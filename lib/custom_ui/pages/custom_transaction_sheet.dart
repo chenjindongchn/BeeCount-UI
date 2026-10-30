@@ -213,7 +213,12 @@ class _CustomTransactionSheetState
       return;
     }
 
-    if (_selectedType != 2 && _selectedCategory == null) {
+    final categories = ref.read(
+      recordingCategoriesProvider((ledgerId: _ledgerId, kind: _currentKind)),
+    ).valueOrNull;
+    final catToSave = _selectedCategory ?? categories?.firstOrNull;
+
+    if (_selectedType != 2 && catToSave == null) {
       _showToast('请选择记账分类');
       return;
     }
@@ -279,7 +284,7 @@ class _CustomTransactionSheetState
         await persistRecordingDraft(
           ref,
           ledgerId: _ledgerId,
-          category: _selectedCategory!,
+          category: catToSave!,
           kind: _currentKind,
           result: resultRecord,
           editingId: null,
@@ -357,10 +362,11 @@ class _CustomTransactionSheetState
 
           const SizedBox(height: 4),
 
-          // 3. 支持左右滑动切换的分类网格与转账视图
+          // 3. 支持左右滑动切换的分类网格与转账视图（按需构建）
           Expanded(
-            child: PageView(
+            child: PageView.builder(
               controller: _pageController,
+              itemCount: 3,
               onPageChanged: (index) {
                 if (_selectedType != index) {
                   HapticFeedback.selectionClick();
@@ -370,11 +376,18 @@ class _CustomTransactionSheetState
                   });
                 }
               },
-              children: [
-                _buildCategoryGrid(context, kind: 'expense'),
-                _buildCategoryGrid(context, kind: 'income'),
-                _buildTransferAccounts(context),
-              ],
+              itemBuilder: (context, index) {
+                switch (index) {
+                  case 0:
+                    return _buildCategoryGrid(context, kind: 'expense');
+                  case 1:
+                    return _buildCategoryGrid(context, kind: 'income');
+                  case 2:
+                    return _buildTransferAccounts(context);
+                  default:
+                    return const SizedBox.shrink();
+                }
+              },
             ),
           ),
 
@@ -558,15 +571,10 @@ class _CustomTransactionSheetState
           return const Center(child: Text('暂无分类'));
         }
 
-        if (_selectedCategory == null &&
-            _currentKind == kind &&
-            categories.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _selectedCategory == null && categories.isNotEmpty) {
-              setState(() => _selectedCategory = categories.firstOrNull);
-            }
-          });
-        }
+        final currentSelected =
+            (_currentKind == kind && _selectedCategory != null)
+                ? _selectedCategory
+                : categories.firstOrNull;
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -582,7 +590,7 @@ class _CustomTransactionSheetState
             itemCount: categories.length,
             itemBuilder: (context, index) {
               final cat = categories[index];
-              final isSelected = _selectedCategory?.id == cat.id;
+              final isSelected = currentSelected?.id == cat.id;
               final isDark = Theme.of(context).brightness == Brightness.dark;
 
               final selectedBg = Theme.of(context)
@@ -809,15 +817,6 @@ class _CustomTransactionSheetState
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // 时间选择
-          _buildMetaChip(
-            context,
-            icon: Icons.calendar_today_outlined,
-            title: timeStr,
-            onTap: _pickDateTime,
-          ),
-          const SizedBox(width: 6),
-
           // 账户选择 (非转账模式下)
           if (_selectedType != 2) ...[
             _buildMetaChip(
@@ -832,6 +831,15 @@ class _CustomTransactionSheetState
             ),
             const SizedBox(width: 6),
           ],
+
+          // 时间选择
+          _buildMetaChip(
+            context,
+            icon: Icons.calendar_today_outlined,
+            title: timeStr,
+            onTap: _pickDateTime,
+          ),
+          const SizedBox(width: 6),
 
           // 标签选择
           _buildMetaChip(

@@ -166,19 +166,21 @@ class _OriginSheetHostState<T> extends State<_OriginSheetHost<T>>
                 child: child,
               ),
             ),
-            child: _OriginSheetScope(
-              onDragUpdate: _onDragUpdate,
-              onDragEnd: _onDragEnd,
-              child: Material(
-                color: OriginSheetTokens.cardColor(context),
-                clipBehavior: Clip.antiAlias,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(OriginSheetTokens.cornerRadius),
-                ),
-                child: SizedBox(
-                  height: height,
-                  width: double.infinity,
-                  child: widget.route.builder(context),
+            child: RepaintBoundary(
+              child: _OriginSheetScope(
+                onDragUpdate: _onDragUpdate,
+                onDragEnd: _onDragEnd,
+                child: Material(
+                  color: OriginSheetTokens.cardColor(context),
+                  clipBehavior: Clip.antiAlias,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(OriginSheetTokens.cornerRadius),
+                  ),
+                  child: SizedBox(
+                    height: height,
+                    width: double.infinity,
+                    child: widget.route.builder(context),
+                  ),
                 ),
               ),
             ),
