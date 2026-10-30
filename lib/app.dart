@@ -11,7 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/account/accounts_page.dart';
 import 'pages/budget/budget_page.dart';
-import 'pages/transaction/transaction_editor_page.dart';
 import 'custom_ui/pages/custom_transaction_sheet.dart';
 import 'custom_ui/pages/custom_home_page.dart';
 import 'custom_ui/pages/custom_analytics_page.dart';
@@ -546,15 +545,12 @@ class _BeeAppState extends ConsumerState<BeeApp>
         nav.push(MaterialPageRoute(builder: (_) => const AIChatPage()));
         break;
       case AppLinkAction.newTransaction:
-        // 小组件「快速记账」点分类格携带 categoryId 时,预填该分类(见
-        // TransactionEditorPage.initialCategoryId);普通「记一笔」categoryId 为 null。
-        nav.push(MaterialPageRoute(
-          builder: (_) => TransactionEditorPage(
-            initialKind: type ?? 'expense',
-            quickAdd: true,
-            initialCategoryId: categoryId,
-          ),
-        ));
+        // 小组件「快速记账」与桌面快捷方式统一调出 Origin 记账抽屉
+        showCustomTransactionSheet(
+          nav.context,
+          initialKind: type ?? 'expense',
+          initialCategoryId: categoryId,
+        );
         break;
       case AppLinkAction.open:
         _openPageForDeepLink(nav, page);

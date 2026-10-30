@@ -22,6 +22,15 @@ Future<void> showCustomTransactionSheet(
   String initialKind = 'expense',
   int? initialCategoryId,
   int? initialAccountId,
+  int? initialToAccountId,
+  DateTime? initialDate,
+  List<int>? initialTagIds,
+  double? initialAmount,
+  String? initialNote,
+  int? editingTransactionId,
+  bool isCopy = false,
+  bool excludeFromStats = false,
+  bool excludeFromBudget = false,
 }) {
   return showOriginBottomSheet<void>(
     context,
@@ -30,6 +39,15 @@ Future<void> showCustomTransactionSheet(
       initialKind: initialKind,
       initialCategoryId: initialCategoryId,
       initialAccountId: initialAccountId,
+      initialToAccountId: initialToAccountId,
+      initialDate: initialDate,
+      initialTagIds: initialTagIds,
+      initialAmount: initialAmount,
+      initialNote: initialNote,
+      editingTransactionId: editingTransactionId,
+      isCopy: isCopy,
+      excludeFromStats: excludeFromStats,
+      excludeFromBudget: excludeFromBudget,
     ),
   );
 }
@@ -255,7 +273,11 @@ class _CustomTransactionSheetState
     final categories = ref.read(
       recordingCategoriesProvider((ledgerId: _ledgerId, kind: _currentKind)),
     ).valueOrNull;
-    final catToSave = _selectedCategory ?? categories?.firstOrNull;
+    Category? initialMatch;
+    if (widget.initialCategoryId != null && categories != null) {
+      initialMatch = categories.where((c) => c.id == widget.initialCategoryId).firstOrNull;
+    }
+    final catToSave = _selectedCategory ?? initialMatch ?? categories?.firstOrNull;
 
     if (_selectedType != 2 && catToSave == null) {
       _showToast('请选择记账分类');
@@ -647,10 +669,16 @@ class _CustomTransactionSheetState
           return const Center(child: Text('暂无分类'));
         }
 
+        Category? initialMatch;
+        if (widget.initialCategoryId != null && _currentKind == kind) {
+          initialMatch = categories
+              .where((c) => c.id == widget.initialCategoryId)
+              .firstOrNull;
+        }
         final currentSelected =
             (_currentKind == kind && _selectedCategory != null)
                 ? _selectedCategory
-                : categories.firstOrNull;
+                : (initialMatch ?? categories.firstOrNull);
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),

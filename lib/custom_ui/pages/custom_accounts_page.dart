@@ -68,7 +68,6 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
     return OriginScaffold(
       appBar: OriginLargeTopAppBar(
         title: widget.asTab ? l10n.tabAssets : l10n.accountsTitle,
-        subtitle: l10n.widgetGalleryNetWorthDesc,
         leading: widget.asTab ? null : const BackButton(),
         actions: [
           IconButton(

@@ -4,13 +4,11 @@ import 'package:beecount_ui/beecount_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../utils/month_range.dart';
-import '../../services/export/share_poster_service.dart';
 import '../../pages/ai/ai_chat_page.dart';
-import '../../pages/report/annual_report_page.dart';
 import '../../pages/shared/pickers/wheel_date_picker.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
-import '../../pages/main/analytics/widgets/analytics_content.dart';
 import '../styles/origin_tokens.dart';
+import '../widgets/origin_analytics_content.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_segmented_control.dart';
 
@@ -69,15 +67,6 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
     ref.read(selectedMonthProvider.notifier).state = _scope == 'year'
         ? DateTime(selected.year + delta, 1)
         : DateTime(selected.year, selected.month + delta);
-  }
-
-  void _share() {
-    final month = ref.read(selectedMonthProvider);
-    SharePosterService.showPosterCarouselPreview(
-      context,
-      year: month.year,
-      month: month.month,
-    );
   }
 
   void _openAI() {
@@ -140,7 +129,6 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
     return OriginScaffold(
       appBar: OriginLargeTopAppBar(
         title: l10n.tabInsights,
-        subtitle: '收支走势与分类统计分析',
         leading: widget.showBack ? const BackButton() : null,
         actions: [
           TextButton.icon(
@@ -154,11 +142,6 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             onPressed: _openAI,
-          ),
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            tooltip: l10n.sharePosterShare,
-            onPressed: _share,
           ),
         ],
       ),
@@ -215,19 +198,12 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                return AnalyticsContent(
+                return OriginAnalyticsContent(
                   data: snapshot.data![_type]!,
                   scope: _scope,
                   type: _type,
                   month: month,
                   onTypeChanged: _selectType,
-                  onAnnual: () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => AnnualReportPage(initialYear: month.year),
-                    ),
-                  ),
-                  onShare: _share,
                   onPeriod: _scope == 'all' ? null : _showPeriodPicker,
                   onRecalculate: _runRecalcForeignTx,
                   onPrevious: _scope == 'all' ? null : () => _movePeriod(-1),

@@ -7,7 +7,6 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/github_star_provider.dart';
 import '../../providers.dart';
 import '../../utils/website_urls.dart';
-import '../../pages/main/mine/widgets/mine_profile.dart';
 import '../../pages/main/mine/bindings/mine_cloud.dart';
 import '../../pages/main/mine/bindings/mine_actions.dart';
 import '../../pages/settings/help_center_page.dart';
@@ -59,16 +58,7 @@ class CustomMinePage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(top: 8.0, bottom: 120.0),
         children: [
-          // 1. 用户个人信息卡片 (原生 12dp 卡片底)
-          const OriginCard(
-            margin: EdgeInsets.symmetric(
-              horizontal: OriginTokens.cardMargin,
-              vertical: 6.0,
-            ),
-            child: MineProfileBinding(),
-          ),
-
-          // 2. 云同步与服务
+          // 1. 云同步与服务
           OriginSectionTitle(title: l.v4MineCloudGroup),
           const OriginCard(
             margin: EdgeInsets.symmetric(
@@ -78,7 +68,7 @@ class CustomMinePage extends ConsumerWidget {
             child: MineCloudBinding(),
           ),
 
-          // 3. 核心功能分组
+          // 2. 核心功能分组
           OriginSectionTitle(title: l.v4MineFeaturesGroup),
           OriginSettingGroup(
             items: [
@@ -128,7 +118,7 @@ class CustomMinePage extends ConsumerWidget {
             ],
           ),
 
-          // 4. 帮助与关于
+          // 3. 帮助与关于
           OriginSectionTitle(title: l.v4MineHelpGroup),
           OriginSettingGroup(
             items: [
@@ -163,7 +153,7 @@ class CustomMinePage extends ConsumerWidget {
             ],
           ),
 
-          // 5. 交流与支持
+          // 4. 交流与支持
           OriginSectionTitle(title: l.v4MineSupportGroup),
           OriginSettingGroup(
             items: [
