@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../styles/origin_tokens.dart';
+
 /// OriginOS 风格自定义记账数字键盘（紧凑精致版）
 ///
 /// 严格参照用户提供的参考设计：
 /// - 按键高度紧凑（44dp）
 /// - 数字字体优雅纤细（20sp，w400/w500）
 /// - 纯净微浅底色，柔和圆角（10dp）
-/// - 右下角浅紫蓝高亮「保存」按钮，左下角浅灰「再记一笔」
+/// - 右下角「保存」按钮跟随软件设置的主题色，左下角浅灰「再记一笔」
 class OriginKeypad extends StatelessWidget {
   const OriginKeypad({
     super.key,
@@ -44,8 +46,8 @@ class OriginKeypad extends StatelessWidget {
 
     // 默认按键底色：日间极纯净浅灰 #F8F9FA，夜间 #262629
     final defaultBg = isDark ? const Color(0xFF262629) : const Color(0xFFF8F9FA);
-    // 保存按钮底色：参考截图中的柔和紫蓝色 #B9C7FE，夜间 #4A5DB0
-    final saveBg = isDark ? const Color(0xFF4358A5) : const Color(0xFFB4C3FA);
+    // 保存按钮底色：挂钩软件设置中的主题色
+    final saveBg = OriginTokens.primary(context);
 
     final bg = backgroundColor ?? (isSave ? saveBg : defaultBg);
 

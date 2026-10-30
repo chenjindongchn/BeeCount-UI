@@ -56,9 +56,17 @@ class OriginTokens {
   /// 底部导航栏主体高度（不含虚拟按键/手势条安全区：66.0dp）
   static const double bottomBarHeight = 66.0;
 
-  /// 悬浮胶囊导航栏高度（54.0dp，内部药丸 46.0dp，距手势条 16.0dp）
-  static const double floatingBarHeight = 54.0;
-  static const double floatingPillHeight = 46.0;
+  /// 悬浮胶囊导航栏高度（紧凑校准：48.0dp，圆角 24.0dp，内部药丸 40.0dp，距手势条上移至 28.0dp）
+  static const double floatingBarHeight = 48.0;
+  static const double floatingBarRadius = 24.0;
+  static const double floatingPillHeight = 40.0;
+  static const double floatingPillRadius = 20.0;
+  static const double floatingBarPaddingH = 4.0;
+  static const double floatingBarPaddingV = 4.0;
+  static const double floatingBarHorizontalMargin = 36.0;
+  static const double floatingBarBottomMargin = 28.0;
+  static const double floatingSplitGap = 10.0;
+  static const double floatingBarIconSize = 20.0;
 
   // ===========================================================================
   // 2. 色彩系统 (Colors & Dark Mode)
@@ -130,7 +138,29 @@ class OriginTokens {
           ? const Color(0xFF8C8C8C)
           : const Color(0xFF757575);
 
-  /// 默认主题强调色（vivo 经典天青蓝 #0066FF）
+  /// 悬浮胶囊导航栏磨砂底色（对齐 OriginColors.navigationBarFloatingBackground）
+  static Color floatingBarBackground(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xE6282828)
+          : const Color(0xEBFFFFFF);
+
+  /// 悬浮胶囊导航栏发丝柔光描边
+  static Color floatingBarBorder(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0x26FFFFFF)
+          : const Color(0x14000000);
+
+  /// 悬浮胶囊导航栏内部选中药丸颜色（对齐 OriginColors.navigationBarPillIndicator）
+  static Color floatingPillIndicator(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xCC121212)
+          : const Color(0xCCEDEDED);
+
+  /// 主题强调色（直接挂钩软件设置中的主题色，不硬编码固定色值）
+  static Color primary(BuildContext context) =>
+      Theme.of(context).colorScheme.primary;
+
+  /// 默认主题强调色兜底常量（仅无 context 时备用）
   static const Color defaultPrimary = Color(0xFF0066FF);
 
   /// 收入强调色（默认翡翠绿）

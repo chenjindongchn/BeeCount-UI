@@ -1,29 +1,32 @@
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import '../../pages/shared/appearance/skin_animation_scope.dart';
 import '../styles/origin_tokens.dart';
-import 'origin_divider.dart';
+import 'origin_animated_nav_icon.dart';
 
 /// vivo OriginOS 底部导航项定义
 class OriginBottomNavItem {
   final IconData icon;
   final IconData selectedIcon;
+  final OriginNavigationIconType? animatedIcon;
   final String label;
 
   const OriginBottomNavItem({
     required this.icon,
     required this.selectedIcon,
+    this.animatedIcon,
     required this.label,
   });
 }
 
-/// vivo OriginOS 风格底部导航栏 (OriginBottomNavBar)
+/// vivo OriginOS 风格分体式悬浮胶囊底栏 (OriginBottomNavBar)
 ///
-/// 遵循 `OriginUI/docs/18-navigation-bar-and-tab-row.md`：
-/// 1. 高度 66dp + 底部安全区；
-/// 2. 纯色不透明质感（日间 #FFFFFF / 夜间 #1E1E1E）；
-/// 3. 顶部 0.5dp 发丝分割线（#D9D9D9 / #262626）；
-/// 4. Tab 项带有轻微按压弹性缩放；
-/// 5. 中间集成高辨识度记账操作区（支持长按与点击）。
-class OriginBottomNavBar extends StatelessWidget {
+/// 遵循蓝河工具箱 `AppBottomNavigationBar.kt` 与 `OriginAnimatedNavigationIcon.kt` 规范：
+/// 1. 分体式结构：左侧三项紧凑悬浮磨砂胶囊（明细 / 洞察 / 资产）+ 右侧独立 48dp 正圆记账按钮（+）；
+/// 2. 几何真值：胶囊与圆钮高 48.0dp（圆角 24.0dp），内部滑动药丸高 40.0dp（圆角 20.0dp）；
+/// 3. 边距规范：距手势安全区上移至 28.0dp，左右紧凑边距 36.0dp，分体间距 10.0dp；
+/// 4. 动态图标：支持 700ms 内部独立零件物理动效与原地点击重播 (`replay`)。
+class OriginBottomNavBar extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTabSelected;
   final List<OriginBottomNavItem> items;
@@ -33,6 +36,7 @@ class OriginBottomNavBar extends StatelessWidget {
   final GestureLongPressEndCallback? onCenterLongPressEnd;
   final GlobalKey? centerButtonKey;
   final Color? primaryColor;
+  final dynamic skin;
 
   const OriginBottomNavBar({
     super.key,
@@ -45,149 +49,362 @@ class OriginBottomNavBar extends StatelessWidget {
     this.onCenterLongPressEnd,
     this.centerButtonKey,
     this.primaryColor,
+    this.skin,
   });
+
+  @override
+  State<OriginBottomNavBar> createState() => _OriginBottomNavBarState();
+}
+
+class _OriginBottomNavBarState extends State<OriginBottomNavBar> {
+  int? _pressedIndex;
+  double? _dragLeftPx;
+  final Map<int, int> _replayCounters = <int, int>{};
+
+  bool get _isInteracting => _pressedIndex != null;
+
+  void _triggerTabTap(int index) {
+    if (index == widget.currentIndex) {
+      setState(() {
+        _replayCounters[index] = (_replayCounters[index] ?? 0) + 1;
+      });
+    }
+    widget.onTabSelected(index);
+  }
+
+  void _handlePointerDown(int index) {
+    setState(() {
+      _pressedIndex = index;
+      _dragLeftPx = null;
+    });
+  }
+
+  void _handlePointerCancel() {
+    if (_pressedIndex != null || _dragLeftPx != null) {
+      setState(() {
+        _pressedIndex = null;
+        _dragLeftPx = null;
+      });
+    }
+  }
+
+  void _handleHorizontalDragUpdate(
+    DragUpdateDetails details,
+    double totalWidth,
+    int itemCount,
+  ) {
+    if (itemCount <= 0 || totalWidth <= 0) return;
+    final itemWidth = totalWidth / itemCount;
+    final localX = details.localPosition.dx.clamp(0.0, totalWidth);
+    final rawLeft = (localX - itemWidth / 2).clamp(0.0, totalWidth - itemWidth);
+    final targetIdx = (localX / itemWidth).floor().clamp(0, itemCount - 1);
+
+    setState(() {
+      _dragLeftPx = rawLeft;
+      _pressedIndex = targetIdx;
+    });
+  }
+
+  void _handleHorizontalDragEnd(int itemCount) {
+    final target = _pressedIndex;
+    setState(() {
+      _pressedIndex = null;
+      _dragLeftPx = null;
+    });
+    if (target != null && target >= 0 && target < itemCount) {
+      _triggerTabTap(target);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final navBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
-    final accent = primaryColor ?? OriginTokens.defaultPrimary;
+    final accent = widget.primaryColor ?? OriginTokens.primary(context);
+    final itemCount = widget.items.length;
+    if (itemCount == 0) return const SizedBox.shrink();
 
-    // 左侧 2 个 Tab，中间记账按钮，右侧 2 个 Tab
-    final leftItems = items.take(2).toList();
-    final rightItems = items.skip(2).take(2).toList();
+    final validIndex = widget.currentIndex.clamp(0, itemCount - 1);
+    final activeIndex = _pressedIndex ?? validIndex;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: navBg,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
-            blurRadius: 10.0,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 0.5dp 顶部发丝线
-          const OriginDivider(startIndent: 0),
-          SizedBox(
-            height: OriginTokens.bottomBarHeight + bottomInset,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: bottomInset),
-              child: Row(
-                children: [
-                  // 左侧 Tab 组
-                  for (var i = 0; i < leftItems.length; i++)
-                    Expanded(
-                      child: _OriginNavItemWidget(
-                        item: leftItems[i],
-                        isSelected: currentIndex == i,
-                        onTap: () => onTabSelected(i),
-                        activeColor: accent,
+    final capsuleBg = OriginTokens.floatingBarBackground(context);
+    final borderColor = OriginTokens.floatingBarBorder(context);
+    final pillColor = OriginTokens.floatingPillIndicator(context);
+    final unselectedColor = OriginTokens.bottomBarUnselected(context);
+
+    return SizedBox(
+      height: OriginTokens.floatingBarHeight +
+          OriginTokens.floatingBarBottomMargin +
+          bottomInset,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: OriginTokens.floatingBarHorizontalMargin,
+          right: OriginTokens.floatingBarHorizontalMargin,
+          bottom: bottomInset + OriginTokens.floatingBarBottomMargin,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // 1. 左侧：三项悬浮磨砂胶囊导航栏（明细 / 洞察 / 资产）
+            Expanded(
+              child: AnimatedScale(
+                scale: _isInteracting ? 1.025 : 1.0,
+                duration: OriginTokens.pressDuration,
+                curve: OriginTokens.enterCurve,
+                child: Container(
+                  height: OriginTokens.floatingBarHeight,
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        BorderRadius.circular(OriginTokens.floatingBarRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black
+                            .withValues(alpha: isDark ? 0.36 : 0.08),
+                        blurRadius: 18.0,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
-                  // 中间记账按钮
-                  _OriginCenterAddButton(
-                    key: centerButtonKey,
-                    onTap: onCenterTap,
-                    onLongPressStart: onCenterLongPressStart,
-                    onLongPressMoveUpdate: onCenterLongPressMoveUpdate,
-                    onLongPressEnd: onCenterLongPressEnd,
-                    primaryColor: accent,
+                      BoxShadow(
+                        color: Colors.black
+                            .withValues(alpha: isDark ? 0.18 : 0.03),
+                        blurRadius: 4.0,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
-                  // 右侧 Tab 组
-                  for (var i = 0; i < rightItems.length; i++)
-                    Expanded(
-                      child: _OriginNavItemWidget(
-                        item: rightItems[i],
-                        isSelected: currentIndex == i + 2,
-                        onTap: () => onTabSelected(i + 2),
-                        activeColor: accent,
+                  child: ClipRRect(
+                    borderRadius:
+                        BorderRadius.circular(OriginTokens.floatingBarRadius),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: capsuleBg,
+                          borderRadius: BorderRadius.circular(
+                              OriginTokens.floatingBarRadius),
+                          border: Border.all(
+                            color: borderColor,
+                            width: 0.6,
+                          ),
+                        ),
+                        child: Stack(
+                          children: [
+                            // 兼容头部皮肤附带的底栏装饰层
+                            if (widget.skin?.tabBarBuilder != null)
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: SkinAnimationScope(
+                                    child: widget.skin!.tabBarBuilder!(
+                                      accent,
+                                      isDark,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            // 内部滑动药丸与前景导航项
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: OriginTokens.floatingBarPaddingH,
+                                vertical: OriginTokens.floatingBarPaddingV,
+                              ),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final maxWidth = constraints.maxWidth;
+                                  final itemWidth = maxWidth / itemCount;
+                                  final targetLeft =
+                                      _dragLeftPx ?? (itemWidth * activeIndex);
+
+                                  return GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onHorizontalDragUpdate: (details) =>
+                                        _handleHorizontalDragUpdate(
+                                      details,
+                                      maxWidth,
+                                      itemCount,
+                                    ),
+                                    onHorizontalDragEnd: (_) =>
+                                        _handleHorizontalDragEnd(itemCount),
+                                    onHorizontalDragCancel:
+                                        _handlePointerCancel,
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      alignment: Alignment.centerLeft,
+                                      children: [
+                                        // 滑动药丸指示器 (46dp 高, 23dp 圆角, 按住呈水滴微放大)
+                                        AnimatedPositioned(
+                                          duration: _dragLeftPx != null
+                                              ? Duration.zero
+                                              : const Duration(
+                                                  milliseconds: 280),
+                                          curve: OriginTokens.enterCurve,
+                                          left: targetLeft,
+                                          top: 0,
+                                          bottom: 0,
+                                          width: itemWidth,
+                                          child: AnimatedScale(
+                                            scale:
+                                                _isInteracting ? 1.06 : 1.0,
+                                            duration:
+                                                OriginTokens.pressDuration,
+                                            curve: OriginTokens.enterCurve,
+                                            child: Container(
+                                              height: OriginTokens
+                                                  .floatingPillHeight,
+                                              decoration: BoxDecoration(
+                                                color: pillColor,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                  OriginTokens
+                                                      .floatingPillRadius,
+                                                ),
+                                                border: _isInteracting
+                                                    ? Border.all(
+                                                        color: isDark
+                                                            ? Colors.white
+                                                                .withValues(
+                                                                    alpha: 0.18)
+                                                            : Colors.white
+                                                                .withValues(
+                                                                    alpha:
+                                                                        0.85),
+                                                        width: 0.8,
+                                                      )
+                                                    : null,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        // 前景三项 Tab (明细 / 洞察 / 资产)
+                                        Row(
+                                          children: [
+                                            for (var i = 0; i < itemCount; i++)
+                                              Expanded(
+                                                child: _OriginFloatingNavItem(
+                                                  item: widget.items[i],
+                                                  isSelected: activeIndex == i,
+                                                  isPressed:
+                                                      _pressedIndex == i,
+                                                  replayTrigger:
+                                                      _replayCounters[i] ?? 0,
+                                                  activeColor: accent,
+                                                  unselectedColor:
+                                                      unselectedColor,
+                                                  onTapDown: () =>
+                                                      _handlePointerDown(i),
+                                                  onTapUp: () {
+                                                    _handlePointerCancel();
+                                                    _triggerTabTap(i);
+                                                  },
+                                                  onTapCancel:
+                                                      _handlePointerCancel,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+
+            const SizedBox(width: OriginTokens.floatingSplitGap),
+
+            // 2. 右侧：独立悬浮 48dp 正圆记账按钮（+）
+            _OriginStandaloneAddButton(
+              key: widget.centerButtonKey,
+              onTap: widget.onCenterTap,
+              onLongPressStart: widget.onCenterLongPressStart,
+              onLongPressMoveUpdate: widget.onCenterLongPressMoveUpdate,
+              onLongPressEnd: widget.onCenterLongPressEnd,
+              primaryColor: accent,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _OriginNavItemWidget extends StatefulWidget {
+class _OriginFloatingNavItem extends StatelessWidget {
   final OriginBottomNavItem item;
   final bool isSelected;
-  final VoidCallback onTap;
+  final bool isPressed;
+  final int replayTrigger;
   final Color activeColor;
+  final Color unselectedColor;
+  final VoidCallback onTapDown;
+  final VoidCallback onTapUp;
+  final VoidCallback onTapCancel;
 
-  const _OriginNavItemWidget({
+  const _OriginFloatingNavItem({
     required this.item,
     required this.isSelected,
-    required this.onTap,
+    required this.isPressed,
+    required this.replayTrigger,
     required this.activeColor,
+    required this.unselectedColor,
+    required this.onTapDown,
+    required this.onTapUp,
+    required this.onTapCancel,
   });
 
   @override
-  State<_OriginNavItemWidget> createState() => _OriginNavItemWidgetState();
-}
-
-class _OriginNavItemWidgetState extends State<_OriginNavItemWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _anim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-      lowerBound: 0.92,
-      upperBound: 1.0,
-      value: 1.0,
-    );
-  }
-
-  @override
-  void dispose() {
-    _anim.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final unselectedColor = OriginTokens.bottomBarUnselected(context);
-    final targetColor = widget.isSelected ? widget.activeColor : unselectedColor;
+    final targetColor = isSelected ? activeColor : unselectedColor;
+    // 对齐 OriginUI V2606A 校准：按住选中项时前景轻微放大，非选中按压时微缩
+    final targetScale = isPressed
+        ? (isSelected ? 1.08 : 0.94)
+        : 1.0;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _anim.reverse(),
-      onTapUp: (_) {
-        _anim.forward();
-        widget.onTap();
-      },
-      onTapCancel: () => _anim.forward(),
+      onTapDown: (_) => onTapDown(),
+      onTapUp: (_) => onTapUp(),
+      onTapCancel: onTapCancel,
       child: Center(
-        child: ScaleTransition(
-          scale: _anim,
+        child: AnimatedScale(
+          scale: targetScale,
+          duration: OriginTokens.pressDuration,
+          curve: OriginTokens.enterCurve,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                widget.isSelected ? widget.item.selectedIcon : widget.item.icon,
-                size: 24.0,
-                color: targetColor,
-              ),
-              const SizedBox(height: 2.0),
+              if (item.animatedIcon != null)
+                OriginAnimatedNavIcon(
+                  icon: item.animatedIcon!,
+                  selected: isSelected,
+                  color: targetColor,
+                  size: OriginTokens.floatingBarIconSize,
+                  replayTrigger: replayTrigger,
+                )
+              else
+                Icon(
+                  isSelected ? item.selectedIcon : item.icon,
+                  size: OriginTokens.floatingBarIconSize,
+                  color: targetColor,
+                ),
+              const SizedBox(height: 1.0),
               Text(
-                widget.item.label,
-                style: OriginTokens.bottomBarTextStyle(color: targetColor),
+                item.label,
                 maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                textScaler: TextScaler.noScaling,
+                style: OriginTokens.bottomBarTextStyle(color: targetColor)
+                    .copyWith(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -197,14 +414,15 @@ class _OriginNavItemWidgetState extends State<_OriginNavItemWidget>
   }
 }
 
-class _OriginCenterAddButton extends StatefulWidget {
+/// 右侧独立悬浮正圆记账按钮（48dp × 48dp）
+class _OriginStandaloneAddButton extends StatefulWidget {
   final VoidCallback onTap;
   final GestureLongPressStartCallback? onLongPressStart;
   final GestureLongPressMoveUpdateCallback? onLongPressMoveUpdate;
   final GestureLongPressEndCallback? onLongPressEnd;
   final Color primaryColor;
 
-  const _OriginCenterAddButton({
+  const _OriginStandaloneAddButton({
     super.key,
     required this.onTap,
     this.onLongPressStart,
@@ -214,10 +432,11 @@ class _OriginCenterAddButton extends StatefulWidget {
   });
 
   @override
-  State<_OriginCenterAddButton> createState() => _OriginCenterAddButtonState();
+  State<_OriginStandaloneAddButton> createState() =>
+      _OriginStandaloneAddButtonState();
 }
 
-class _OriginCenterAddButtonState extends State<_OriginCenterAddButton>
+class _OriginStandaloneAddButtonState extends State<_OriginStandaloneAddButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _anim;
 
@@ -226,7 +445,7 @@ class _OriginCenterAddButtonState extends State<_OriginCenterAddButton>
     super.initState();
     _anim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 150),
+      duration: OriginTokens.pressDuration,
       lowerBound: 0.90,
       upperBound: 1.0,
       value: 1.0,
@@ -249,31 +468,45 @@ class _OriginCenterAddButtonState extends State<_OriginCenterAddButton>
         widget.onTap();
       },
       onTapCancel: () => _anim.forward(),
-      onLongPressStart: widget.onLongPressStart,
+      onLongPressStart: (details) {
+        _anim.reverse();
+        widget.onLongPressStart?.call(details);
+      },
       onLongPressMoveUpdate: widget.onLongPressMoveUpdate,
-      onLongPressEnd: widget.onLongPressEnd,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10.0),
-        child: ScaleTransition(
-          scale: _anim,
-          child: Container(
-            width: 48.0,
-            height: 48.0,
-            decoration: BoxDecoration(
-              color: widget.primaryColor,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: widget.primaryColor.withValues(alpha: 0.35),
-                  blurRadius: 8.0,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+      onLongPressEnd: (details) {
+        _anim.forward();
+        widget.onLongPressEnd?.call(details);
+      },
+      child: ScaleTransition(
+        scale: _anim,
+        child: Container(
+          width: OriginTokens.floatingBarHeight,
+          height: OriginTokens.floatingBarHeight,
+          decoration: BoxDecoration(
+            color: widget.primaryColor,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.25),
+              width: 0.6,
             ),
-            child: const Icon(
+            boxShadow: [
+              BoxShadow(
+                color: widget.primaryColor.withValues(alpha: 0.36),
+                blurRadius: 14.0,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4.0,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Icon(
               Icons.add_rounded,
               color: Colors.white,
-              size: 28.0,
+              size: 24.0,
             ),
           ),
         ),
@@ -282,13 +515,10 @@ class _OriginCenterAddButtonState extends State<_OriginCenterAddButton>
   }
 }
 
-/// vivo OriginOS 风格 BeeCount 专属底部导航栏适配器 (OriginBeeBottomBar)
+/// vivo OriginOS 风格 BeeCount 专属分体式底部导航栏适配器 (OriginBeeBottomBar)
 ///
-/// 遵循 `OriginUI/docs/18-navigation-bar-and-tab-row.md`：
-/// 1. 贴底 66dp 高度 + 底部安全区，不透明纯色卡片质感；
-/// 2. 顶部 0.5dp 发丝分割线；
-/// 3. Tab 项包括：流水（账单）、洞察（统计）、快速记账、资产（账户）、我的（设置）；
-/// 4. 完美接管原版头像、长按手势及动效。
+/// 左侧悬浮胶囊承载三个核心页面：明细（账单）、洞察（统计）、资产（账户）；
+/// 右侧独立悬浮正圆按钮承载：快速记账（点击抽屉 / 长按扇形菜单）。
 class OriginBeeBottomBar extends StatelessWidget {
   final int currentIndex;
   final Color primaryColor;
@@ -333,6 +563,7 @@ class OriginBeeBottomBar extends StatelessWidget {
       currentIndex: currentIndex,
       onTabSelected: onTabTap,
       primaryColor: primaryColor,
+      skin: skin,
       centerButtonKey: centerButtonKey,
       onCenterTap: onCenterTap,
       onCenterLongPressStart: onCenterLongPressStart,
@@ -342,22 +573,20 @@ class OriginBeeBottomBar extends StatelessWidget {
         OriginBottomNavItem(
           icon: Icons.receipt_long_outlined,
           selectedIcon: Icons.receipt_long,
+          animatedIcon: OriginNavigationIconType.receipt,
           label: labelHome,
         ),
         OriginBottomNavItem(
           icon: Icons.pie_chart_outline_rounded,
           selectedIcon: Icons.pie_chart_rounded,
+          animatedIcon: OriginNavigationIconType.insights,
           label: labelInsights,
         ),
         OriginBottomNavItem(
           icon: Icons.account_balance_wallet_outlined,
           selectedIcon: Icons.account_balance_wallet,
+          animatedIcon: OriginNavigationIconType.assets,
           label: labelAssets,
-        ),
-        OriginBottomNavItem(
-          icon: Icons.person_outline_rounded,
-          selectedIcon: Icons.person_rounded,
-          label: labelMine,
         ),
       ],
     );

@@ -8,6 +8,7 @@ class OriginSettingItem {
   final String title;
   final String? subtitle;
   final Widget? leading;
+  final String? valueText;
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool showArrow;
@@ -16,6 +17,7 @@ class OriginSettingItem {
     required this.title,
     this.subtitle,
     this.leading,
+    this.valueText,
     this.trailing,
     this.onTap,
     this.showArrow = true,
@@ -110,6 +112,17 @@ class _OriginSettingTile extends StatelessWidget {
                 ],
               ),
             ),
+            if (item.valueText != null && item.valueText!.isNotEmpty) ...[
+              Text(
+                item.valueText!,
+                style: TextStyle(
+                  fontSize: 13.0,
+                  color: OriginTokens.textSecondary(context),
+                ),
+              ),
+              if (item.showArrow || item.trailing != null)
+                const SizedBox(width: 4.0),
+            ],
             if (item.trailing != null) ...[
               item.trailing!,
               if (item.showArrow) const SizedBox(width: 4.0),
