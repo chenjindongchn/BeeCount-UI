@@ -9,13 +9,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'pages/main/home_page.dart';
-import 'pages/main/analytics_page.dart';
 import 'pages/account/accounts_page.dart';
 import 'pages/budget/budget_page.dart';
-import 'pages/main/mine_page.dart';
 import 'pages/transaction/transaction_editor_page.dart';
 import 'custom_ui/pages/custom_transaction_sheet.dart';
+import 'custom_ui/pages/custom_home_page.dart';
+import 'custom_ui/pages/custom_analytics_page.dart';
+import 'custom_ui/pages/custom_accounts_page.dart';
+import 'custom_ui/pages/custom_mine_page.dart';
+import 'custom_ui/widgets/origin_bottom_nav_bar.dart';
 import 'providers.dart';
 import 'l10n/app_localizations.dart';
 import 'widget/widget_manager.dart';
@@ -48,10 +50,10 @@ class BeeApp extends ConsumerStatefulWidget {
 class _BeeAppState extends ConsumerState<BeeApp>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final _pages = const [
-    HomePage(),
-    AnalyticsPage(),
-    AccountsPage(asTab: true),
-    MinePage(),
+    CustomHomePage(),
+    CustomAnalyticsPage(),
+    CustomAccountsPage(asTab: true),
+    CustomMinePage(),
   ];
 
   // 双击检测：记录最后一次点击的时间和索引
@@ -827,12 +829,15 @@ class _BeeAppState extends ConsumerState<BeeApp>
                   TickerMode(enabled: i == idx, child: _pages[i]),
               ],
             ),
-            bottomNavigationBar: _BeeBottomBar(
+            bottomNavigationBar: OriginBeeBottomBar(
               currentIndex: idx,
               primaryColor: primaryColor,
               isDark: isDark,
               bottomPadding: bottomPadding,
-              l10n: l10n,
+              labelHome: l10n.tabHome,
+              labelInsights: l10n.tabInsights,
+              labelAssets: l10n.tabAssets,
+              labelMine: l10n.tabMine,
               avatarPath: avatarPath,
               skin: headerSkin,
               centerButtonKey: _centerButtonKey,
@@ -894,6 +899,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
 }
 
 /// Telegram 风格悬浮胶囊底部导航栏
+// ignore: unused_element
 class _BeeBottomBar extends StatelessWidget {
   final int currentIndex;
   final Color primaryColor;
@@ -909,13 +915,16 @@ class _BeeBottomBar extends StatelessWidget {
   final GestureLongPressMoveUpdateCallback onCenterLongPressMoveUpdate;
   final GestureLongPressEndCallback onCenterLongPressEnd;
 
+  // ignore: unused_element, unused_element_parameter
   const _BeeBottomBar({
     required this.currentIndex,
     required this.primaryColor,
     required this.isDark,
     required this.bottomPadding,
     required this.l10n,
+    // ignore: unused_element_parameter
     this.avatarPath,
+    // ignore: unused_element_parameter
     this.skin,
     required this.centerButtonKey,
     required this.onTabTap,

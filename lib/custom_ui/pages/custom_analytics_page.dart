@@ -1,0 +1,243 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:beecount_ui/beecount_ui.dart';
+import '../../l10n/app_localizations.dart';
+import '../../providers.dart';
+import '../../utils/month_range.dart';
+import '../../services/export/share_poster_service.dart';
+import '../../pages/ai/ai_chat_page.dart';
+import '../../pages/report/annual_report_page.dart';
+import '../../pages/shared/pickers/wheel_date_picker.dart';
+import '../../pages/main/analytics/bindings/analytics_data.dart';
+import '../../pages/main/analytics/widgets/analytics_content.dart';
+import '../styles/origin_tokens.dart';
+import '../widgets/origin_scaffold.dart';
+import '../widgets/origin_segmented_control.dart';
+
+/// vivo OriginOS 风格数据洞察与统计分析页面 (CustomAnalyticsPage)
+///
+/// 遵循 `OriginUI/docs/` 规范：
+/// 1. 大标题栏（84dp / 22sp SemiBold）；
+/// 2. 胶囊分段滑动选择器（36dp 高度，18dp 圆角，滑动药丸动效）；
+/// 3. 日间纯白卡片，夜间 #202020 纯深色卡片；
+/// 4. 纯 Riverpod 驱动，不修改原有统计计算逻辑。
+class CustomAnalyticsPage extends ConsumerStatefulWidget {
+  final bool showBack;
+  const CustomAnalyticsPage({super.key, this.showBack = false});
+
+  @override
+  ConsumerState<CustomAnalyticsPage> createState() => _CustomAnalyticsPageState();
+}
+
+class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
+  String _scope = 'month';
+  String _type = 'expense';
+  Object? _queryKey;
+  Future<Map<String, AnalyticsResult>>? _query;
+
+  void _selectType(String value) => setState(() => _type = value);
+
+  DateTime get _latestPeriod =>
+      labelForDate(DateTime.now(), ref.read(currentMonthStartDayProvider));
+
+  bool get _canGoNext {
+    final selected = ref.read(selectedMonthProvider);
+    final latest = _latestPeriod;
+    return _scope == 'month'
+        ? DateTime(selected.year, selected.month).isBefore(latest)
+        : _scope == 'year' && selected.year < latest.year;
+  }
+
+  Future<void> _showPeriodPicker() async {
+    final selected = ref.read(selectedMonthProvider);
+    final latest = _latestPeriod;
+    final result = await showWheelDatePicker(
+      context,
+      initial: selected,
+      mode: _scope == 'year' ? WheelDatePickerMode.y : WheelDatePickerMode.ym,
+      maxDate: latest,
+    );
+    if (result != null && mounted) {
+      ref.read(selectedMonthProvider.notifier).state =
+          DateTime(result.year, _scope == 'year' ? 1 : result.month, 1);
+    }
+  }
+
+  void _movePeriod(int delta) {
+    if (_scope == 'all' || (delta > 0 && !_canGoNext)) return;
+    final selected = ref.read(selectedMonthProvider);
+    ref.read(selectedMonthProvider.notifier).state = _scope == 'year'
+        ? DateTime(selected.year + delta, 1)
+        : DateTime(selected.year, selected.month + delta);
+  }
+
+  void _share() {
+    final month = ref.read(selectedMonthProvider);
+    SharePosterService.showPosterCarouselPreview(
+      context,
+      year: month.year,
+      month: month.month,
+    );
+  }
+
+  void _openAI() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AIChatPage()),
+    );
+  }
+
+  Future<void> _runRecalcForeignTx(int count) async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => BeeDialog(
+        title: Text(l.recalcForeignTxAction),
+        content: Text(l.recalcSyncCountHint(count)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.commonConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final repo = ref.read(repositoryProvider);
+    final id = ref.read(currentLedgerIdProvider);
+    final foreign = await repo.getLedgerForeignCurrencies(id);
+    await refreshExchangeRatesFromUi(ref, force: true, extraQuotes: foreign);
+    await repo.recomputeForeignTxForLedger(id);
+    if (mounted) setState(() => _queryKey = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final repo = ref.watch(repositoryProvider);
+    final id = ref.watch(currentLedgerIdProvider);
+    final month = ref.watch(selectedMonthProvider);
+    final sd = ref.watch(currentMonthStartDayProvider);
+    final tick = ref.watch(statsRefreshProvider);
+    final primaryColor = ref.watch(primaryColorProvider);
+
+    final key = (repo, id, month, _scope, sd, tick, DateUtils.dateOnly(DateTime.now()));
+    if (_queryKey != key) {
+      _queryKey = key;
+      _query = loadAnalyticsViews(
+        repo,
+        ledgerId: id,
+        scope: _scope,
+        selMonth: month,
+        startDay: sd,
+      );
+    }
+
+    return OriginScaffold(
+      appBar: OriginLargeTopAppBar(
+        title: l10n.tabInsights,
+        subtitle: '收支走势与分类统计分析',
+        leading: widget.showBack ? const BackButton() : null,
+        actions: [
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            ),
+            icon: const Icon(Icons.auto_awesome_rounded, size: 18.0),
+            label: const Text(
+              'AI',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            onPressed: _openAI,
+          ),
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: l10n.sharePosterShare,
+            onPressed: _share,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // 顶部 OriginOS 胶囊分段滑动选择器 (月度 / 年度 / 全部)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              OriginTokens.cardMargin,
+              4.0,
+              OriginTokens.cardMargin,
+              8.0,
+            ),
+            child: OriginSegmentedControl<String>(
+              items: const ['month', 'year', 'all'],
+              selectedItem: _scope,
+              onSelected: (scope) => setState(() => _scope = scope),
+              labelBuilder: (scope) {
+                switch (scope) {
+                  case 'month':
+                    return l10n.analyticsMonth;
+                  case 'year':
+                    return l10n.analyticsYear;
+                  default:
+                    return l10n.analyticsAll;
+                }
+              },
+            ),
+          ),
+
+          // 核心统计图表与明细内容
+          Expanded(
+            child: FutureBuilder<Map<String, AnalyticsResult>>(
+              key: ValueKey((
+                repo,
+                id,
+                month,
+                _scope,
+                sd,
+                DateUtils.dateOnly(DateTime.now()),
+              )),
+              future: _query,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return BeeEmptyState(
+                    title: l10n.commonError,
+                    message: '${snapshot.error}',
+                    action: BeeButton(
+                      label: l10n.v4RecordingRetry,
+                      onPressed: () => setState(() => _queryKey = null),
+                    ),
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return AnalyticsContent(
+                  data: snapshot.data![_type]!,
+                  scope: _scope,
+                  type: _type,
+                  month: month,
+                  onTypeChanged: _selectType,
+                  onAnnual: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => AnnualReportPage(initialYear: month.year),
+                    ),
+                  ),
+                  onShare: _share,
+                  onPeriod: _scope == 'all' ? null : _showPeriodPicker,
+                  onRecalculate: _runRecalcForeignTx,
+                  onPrevious: _scope == 'all' ? null : () => _movePeriod(-1),
+                  onNext: _canGoNext ? () => _movePeriod(1) : null,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
