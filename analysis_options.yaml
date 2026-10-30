@@ -4,3 +4,6 @@ analyzer:
   exclude:
     - docs/design/card-refresh/archive/**
     - tool/v4/original_skin_renderer/build/**
+    - build/**
+    - android/**
+    - ios/**
