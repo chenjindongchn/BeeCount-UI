@@ -25,6 +25,7 @@ Future<void> showCustomTransactionSheet(
 }) {
   return showOriginBottomSheet<void>(
     context,
+    heightFactor: 0.72, // 参照参考图，约占屏幕 72%，顶部露出背景卡片
     builder: (_) => CustomTransactionSheet(
       initialKind: initialKind,
       initialCategoryId: initialCategoryId,
@@ -340,23 +341,23 @@ class _CustomTransactionSheetState
           OriginSheetDragRegion(
             child: Center(
               child: Container(
-                width: 36,
-                height: 4.5,
-                margin: const EdgeInsets.only(top: 8, bottom: 6),
+                width: 32,
+                height: 4,
+                margin: const EdgeInsets.only(top: 7, bottom: 5),
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white24 : Colors.black12,
-                  borderRadius: BorderRadius.circular(2.5),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
           ),
 
-          // 2. 居中类型切换 Segmented（无 X 号，严格对齐要求）
+          // 2. 居中类型切换 Segmented（紧凑小巧，无 X 号）
           _buildTypeSegmented(context),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
-          // 3. 支持左右滑动切换的分类网格与转账视图（PageView 充满剩余高度）
+          // 3. 支持左右滑动切换的分类网格与转账视图
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -377,24 +378,24 @@ class _CustomTransactionSheetState
             ),
           ),
 
-          // 4. 金额大字输入展示区（严格位于备注正上方！）
+          // 4. 金额大字输入展示区（严格位于备注正上方，紧凑精致）
           _buildAmountDisplay(context),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
-          // 5. 备注输入栏
+          // 5. 备注输入栏（紧凑胶囊）
           _buildNoteInput(context),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
 
-          // 6. 时间、账户、标签选择栏（严格位于备注正下方！）
+          // 6. 时间、账户、标签选择栏（严格位于备注正下方）
           _buildMetaSelectorRow(context),
 
           const SizedBox(height: 4),
 
-          // 7. OriginOS 风格数字键盘（紧贴最底部，消除多余空隙）
+          // 7. OriginOS 风格数字键盘（紧密贴底）
           Padding(
-            padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset * 0.4 : 4.0),
+            padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset * 0.35 : 2.0),
             child: OriginKeypad(
               onDigit: _onDigit,
               onOperator: _onOperator,
@@ -410,18 +411,18 @@ class _CustomTransactionSheetState
     );
   }
 
-  /// 居中 Segmented 切换胶囊
+  /// 居中 Segmented 切换胶囊（高 30dp，轻盈小巧）
   Widget _buildTypeSegmented(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final segmentBg = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFECEEF2);
 
     return Center(
       child: Container(
-        height: 38,
-        padding: const EdgeInsets.all(3),
+        height: 32,
+        padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
           color: segmentBg,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -461,18 +462,18 @@ class _CustomTransactionSheetState
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark ? const Color(0xFF3E3E42) : Colors.white)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: isSelected
               ? [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1.5),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
                   )
                 ]
               : null,
@@ -480,7 +481,7 @@ class _CustomTransactionSheetState
         child: Text(
           title,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             color: isSelected
                 ? (isDark ? Colors.white : const Color(0xFF1D1D1F))
@@ -491,7 +492,7 @@ class _CustomTransactionSheetState
     );
   }
 
-  /// 金额大字展示区（位于备注上方）
+  /// 金额输入展示区（位于备注正上方，字号 25sp，轻巧自然）
   Widget _buildAmountDisplay(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -507,7 +508,7 @@ class _CustomTransactionSheetState
               Text(
                 '¥',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: isDark ? Colors.white70 : const Color(0xFF2C2C2E),
                 ),
@@ -520,9 +521,9 @@ class _CustomTransactionSheetState
                   child: Text(
                     _amountExpression,
                     style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.5,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.3,
                       color: isDark ? Colors.white : const Color(0xFF1D1D1F),
                     ),
                   ),
@@ -530,10 +531,10 @@ class _CustomTransactionSheetState
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Divider(
             height: 1,
-            thickness: 0.8,
+            thickness: 0.6,
             color: isDark ? Colors.white12 : const Color(0xFFE5E7EB),
           ),
         ],
@@ -541,7 +542,7 @@ class _CustomTransactionSheetState
     );
   }
 
-  /// 5 列精致分类图标网格
+  /// 5 列精致分类图标网格（紧凑尺寸，直径 38dp）
   Widget _buildCategoryGrid(BuildContext context, {required String kind}) {
     final categoriesAsync = ref.watch(
       recordingCategoriesProvider((ledgerId: _ledgerId, kind: kind)),
@@ -568,15 +569,15 @@ class _CustomTransactionSheetState
         }
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           child: GridView.builder(
             physics: const BouncingScrollPhysics(),
             scrollDirection: Axis.vertical,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 5,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.88,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 0.92,
             ),
             itemCount: categories.length,
             itemBuilder: (context, index) {
@@ -601,8 +602,8 @@ class _CustomTransactionSheetState
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      width: 44,
-                      height: 44,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
                         color: isSelected ? selectedBg : unselectedBg,
                         shape: BoxShape.circle,
@@ -616,20 +617,20 @@ class _CustomTransactionSheetState
                       child: Center(
                         child: RecordingCategoryIcon(
                           category: cat,
-                          size: 22,
+                          size: 19,
                           color: isSelected
                               ? Theme.of(context).colorScheme.primary
                               : (isDark ? Colors.white70 : const Color(0xFF4A4A4F)),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       cat.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w400,
                         color: isSelected
@@ -680,6 +681,7 @@ class _CustomTransactionSheetState
                 ),
                 Icon(
                   Icons.arrow_forward_rounded,
+                  size: 18,
                   color: isDark ? Colors.white38 : Colors.black26,
                 ),
                 _buildAccountPickerChip(
@@ -706,10 +708,10 @@ class _CustomTransactionSheetState
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF28282C) : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -717,15 +719,15 @@ class _CustomTransactionSheetState
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10.5,
                 color: isDark ? Colors.white38 : Colors.black38,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               accountName,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -735,29 +737,29 @@ class _CustomTransactionSheetState
     );
   }
 
-  /// 备注输入栏
+  /// 备注输入栏（高度 34dp）
   Widget _buildNoteInput(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        height: 38,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF262629) : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(19),
+          borderRadius: BorderRadius.circular(17),
         ),
         child: Row(
           children: [
             Expanded(
               child: TextField(
                 controller: _noteController,
-                style: const TextStyle(fontSize: 13),
+                style: const TextStyle(fontSize: 12.5),
                 decoration: InputDecoration(
                   hintText: '点击填写备注',
                   hintStyle: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12.5,
                     color: isDark ? Colors.white38 : const Color(0xFF9E9E9E),
                   ),
                   border: InputBorder.none,
@@ -768,7 +770,7 @@ class _CustomTransactionSheetState
             ),
             Icon(
               Icons.camera_alt_outlined,
-              size: 19,
+              size: 18,
               color: isDark ? Colors.white38 : const Color(0xFF9E9E9E),
             ),
           ],
@@ -777,7 +779,7 @@ class _CustomTransactionSheetState
     );
   }
 
-  /// 严格位于备注正下方：时间、账户、标签选择
+  /// 严格位于备注正下方：时间、账户、标签选择（高度 28dp）
   Widget _buildMetaSelectorRow(BuildContext context) {
     final accountsAsync = ref.watch(accountsStreamProvider(_ledgerId));
 
@@ -814,7 +816,7 @@ class _CustomTransactionSheetState
             title: timeStr,
             onTap: _pickDateTime,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
 
           // 账户选择 (非转账模式下)
           if (_selectedType != 2) ...[
@@ -828,7 +830,7 @@ class _CustomTransactionSheetState
                 });
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
           ],
 
           // 标签选择
@@ -859,18 +861,18 @@ class _CustomTransactionSheetState
           onTap();
         },
         child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: 13,
+                size: 12,
                 color: isDark ? Colors.white54 : const Color(0xFF757575),
               ),
               const SizedBox(width: 4),
@@ -880,7 +882,7 @@ class _CustomTransactionSheetState
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: isDark ? Colors.white70 : const Color(0xFF424242),
                   ),
                 ),
