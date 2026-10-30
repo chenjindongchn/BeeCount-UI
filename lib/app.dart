@@ -15,6 +15,7 @@ import 'pages/account/accounts_page.dart';
 import 'pages/budget/budget_page.dart';
 import 'pages/main/mine_page.dart';
 import 'pages/transaction/transaction_editor_page.dart';
+import 'custom_ui/pages/custom_transaction_sheet.dart';
 import 'providers.dart';
 import 'l10n/app_localizations.dart';
 import 'widget/widget_manager.dart';
@@ -852,17 +853,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
                   ref.read(bottomTabIndexProvider.notifier).state = index;
                 }
               },
-              onCenterTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const TransactionEditorPage(
-                      initialKind: 'expense',
-                      quickAdd: true,
-                    ),
-                  ),
-                );
-              },
+              onCenterTap: () => showCustomTransactionSheet(context),
               onCenterLongPressStart: _onLongPressStart,
               onCenterLongPressMoveUpdate: _onLongPressMoveUpdate,
               onCenterLongPressEnd: _onLongPressEnd,
