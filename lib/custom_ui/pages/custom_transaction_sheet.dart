@@ -56,6 +56,7 @@ class _CustomTransactionSheetState
   // 0=支出, 1=收入, 2=转账
   late int _selectedType;
   late int _ledgerId;
+  late final PageController _pageController;
 
   // 金额相关
   String _amountExpression = '0';
@@ -80,6 +81,7 @@ class _CustomTransactionSheetState
         : widget.initialKind == 'transfer'
             ? 2
             : 0;
+    _pageController = PageController(initialPage: _selectedType);
     _selectedDate = DateTime.now();
     _ledgerId = ref.read(currentLedgerIdProvider);
     _selectedAccountId = widget.initialAccountId;
@@ -88,6 +90,7 @@ class _CustomTransactionSheetState
 
   @override
   void dispose() {
+    _pageController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -120,7 +123,6 @@ class _CustomTransactionSheetState
       if (_amountExpression == '0') {
         _amountExpression = digit;
       } else {
-        // 限制小数位数最多2位
         final parts = _amountExpression.split(RegExp(r'[\+\-]'));
         final currentNumber = parts.last;
         if (currentNumber.contains('.')) {
@@ -220,7 +222,6 @@ class _CustomTransactionSheetState
 
     try {
       if (_selectedType == 2) {
-        // 转账逻辑
         if (_selectedAccountId == null || _transferToAccountId == null) {
           _showToast('请选择转出与转入账户');
           setState(() => _isSaving = false);
@@ -258,7 +259,6 @@ class _CustomTransactionSheetState
           onCreated: (_) {},
         );
       } else {
-        // 支出 / 收入
         final AmountEditorResult resultRecord = (
           amount: amount,
           continueAdding: continueAdding,
@@ -323,6 +323,7 @@ class _CustomTransactionSheetState
   Widget build(BuildContext context) {
     final cardBg = OriginSheetTokens.cardColor(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Container(
       decoration: BoxDecoration(
@@ -331,67 +332,70 @@ class _CustomTransactionSheetState
           top: Radius.circular(OriginSheetTokens.cornerRadius),
         ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. 顶部拖拽热区条（OriginOS 规范）
-            OriginSheetDragRegion(
-              child: Center(
-                child: Container(
-                  width: 36,
-                  height: 4.5,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(2.5),
-                  ),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. 顶部拖拽热区条（OriginOS 规范，支持下拉手势退出）
+          OriginSheetDragRegion(
+            child: Center(
+              child: Container(
+                width: 36,
+                height: 4.5,
+                margin: const EdgeInsets.only(top: 8, bottom: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.black12,
+                  borderRadius: BorderRadius.circular(2.5),
                 ),
               ),
             ),
+          ),
 
-            // 2. 居中类型切换 Segmented（无 X 号，严格符合要求）
-            _buildTypeSegmented(context),
+          // 2. 居中类型切换 Segmented（无 X 号，严格对齐要求）
+          _buildTypeSegmented(context),
 
-            const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
-            // 3. 金额大字输入展示区
-            _buildAmountDisplay(context),
-
-            const SizedBox(height: 8),
-
-            // 4. 中间内容区域（根据类型区分分类网格或转账账户选择）
-            Flexible(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_selectedType == 2)
-                      _buildTransferAccounts(context)
-                    else
-                      _buildCategoryGrid(context),
-
-                    const SizedBox(height: 8),
-
-                    // 5. 备注输入栏
-                    _buildNoteInput(context),
-
-                    const SizedBox(height: 8),
-
-                    // 6. 时间、账户、标签选择栏（严格位于备注正下方）
-                    _buildMetaSelectorRow(context),
-                  ],
-                ),
-              ),
+          // 3. 支持左右滑动切换的分类网格与转账视图（PageView 充满剩余高度）
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                if (_selectedType != index) {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _selectedType = index;
+                    _selectedCategory = null;
+                  });
+                }
+              },
+              children: [
+                _buildCategoryGrid(context, kind: 'expense'),
+                _buildCategoryGrid(context, kind: 'income'),
+                _buildTransferAccounts(context),
+              ],
             ),
+          ),
 
-            const SizedBox(height: 6),
+          // 4. 金额大字输入展示区（严格位于备注正上方！）
+          _buildAmountDisplay(context),
 
-            // 7. OriginOS 风格数字键盘
-            OriginKeypad(
+          const SizedBox(height: 6),
+
+          // 5. 备注输入栏
+          _buildNoteInput(context),
+
+          const SizedBox(height: 6),
+
+          // 6. 时间、账户、标签选择栏（严格位于备注正下方！）
+          _buildMetaSelectorRow(context),
+
+          const SizedBox(height: 4),
+
+          // 7. OriginOS 风格数字键盘（紧贴最底部，消除多余空隙）
+          Padding(
+            padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset * 0.4 : 4.0),
+            child: OriginKeypad(
               onDigit: _onDigit,
               onOperator: _onOperator,
               onBackspace: _onBackspace,
@@ -400,8 +404,8 @@ class _CustomTransactionSheetState
               onSave: () => _submit(continueAdding: false),
               onSaveAndContinue: () => _submit(continueAdding: true),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -445,8 +449,13 @@ class _CustomTransactionSheetState
           HapticFeedback.selectionClick();
           setState(() {
             _selectedType = index;
-            _selectedCategory = null; // 切换后重置选中分类
+            _selectedCategory = null;
           });
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+          );
         }
       },
       child: AnimatedContainer(
@@ -482,12 +491,12 @@ class _CustomTransactionSheetState
     );
   }
 
-  /// 金额大字展示区
+  /// 金额大字展示区（位于备注上方）
   Widget _buildAmountDisplay(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -498,7 +507,7 @@ class _CustomTransactionSheetState
               Text(
                 '¥',
                 style: TextStyle(
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: isDark ? Colors.white70 : const Color(0xFF2C2C2E),
                 ),
@@ -511,7 +520,7 @@ class _CustomTransactionSheetState
                   child: Text(
                     _amountExpression,
                     style: TextStyle(
-                      fontSize: 36,
+                      fontSize: 34,
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.5,
                       color: isDark ? Colors.white : const Color(0xFF1D1D1F),
@@ -521,7 +530,7 @@ class _CustomTransactionSheetState
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Divider(
             height: 1,
             thickness: 0.8,
@@ -533,48 +542,41 @@ class _CustomTransactionSheetState
   }
 
   /// 5 列精致分类图标网格
-  Widget _buildCategoryGrid(BuildContext context) {
+  Widget _buildCategoryGrid(BuildContext context, {required String kind}) {
     final categoriesAsync = ref.watch(
-      recordingCategoriesProvider((ledgerId: _ledgerId, kind: _currentKind)),
+      recordingCategoriesProvider((ledgerId: _ledgerId, kind: kind)),
     );
 
     return categoriesAsync.when(
-      loading: () => const SizedBox(
-        height: 140,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      loading: () => const Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
       ),
-      error: (_, __) => const SizedBox(
-        height: 140,
-        child: Center(child: Text('分类加载失败')),
-      ),
+      error: (_, __) => const Center(child: Text('分类加载失败')),
       data: (categories) {
         if (categories.isEmpty) {
-          return const SizedBox(
-            height: 100,
-            child: Center(child: Text('暂无分类')),
-          );
+          return const Center(child: Text('暂无分类'));
         }
 
-        // 默认选中第一个
-        if (_selectedCategory == null && categories.isNotEmpty) {
+        if (_selectedCategory == null &&
+            _currentKind == kind &&
+            categories.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _selectedCategory == null) {
-              setState(() => _selectedCategory = categories.first);
+            if (mounted && _selectedCategory == null && categories.isNotEmpty) {
+              setState(() => _selectedCategory = categories.firstOrNull);
             }
           });
         }
 
-        return Container(
-          height: 155,
+        return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: GridView.builder(
             physics: const BouncingScrollPhysics(),
             scrollDirection: Axis.vertical,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 5,
-              mainAxisSpacing: 10,
+              mainAxisSpacing: 8,
               crossAxisSpacing: 8,
-              childAspectRatio: 0.9,
+              childAspectRatio: 0.88,
             ),
             itemCount: categories.length,
             itemBuilder: (context, index) {
@@ -599,8 +601,8 @@ class _CustomTransactionSheetState
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      width: 46,
-                      height: 46,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: isSelected ? selectedBg : unselectedBg,
                         shape: BoxShape.circle,
@@ -621,13 +623,13 @@ class _CustomTransactionSheetState
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       cat.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 11,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w400,
                         color: isSelected
@@ -651,44 +653,43 @@ class _CustomTransactionSheetState
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return accountsAsync.when(
-      loading: () => const SizedBox(height: 100),
-      error: (_, __) => const SizedBox(height: 100, child: Text('加载账户失败')),
+      loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      error: (_, __) => const Center(child: Text('加载账户失败')),
       data: (accounts) {
+        if (accounts.isEmpty) {
+          return const Center(child: Text('暂无可用账户，请先添加账户'));
+        }
         if (_transferToAccountId == null && accounts.length > 1) {
           _transferToAccountId = accounts[1].id;
         }
 
-        final fromAcc = accounts.firstWhere(
-          (a) => a.id == _selectedAccountId,
-          orElse: () => accounts.first,
-        );
-        final toAcc = accounts.firstWhere(
-          (a) => a.id == _transferToAccountId,
-          orElse: () => accounts.last,
-        );
+        final fromAcc = accounts.where((a) => a.id == _selectedAccountId).firstOrNull ?? accounts.first;
+        final toAcc = accounts.where((a) => a.id == _transferToAccountId).firstOrNull ?? (accounts.length > 1 ? accounts[1] : accounts.first);
 
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildAccountPickerChip(
-                context,
-                label: '转出账户',
-                accountName: fromAcc.name,
-                onTap: () => _pickAccount(context, accounts, true),
-              ),
-              Icon(
-                Icons.arrow_forward_rounded,
-                color: isDark ? Colors.white38 : Colors.black26,
-              ),
-              _buildAccountPickerChip(
-                context,
-                label: '转入账户',
-                accountName: toAcc.name,
-                onTap: () => _pickAccount(context, accounts, false),
-              ),
-            ],
+        return Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildAccountPickerChip(
+                  context,
+                  label: '转出账户',
+                  accountName: fromAcc.name,
+                  onTap: () => _pickAccount(context, accounts, true),
+                ),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  color: isDark ? Colors.white38 : Colors.black26,
+                ),
+                _buildAccountPickerChip(
+                  context,
+                  label: '转入账户',
+                  accountName: toAcc.name,
+                  onTap: () => _pickAccount(context, accounts, false),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -705,12 +706,13 @@ class _CustomTransactionSheetState
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF28282C) : const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               label,
@@ -740,22 +742,22 @@ class _CustomTransactionSheetState
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        height: 42,
+        height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF262629) : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(21),
+          borderRadius: BorderRadius.circular(19),
         ),
         child: Row(
           children: [
             Expanded(
               child: TextField(
                 controller: _noteController,
-                style: const TextStyle(fontSize: 13.5),
+                style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: '点击填写备注',
                   hintStyle: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 13,
                     color: isDark ? Colors.white38 : const Color(0xFF9E9E9E),
                   ),
                   border: InputBorder.none,
@@ -766,7 +768,7 @@ class _CustomTransactionSheetState
             ),
             Icon(
               Icons.camera_alt_outlined,
-              size: 20,
+              size: 19,
               color: isDark ? Colors.white38 : const Color(0xFF9E9E9E),
             ),
           ],
@@ -781,11 +783,12 @@ class _CustomTransactionSheetState
 
     String accountTitle = '账户';
     accountsAsync.whenData((accounts) {
-      final acc = accounts.firstWhere(
-        (a) => a.id == _selectedAccountId,
-        orElse: () => accounts.first,
-      );
-      accountTitle = acc.name;
+      if (accounts.isNotEmpty) {
+        final acc = accounts.where((a) => a.id == _selectedAccountId).firstOrNull ?? accounts.firstOrNull;
+        if (acc != null) {
+          accountTitle = acc.name;
+        }
+      }
     });
 
     final now = DateTime.now();
@@ -856,18 +859,18 @@ class _CustomTransactionSheetState
           onTap();
         },
         child: Container(
-          height: 34,
+          height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(17),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: 14,
+                size: 13,
                 color: isDark ? Colors.white54 : const Color(0xFF757575),
               ),
               const SizedBox(width: 4),
@@ -877,7 +880,7 @@ class _CustomTransactionSheetState
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     color: isDark ? Colors.white70 : const Color(0xFF424242),
                   ),
                 ),
