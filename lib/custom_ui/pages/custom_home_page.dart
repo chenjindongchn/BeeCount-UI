@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_list_view/flutter_list_view.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
+import '../../providers/avatar_providers.dart';
 import '../../utils/month_range.dart';
 import '../../utils/format_money.dart';
 import '../../utils/currencies.dart';
@@ -13,8 +15,8 @@ import '../../pages/main/home/widgets/home_reminders.dart';
 import '../../pages/main/ledgers_page_new.dart';
 import '../../pages/shared/selectors/ledger_picker_sheet.dart';
 import '../../pages/shared/pickers/wheel_date_picker.dart';
+import '../../pages/shared/widgets/feature_dot.dart';
 import '../../pages/transaction/search_page.dart';
-import '../../pages/calendar/calendar_page.dart';
 import '../../pages/report/annual_report_page.dart';
 import '../../pages/ai/ai_chat_page.dart';
 import '../../services/export/share_poster_service.dart';
@@ -24,6 +26,7 @@ import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
 import '../widgets/origin_divider.dart';
+import 'custom_mine_page.dart';
 
 /// vivo OriginOS 风格流水看板首页 (CustomHomePage)
 ///
@@ -46,6 +49,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
       GlobalKey<OriginTransactionListState>();
   final Set<String> _visibleHeaders = {};
   Timer? _debounceTimer;
+  bool _showStickyMonthBar = false;
 
   @override
   void initState() {
@@ -86,10 +90,10 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     );
   }
 
-  void _openCalendar() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CalendarPage()),
+  void _openMinePage() {
+    _transactionListKey.currentState?.switchToStreamMode();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CustomMinePage()),
     );
   }
 
@@ -163,6 +167,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     final month = ref.watch(selectedMonthProvider);
     final hideAmounts = ref.watch(hideAmountsProvider);
     final primaryColor = ref.watch(primaryColorProvider);
+    final avatarPath = ref.watch(avatarPathProvider).asData?.value;
 
     final params = (ledgerId: ledgerId, month: month);
     ref.watch(monthlyTotalsProvider(params));
@@ -181,6 +186,11 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     ref.listen<int>(homeScrollToTopProvider, (prev, next) {
       if (prev != next) {
         _transactionListKey.currentState?.jumpToTop();
+        if (_showStickyMonthBar) {
+          setState(() {
+            _showStickyMonthBar = false;
+          });
+        }
       }
     });
 
@@ -206,122 +216,318 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
             tooltip: '切换账本',
             onPressed: _openLedgerPicker,
           ),
-          // AI 按钮
+          // 我的 / 个人中心入口按钮（支持头像与新功能红点）
+          IconButton(
+            tooltip: l10n.tabMine,
+            onPressed: _openMinePage,
+            icon: FeatureDot(
+              anchor: 'tab_mine',
+              offset: const Offset(-2, 0),
+              child: avatarPath != null
+                  ? Container(
+                      width: 24.0,
+                      height: 24.0,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: primaryColor.withValues(alpha: 0.5),
+                          width: 1.2,
+                        ),
+                        image: DecorationImage(
+                          image: FileImage(File(avatarPath)),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
+                  : const Icon(Icons.person_outline_rounded),
+            ),
+          ),
+          // AI 按钮（居最右侧）
           IconButton(
             icon: Icon(Icons.auto_awesome_rounded, color: primaryColor),
             tooltip: l10n.aiChatTitle,
             onPressed: _openAIChat,
           ),
-          // 搜索按钮
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            tooltip: l10n.homeSearch,
-            onPressed: () => _openSearch(),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // 1. 流水列表（外层包裹滚动通知监听，感知上滑进入明细区域）
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.axis == Axis.vertical) {
+                final show = notification.metrics.pixels > 65.0;
+                if (show != _showStickyMonthBar) {
+                  setState(() {
+                    _showStickyMonthBar = show;
+                  });
+                }
+              }
+              return false;
+            },
+            child: OriginTransactionFeed(
+              header: Column(
+                children: [
+                  // 1. 月度收支看板卡片（彻底移除“支出”字样，大金额与小眼睛同行，收缩卡片高度）
+                  OriginCard(
+                    onTap: _handleDateSelection,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              hideAmounts
+                                  ? '****'
+                                  : '$currencySymbol ${formatMoneyCompact(expense)}',
+                              style: TextStyle(
+                                fontSize: 26.0,
+                                fontWeight: FontWeight.bold,
+                                color: OriginTokens.textPrimary(context),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: Icon(
+                                hideAmounts
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                size: 20.0,
+                                color: OriginTokens.textTertiary(context),
+                              ),
+                              onPressed: () {
+                                ref.read(hideAmountsProvider.notifier).state =
+                                    !hideAmounts;
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10.0),
+                        const OriginDivider(startIndent: 0),
+                        const SizedBox(height: 10.0),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '本月收入',
+                                    style: TextStyle(
+                                      fontSize: 12.0,
+                                      color: OriginTokens.textSecondary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3.0),
+                                  Text(
+                                    hideAmounts
+                                        ? '****'
+                                        : '$currencySymbol ${formatMoneyCompact(income)}',
+                                    style: const TextStyle(
+                                      fontSize: 15.0,
+                                      fontWeight: FontWeight.w600,
+                                      color: OriginTokens.incomeGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '月度结余',
+                                    style: TextStyle(
+                                      fontSize: 12.0,
+                                      color: OriginTokens.textSecondary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3.0),
+                                  Text(
+                                    hideAmounts
+                                        ? '****'
+                                        : '$currencySymbol ${formatMoneyCompact(balance)}',
+                                    style: TextStyle(
+                                      fontSize: 15.0,
+                                      fontWeight: FontWeight.w600,
+                                      color: balance < 0
+                                          ? OriginTokens.expenseRed
+                                          : OriginTokens.textPrimary(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 2. 提醒模块 (月度报告、年度账单、预算提醒)
+                  HomeReminders(
+                    onMonthly: (m) =>
+                        SharePosterService.showPosterCarouselPreview(
+                      context,
+                      year: m.year,
+                      month: m.month,
+                    ),
+                    onAnnual: (y) => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AnnualReportPage(initialYear: y),
+                      ),
+                    ),
+                    onBudget: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AnnualReportPage(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6.0),
+                ],
+              ),
+              startupPreview: initialPreview,
+              ledgerId: ledgerId,
+              hideAmounts: hideAmounts,
+              listKey: _transactionListKey,
+              controller: _listController,
+              onDateVisibilityChanged: _onHeaderVisibilityChanged,
+              onBatch: () => _openSearch(batch: true),
+              emptyWidget: BeeEmptyState(
+                title: l10n.homeNoRecords,
+                message: l10n.homeNoRecordsSubtext,
+              ),
+            ),
           ),
-          // 日历按钮
-          IconButton(
-            icon: const Icon(Icons.calendar_month_outlined),
-            tooltip: '日历看板',
-            onPressed: _openCalendar,
+
+          // 2. 吸顶月份与收支悬浮条（明细上滑到页面上方时显现，支持快速调节月份，右侧呈现收支）
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              offset: _showStickyMonthBar ? Offset.zero : const Offset(0, -0.2),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                opacity: _showStickyMonthBar ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !_showStickyMonthBar,
+                  child: _buildStickyMonthBar(
+                    context,
+                    month: month,
+                    expense: expense,
+                    income: income,
+                    hideAmounts: hideAmounts,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
-      body: OriginTransactionFeed(
-        header: Column(
-          children: [
-            // 1. 月度收支看板卡片（彻底移除“支出”字样，大金额与小眼睛同行，收缩卡片高度）
-            OriginCard(
-              onTap: _handleDateSelection,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  /// 吸顶月份与收支统计条（上滑悬浮固定，参考 OriginOS 与图片设计）
+  Widget _buildStickyMonthBar(
+    BuildContext context, {
+    required DateTime month,
+    required double expense,
+    required double income,
+    required bool hideAmounts,
+  }) {
+    final expenseStr = hideAmounts
+        ? '****'
+        : formatMoneyCompact(expense, maxDecimals: 2, trimZeros: false);
+    final incomeStr = hideAmounts
+        ? '****'
+        : formatMoneyCompact(income, maxDecimals: 2, trimZeros: false);
+
+    return Container(
+      height: 44.0,
+      color: OriginTokens.pageBackground(context),
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: OriginTokens.cardMargin,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        hideAmounts
-                            ? '****'
-                            : '$currencySymbol ${formatMoneyCompact(expense)}',
-                        style: TextStyle(
-                          fontSize: 26.0,
-                          fontWeight: FontWeight.bold,
-                          color: OriginTokens.textPrimary(context),
-                          letterSpacing: -0.5,
+                  // 左侧：当前月份（点击可快速调节）
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _handleDateSelection,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${month.year}年${month.month}月',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.w600,
+                            color: OriginTokens.textPrimary(context),
+                            letterSpacing: -0.2,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        icon: Icon(
-                          hideAmounts
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                        const SizedBox(width: 2.0),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
                           size: 20.0,
                           color: OriginTokens.textTertiary(context),
                         ),
-                        onPressed: () {
-                          ref.read(hideAmountsProvider.notifier).state =
-                              !hideAmounts;
-                        },
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 10.0),
-                  const OriginDivider(startIndent: 0),
-                  const SizedBox(height: 10.0),
+
+                  // 右侧：支出与收入统计 (支 228.43  收 0.00)
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '本月收入',
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: OriginTokens.textSecondary(context),
-                              ),
-                            ),
-                            const SizedBox(height: 3.0),
-                            Text(
-                              hideAmounts
-                                  ? '****'
-                                  : '$currencySymbol ${formatMoneyCompact(income)}',
-                              style: const TextStyle(
-                                fontSize: 15.0,
-                                fontWeight: FontWeight.w600,
-                                color: OriginTokens.incomeGreen,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        '支 ',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: OriginTokens.textSecondary(context),
                         ),
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '月度结余',
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: OriginTokens.textSecondary(context),
-                              ),
-                            ),
-                            const SizedBox(height: 3.0),
-                            Text(
-                              hideAmounts
-                                  ? '****'
-                                  : '$currencySymbol ${formatMoneyCompact(balance)}',
-                              style: TextStyle(
-                                fontSize: 15.0,
-                                fontWeight: FontWeight.w600,
-                                color: balance < 0
-                                    ? OriginTokens.expenseRed
-                                    : OriginTokens.textPrimary(context),
-                              ),
-                            ),
-                          ],
+                      Text(
+                        expenseStr,
+                        style: TextStyle(
+                          fontSize: 14.0,
+                          fontWeight: FontWeight.w500,
+                          color: OriginTokens.textPrimary(context),
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      const SizedBox(width: 14.0),
+                      Text(
+                        '收 ',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: OriginTokens.textSecondary(context),
+                        ),
+                      ),
+                      Text(
+                        incomeStr,
+                        style: TextStyle(
+                          fontSize: 14.0,
+                          fontWeight: FontWeight.w500,
+                          color: OriginTokens.textPrimary(context),
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -329,42 +535,9 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                 ],
               ),
             ),
-
-            // 2. 提醒模块 (月度报告、年度账单、预算提醒)
-            HomeReminders(
-              onMonthly: (m) =>
-                  SharePosterService.showPosterCarouselPreview(
-                context,
-                year: m.year,
-                month: m.month,
-              ),
-              onAnnual: (y) => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AnnualReportPage(initialYear: y),
-                ),
-              ),
-              onBudget: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AnnualReportPage(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6.0),
-          ],
-        ),
-        startupPreview: initialPreview,
-        ledgerId: ledgerId,
-        hideAmounts: hideAmounts,
-        listKey: _transactionListKey,
-        controller: _listController,
-        onDateVisibilityChanged: _onHeaderVisibilityChanged,
-        onBatch: () => _openSearch(batch: true),
-        emptyWidget: BeeEmptyState(
-          title: l10n.homeNoRecords,
-          message: l10n.homeNoRecordsSubtext,
-        ),
+          ),
+          const OriginDivider(startIndent: 0),
+        ],
       ),
     );
   }

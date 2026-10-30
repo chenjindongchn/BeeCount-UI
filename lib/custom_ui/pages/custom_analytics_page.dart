@@ -5,6 +5,8 @@ import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../utils/month_range.dart';
 import '../../pages/ai/ai_chat_page.dart';
+import '../../pages/transaction/search_page.dart';
+import '../../pages/calendar/calendar_page.dart';
 import '../../pages/shared/pickers/wheel_date_picker.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
 import '../styles/origin_tokens.dart';
@@ -76,6 +78,20 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
     );
   }
 
+  void _openSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchPage()),
+    );
+  }
+
+  void _openCalendar() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CalendarPage()),
+    );
+  }
+
   Future<void> _runRecalcForeignTx(int count) async {
     final l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -131,6 +147,19 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
         title: l10n.tabInsights,
         leading: widget.showBack ? const BackButton() : null,
         actions: [
+          // 搜索按钮（移自明细页，置于 AI 左侧）
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            tooltip: l10n.homeSearch,
+            onPressed: _openSearch,
+          ),
+          // 日历按钮（移自明细页，置于 AI 左侧）
+          IconButton(
+            icon: const Icon(Icons.calendar_month_outlined),
+            tooltip: '日历看板',
+            onPressed: _openCalendar,
+          ),
+          // AI 按钮
           TextButton.icon(
             style: TextButton.styleFrom(
               foregroundColor: primaryColor,
