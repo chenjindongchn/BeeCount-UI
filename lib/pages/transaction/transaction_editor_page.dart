@@ -14,6 +14,7 @@ import 'recording/bindings/amount_editor_sheet.dart';
 import 'recording/bindings/transfer_form.dart';
 import 'recording/bindings/recording_category_section.dart';
 import 'recording/bindings/recording_save.dart';
+import '../../custom_ui/pages/custom_transaction_page.dart';
 
 /// 交易编辑器页面
 /// 支持创建/编辑收入、支出和转账记录
@@ -148,6 +149,22 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 挂载 OriginUI 定制记账页面，实现全局所有调用处统一切换且对业务调用方零侵入
+    return CustomTransactionPage(
+      initialKind: widget.initialKind,
+      initialCategoryId: widget.initialCategoryId,
+      initialAccountId: widget.initialAccountId,
+      initialToAccountId: widget.initialToAccountId,
+      initialDate: widget.initialDate,
+      initialTagIds: widget.initialTagIds,
+      initialAmount: widget.initialAmount,
+      initialNote: widget.initialNote,
+      editingTransactionId: widget.editingTransactionId,
+      isCopy: widget.isCopy,
+      excludeFromStats: widget.initialExcludeFromStats,
+      excludeFromBudget: widget.initialExcludeFromBudget,
+    );
+    // ignore: dead_code
     final theme = Theme.of(context);
     final cards = BeeCardTheme.fromBrightness(theme.brightness);
     final l10n = AppLocalizations.of(context);

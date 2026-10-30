@@ -41,11 +41,35 @@ class CustomTransactionSheet extends ConsumerStatefulWidget {
     this.initialKind = 'expense',
     this.initialCategoryId,
     this.initialAccountId,
+    this.initialToAccountId,
+    this.initialDate,
+    this.initialTagIds,
+    this.initialAmount,
+    this.initialNote,
+    this.editingTransactionId,
+    this.isCopy = false,
+    this.excludeFromStats = false,
+    this.excludeFromBudget = false,
+    this.showDragHandle = true,
+    this.showTopBar = false,
+    this.onClose,
   });
 
   final String initialKind;
   final int? initialCategoryId;
   final int? initialAccountId;
+  final int? initialToAccountId;
+  final DateTime? initialDate;
+  final List<int>? initialTagIds;
+  final double? initialAmount;
+  final String? initialNote;
+  final int? editingTransactionId;
+  final bool isCopy;
+  final bool excludeFromStats;
+  final bool excludeFromBudget;
+  final bool showDragHandle;
+  final bool showTopBar;
+  final VoidCallback? onClose;
 
   @override
   ConsumerState<CustomTransactionSheet> createState() =>
@@ -83,9 +107,24 @@ class _CustomTransactionSheetState
             ? 2
             : 0;
     _pageController = PageController(initialPage: _selectedType);
-    _selectedDate = DateTime.now();
+    _selectedDate = widget.initialDate ?? DateTime.now();
     _ledgerId = ref.read(currentLedgerIdProvider);
     _selectedAccountId = widget.initialAccountId;
+    _transferToAccountId = widget.initialToAccountId;
+    if (widget.initialTagIds != null && widget.initialTagIds!.isNotEmpty) {
+      _selectedTagIds = List.from(widget.initialTagIds!);
+    }
+    if (widget.initialAmount != null && widget.initialAmount! > 0) {
+      final amt = widget.initialAmount!;
+      if (amt == amt.roundToDouble()) {
+        _amountExpression = amt.toInt().toString();
+      } else {
+        _amountExpression = amt.toStringAsFixed(2);
+      }
+    }
+    if (widget.initialNote != null && widget.initialNote!.isNotEmpty) {
+      _noteController.text = widget.initialNote!;
+    }
     _initDefaultAccount();
   }
 
@@ -238,7 +277,6 @@ class _CustomTransactionSheetState
           setState(() => _isSaving = false);
           return;
         }
-        final transferCat = await ref.read(transferCategoryProvider.future);
         final AmountEditorResult resultRecord = (
           amount: amount,
           continueAdding: continueAdding,
@@ -249,19 +287,19 @@ class _CustomTransactionSheetState
           accountId: _selectedAccountId,
           tagIds: _selectedTagIds,
           pendingAttachments: const <File>[],
-          excludeFromStats: false,
-          excludeFromBudget: false,
+          excludeFromStats: widget.excludeFromStats,
+          excludeFromBudget: widget.excludeFromBudget,
           currencyCode: null as String?,
           nativeAmount: null as double?,
         );
 
-        await persistRecordingDraft(
+        await persistTransferDraft(
           ref,
           ledgerId: _ledgerId,
-          category: transferCat,
-          kind: 'transfer',
           result: resultRecord,
-          editingId: null,
+          fromAccountId: _selectedAccountId!,
+          toAccountId: _transferToAccountId!,
+          editingId: widget.editingTransactionId,
           onCreated: (_) {},
         );
       } else {
@@ -275,8 +313,8 @@ class _CustomTransactionSheetState
           accountId: _selectedAccountId,
           tagIds: _selectedTagIds,
           pendingAttachments: const <File>[],
-          excludeFromStats: false,
-          excludeFromBudget: false,
+          excludeFromStats: widget.excludeFromStats,
+          excludeFromBudget: widget.excludeFromBudget,
           currencyCode: null as String?,
           nativeAmount: null as double?,
         );
@@ -287,7 +325,7 @@ class _CustomTransactionSheetState
           category: catToSave!,
           kind: _currentKind,
           result: resultRecord,
-          editingId: null,
+          editingId: widget.editingTransactionId,
           onCreated: (_) {},
         );
       }
@@ -302,7 +340,7 @@ class _CustomTransactionSheetState
         });
         _showToast('已记一笔，请继续');
       } else {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -342,23 +380,24 @@ class _CustomTransactionSheetState
         mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. 顶部拖拽热区条（OriginOS 规范，支持下拉手势退出）
-          OriginSheetDragRegion(
-            child: Center(
-              child: Container(
-                width: 32,
-                height: 4,
-                margin: const EdgeInsets.only(top: 7, bottom: 5),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black12,
-                  borderRadius: BorderRadius.circular(2),
+          // 1. 顶部拖拽热区条（抽屉模式下展示）
+          if (widget.showDragHandle)
+            OriginSheetDragRegion(
+              child: Center(
+                child: Container(
+                  width: 32,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 7, bottom: 5),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // 2. 居中类型切换 Segmented（紧凑小巧，无 X 号）
-          _buildTypeSegmented(context),
+          // 2. 居中类型切换 Segmented（页面模式下左侧提供轻巧返回按钮）
+          _buildTopHeader(context),
 
           const SizedBox(height: 4),
 
@@ -419,6 +458,43 @@ class _CustomTransactionSheetState
               onSaveAndContinue: () => _submit(continueAdding: true),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// 顶部栏容器（根据 showTopBar 动态提供返回按钮或纯居中胶囊）
+  Widget _buildTopHeader(BuildContext context) {
+    if (!widget.showTopBar) {
+      return _buildTypeSegmented(context);
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onClose ?? () => Navigator.maybePop(context),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white12
+                      : Colors.black.withValues(alpha: 0.06),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 15,
+                ),
+              ),
+            ),
+          ),
+          _buildTypeSegmented(context),
         ],
       ),
     );
