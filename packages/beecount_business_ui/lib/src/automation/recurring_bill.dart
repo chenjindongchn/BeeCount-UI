@@ -84,7 +84,7 @@ class BeeRecurringBillCard extends StatelessWidget {
                 ],
                 Semantics(
                     label: toggleLabel,
-                    child: Switch(
+                    child: OriginSwitch(
                         value: enabled, onChanged: busy ? null : onToggle)),
               ]),
               const SizedBox(height: 12),

@@ -2119,12 +2119,18 @@ class _S3ConfigDialogState extends State<_S3ConfigDialog> {
               label: l.cloudS3BucketLabel,
               hint: l.cloudS3BucketHint,
               controller: bucketController),
-          SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l.cloudS3UseSSLLabel,
-                  style: const TextStyle(fontSize: 13)),
-              value: useSSL,
-              onChanged: (value) => setState(() => useSSL = value)),
+          InkWell(
+              onTap: () => setState(() => useSSL = !useSSL),
+              child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(children: [
+                    Expanded(
+                        child: Text(l.cloudS3UseSSLLabel,
+                            style: const TextStyle(fontSize: 13))),
+                    OriginSwitch(
+                        value: useSSL,
+                        onChanged: (value) => setState(() => useSSL = value)),
+                  ]))),
           BeeField(
               key: const ValueKey('cc91-s3-port'),
               label: l.cloudS3PortLabel,

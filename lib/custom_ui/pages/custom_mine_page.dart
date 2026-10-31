@@ -34,6 +34,8 @@ import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
 import '../widgets/origin_setting_card.dart';
+import '../widgets/origin_dialog.dart';
+import '../widgets/origin_bottom_sheet.dart';
 
 /// vivo OriginOS 风格“我的”与设置页面 (CustomMinePage)
 ///
@@ -64,17 +66,49 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
     );
   }
 
+  IconData _mapChoiceIcon(String icon) {
+    switch (icon) {
+      case 'Settings2':
+        return Icons.brightness_auto_rounded;
+      case 'Sun':
+        return Icons.light_mode_rounded;
+      case 'Moon':
+        return Icons.dark_mode_rounded;
+      case 'List':
+        return Icons.format_list_bulleted_rounded;
+      case 'Minimize':
+        return Icons.compress_rounded;
+      case 'Tag':
+        return Icons.label_outline_rounded;
+      case 'PencilLine':
+        return Icons.edit_note_rounded;
+      case 'TrendingUp':
+        return Icons.trending_up_rounded;
+      case 'TrendingDown':
+        return Icons.trending_down_rounded;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
   Future<void> _choose<T>(
     String title,
     T selected,
     List<({T value, String title, String? subtitle, String icon})> options,
     ValueChanged<T> save,
   ) async {
-    final value = await showAppearanceChoice<T>(
+    final value = await showOriginActionSheet<T>(
       context,
       title: title,
       selected: selected,
-      options: options,
+      options: options.map((opt) {
+        return OriginChoiceOption<T>(
+          value: opt.value,
+          title: opt.title,
+          subtitle: opt.subtitle,
+          icon: _mapChoiceIcon(opt.icon),
+        );
+      }).toList(),
     );
     if (mounted && value != null) {
       save(value);
@@ -198,6 +232,16 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                 ),
                 onTap: () => _open(const AutomationPage()),
               ),
+              OriginSettingItem(
+                title: '账户偏好设置',
+                subtitle: '设置默认支出与收入账户',
+                leading: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                onTap: () => showOriginAccountPreferencesSheet(context, ref),
+              ),
             ],
           ),
 
@@ -263,9 +307,9 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                   size: 22.0,
                 ),
                 showArrow: false,
-                trailing: Switch.adaptive(
+                trailing: OriginSwitch(
                   value: skinAnimation,
-                  activeTrackColor: primaryColor,
+                  activeColor: primaryColor,
                   onChanged: (v) => ref
                       .read(skinAnimationEnabledProvider.notifier)
                       .state = v,
@@ -330,9 +374,9 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                   size: 22.0,
                 ),
                 showArrow: false,
-                trailing: Switch.adaptive(
+                trailing: OriginSwitch(
                   value: showTime,
-                  activeTrackColor: primaryColor,
+                  activeColor: primaryColor,
                   onChanged: (v) => ref
                       .read(showTransactionTimeProvider.notifier)
                       .state = v,

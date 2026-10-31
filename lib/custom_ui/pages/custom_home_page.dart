@@ -13,7 +13,7 @@ import '../../utils/currencies.dart';
 import '../widgets/origin_transaction_feed.dart';
 import '../../pages/main/home/widgets/home_reminders.dart';
 import '../../pages/main/ledgers_page_new.dart';
-import '../../pages/shared/selectors/ledger_picker_sheet.dart';
+import '../widgets/origin_dialog.dart';
 import '../../pages/shared/pickers/wheel_date_picker.dart';
 import '../../pages/shared/widgets/feature_dot.dart';
 import '../../pages/transaction/search_page.dart';
@@ -26,6 +26,7 @@ import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
 import '../widgets/origin_divider.dart';
+import '../widgets/origin_menu.dart';
 import 'custom_mine_page.dart';
 
 /// vivo OriginOS 风格流水看板首页 (CustomHomePage)
@@ -125,7 +126,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
         ),
       );
     } else {
-      showLedgerPicker(context);
+      showOriginLedgerPickerDialog(context);
     }
   }
 
@@ -210,43 +211,51 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
       appBar: OriginLargeTopAppBar(
         title: ledger?.name ?? '日常账本',
         actions: [
-          // 账本切换按钮
-          IconButton(
-            icon: const Icon(Icons.book_outlined),
-            tooltip: '切换账本',
-            onPressed: _openLedgerPicker,
-          ),
-          // 我的 / 个人中心入口按钮（支持头像与新功能红点）
-          IconButton(
-            tooltip: l10n.tabMine,
-            onPressed: _openMinePage,
-            icon: FeatureDot(
-              anchor: 'tab_mine',
-              offset: const Offset(-2, 0),
-              child: avatarPath != null
-                  ? Container(
-                      width: 24.0,
-                      height: 24.0,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: primaryColor.withValues(alpha: 0.5),
-                          width: 1.2,
-                        ),
-                        image: DecorationImage(
-                          image: FileImage(File(avatarPath)),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    )
-                  : const Icon(Icons.person_outline_rounded),
+          // vivo OriginOS 规范：右上角“竖排双圆点”展示更多设置与功能入口
+          FeatureDot(
+            anchor: 'tab_mine',
+            offset: const Offset(-2, 0),
+            child: OriginMoreButton(
+              tooltip: '设置与功能',
+              items: [
+                OriginMenuItem(
+                  title: '切换账本',
+                  subtitle: ledger?.name ?? '日常账本',
+                  icon: const Icon(Icons.menu_book_outlined),
+                  onTap: _openLedgerPicker,
+                ),
+                OriginMenuItem(
+                  title: l10n.aiChatTitle,
+                  icon: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: primaryColor,
+                  ),
+                  onTap: _openAIChat,
+                ),
+                OriginMenuItem(
+                  title: l10n.searchTitle,
+                  icon: const Icon(Icons.search_rounded),
+                  onTap: () => _openSearch(),
+                ),
+                OriginMenuItem(
+                  title: l10n.tabMine,
+                  icon: avatarPath != null
+                      ? Container(
+                          width: 20.0,
+                          height: 20.0,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            image: DecorationImage(
+                              image: FileImage(File(avatarPath)),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        )
+                      : const Icon(Icons.person_outline_rounded),
+                  onTap: _openMinePage,
+                ),
+              ],
             ),
-          ),
-          // AI 按钮（居最右侧）
-          IconButton(
-            icon: Icon(Icons.auto_awesome_rounded, color: primaryColor),
-            tooltip: l10n.aiChatTitle,
-            onPressed: _openAIChat,
           ),
         ],
       ),

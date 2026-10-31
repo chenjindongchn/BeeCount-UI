@@ -156,15 +156,29 @@ class BeeCloudBackupPreference extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BeeSurface(
       padding: EdgeInsets.zero,
-      child: SwitchListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          title: Text(title, style: const TextStyle(fontSize: 14)),
-          subtitle: Text(subtitle,
-              style: TextStyle(
-                  fontSize: 12,
-                  height: 1.5,
-                  color: Theme.of(context).hintColor)),
-          value: value,
-          onChanged: onChanged));
+      child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onChanged == null ? null : () => onChanged!(!value),
+          child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(children: [
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                      Text(title, style: const TextStyle(fontSize: 14)),
+                      const SizedBox(height: 2),
+                      Text(subtitle,
+                          style: TextStyle(
+                              fontSize: 12,
+                              height: 1.5,
+                              color: Theme.of(context).hintColor)),
+                    ])),
+                const SizedBox(width: 12),
+                OriginSwitch(
+                    value: value,
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    onChanged: onChanged),
+              ]))));
 }

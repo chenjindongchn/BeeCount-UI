@@ -120,10 +120,8 @@ class BeeToggleRow extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context), cards = BeeCardTheme.of(context);
+    final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
-    final ink = theme.colorScheme.onPrimary;
-    const scale = 36 / 52;
     return MergeSemantics(
         child: Semantics(
             toggled: value,
@@ -160,34 +158,10 @@ class BeeToggleRow extends StatelessWidget {
                                 ]
                               ])),
                           const SizedBox(width: 12),
-                          SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: Center(
-                                  child: Transform.scale(
-                                      scale: scale,
-                                      child: Switch(
-                                          value: value,
-                                          onChanged: onChanged,
-                                          materialTapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                          trackOutlineWidth:
-                                              WidgetStatePropertyAll(1 / scale),
-                                          trackOutlineColor:
-                                              WidgetStatePropertyAll(value
-                                                  ? accent
-                                                  : theme.hintColor),
-                                          trackColor: WidgetStatePropertyAll(
-                                              value ? accent : cards.soft),
-                                          thumbColor:
-                                              const WidgetStatePropertyAll(
-                                                  Colors.transparent),
-                                          thumbIcon: WidgetStatePropertyAll(
-                                              Icon(Icons.circle,
-                                                  size: 14 / scale,
-                                                  color: value
-                                                      ? ink
-                                                      : theme.hintColor))))))
+                          OriginSwitch(
+                              value: value,
+                              onChanged: onChanged,
+                              activeColor: accent)
                         ]))))));
   }
 }

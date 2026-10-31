@@ -69,6 +69,98 @@ class OriginTokens {
   static const double floatingBarIconSize = 20.0;
 
   // ===========================================================================
+  // 1.1 对话框与开关几何真值 (Dialog & Switch Dimensions)
+  // 遵循蓝河工具箱 `OriginUI/docs/01-switch-and-dark-mode.md` 与 `22-update-dialog.md`
+  // ===========================================================================
+
+  /// 对话框圆角（vivo vigour 标准大圆角：30.0dp）
+  static const double dialogRadius = 30.0;
+
+  /// 对话框卡片标准宽度（304.0dp）
+  static const double dialogWidth = 304.0;
+
+  /// 对话框屏幕左右与底部外边距（28.0dp）
+  static const double dialogMargin = 28.0;
+
+  /// 对话框内部水平内边距（28.0dp）
+  static const double dialogContentPadding = 28.0;
+
+  /// 对话框标题顶部留白（40.0dp）
+  static const double dialogTitleTopPadding = 40.0;
+
+  /// 对话框标题底部留白（16.0dp）
+  static const double dialogTitleBottomPadding = 16.0;
+
+  /// 对话框正文与按钮间距（24.0dp）
+  static const double dialogMessageButtonGap = 24.0;
+
+  /// 对话框正文滚动区域最大高度（360.0dp，对齐 2/3 屏高规范）
+  static const double dialogMaxContentHeight = 360.0;
+
+  /// 对话框胶囊按钮高度（46.0dp）
+  static const double dialogButtonHeight = 46.0;
+
+  /// 对话框胶囊按钮圆角（23.0dp）
+  static const double dialogButtonRadius = 23.0;
+
+  /// 开关画布总宽（44.0dp，VivoMoveSwitch.java 运行时真值）
+  static const double switchWidth = 44.0;
+
+  /// 开关画布总高（26.0dp）
+  static const double switchHeight = 26.0;
+
+  /// 开关开启态实心胶囊轨道高度（14.0dp）
+  static const double switchTrackOnHeight = 14.0;
+
+  /// 开关关闭态空心轨道高度（22.0dp）
+  static const double switchTrackOffHeight = 22.0;
+
+  /// 开关关闭态空心轨道描边粗细（2.72dp）
+  static const double switchTrackOutlineStroke = 2.72;
+
+  /// 开关滑块外环彩色描边笔宽（3.0dp）
+  static const double switchThumbRingStroke = 3.0;
+
+  /// 开关关闭态滑块外圆半径（11.0dp，外径 22.0dp）
+  static const double switchThumbRadiusOff = 11.0;
+
+  /// 开关开启态滑块外圆半径（12.5dp，外径 25.0dp）
+  static const double switchThumbRadiusOn = 12.5;
+
+  /// 开关滑块位移中心点（关闭态：11.0dp，开启态：31.5dp）
+  static const double switchThumbCenterOff = 11.0;
+  static const double switchThumbCenterOn = 31.5;
+
+  /// 开关按压态圆角反馈（关闭态 6.0dp，开启态 8.0dp）
+  static const double switchThumbPressedRadiusOff = 6.0;
+  static const double switchThumbPressedRadiusOn = 8.0;
+
+  /// 开关开启态立体光效阴影模糊半径与Y偏移（6.5dp, 1.5dp）
+  static const double switchGlowRadius = 6.5;
+  static const double switchGlowOffsetY = 1.5;
+
+  // ===========================================================================
+  // 1.2 气泡更多菜单几何真值 (PopupMenu Dimensions)
+  // 遵循蓝河工具箱 `OriginUI/docs/21-navigation-menu-color-preferences.md` 与 `OriginDimens.kt`
+  // ===========================================================================
+
+  /// 气泡菜单大圆角（vigour_menu_list_radius = 16.0dp）
+  static const double popupMenuRadius = 16.0;
+
+  /// 气泡菜单悬浮投影高度（10.0dp）
+  static const double popupMenuElevation = 10.0;
+
+  /// 气泡菜单条目最小高度（vigour_popup_menu_item = 48.0dp）
+  static const double popupMenuItemMinHeight = 48.0;
+
+  /// 气泡菜单最小与最大宽度（148.0dp ~ 240.0dp）
+  static const double popupMenuMinWidth = 148.0;
+  static const double popupMenuMaxWidth = 240.0;
+
+  /// 气泡菜单条目水平内边距（16.0dp）
+  static const double popupMenuItemPadding = 16.0;
+
+  // ===========================================================================
   // 2. 色彩系统 (Colors & Dark Mode)
   // ===========================================================================
 
@@ -169,6 +261,63 @@ class OriginTokens {
   /// 支出强调色（默认赤红）
   static const Color expenseRed = Color(0xFFFF4D4F);
 
+  /// 气泡菜单表面背景色（日间纯白 #FFFFFF，夜间深灰 #282828 依据 OriginColors.surfacePopup）
+  static Color surfacePopup(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF282828)
+          : const Color(0xFFFFFFFF);
+
+  /// 气泡菜单分割线颜色（日间 #E0E0E0，夜间 #4C4C4C 依据 OriginColors.menuDivider）
+  static Color menuDivider(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF4C4C4C)
+          : const Color(0xFFE0E0E0);
+
+  /// 气泡菜单按压反馈遮罩色（日间 #F2F2F2，夜间 #161616 依据 OriginColors.pressedOverlay）
+  static Color pressedOverlay(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF161616)
+          : const Color(0xFFF2F2F2);
+
+  /// 对话框表面背景色（日间纯白 #FFFFFF，夜间纯黑暗灰 #1E1E1E 反编译真值）
+  static Color dialogBackground(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF1E1E1E)
+          : const Color(0xFFFFFFFF);
+
+  /// 对话框背景遮罩（日间 30% alpha #4D000000，夜间 60% alpha #99000000）
+  static Color dialogScrim(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0x99000000)
+          : const Color(0x4D000000);
+
+  /// 对话框次级/取消胶囊按钮背景（日间 #F4F4F6，夜间 #2A2A2A）
+  static Color dialogButtonSecondary(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF2A2A2A)
+          : const Color(0xFFF4F4F6);
+
+  /// 开关关闭态空心轨道描边色（日间 #14000000，夜间 #66333333）
+  static Color switchTrackOff(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0x66333333)
+          : const Color(0x14000000);
+
+  /// 开关关闭态滑块外环色（日间 #CCCCCC，夜间 #333333）
+  static Color switchRingOff(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF333333)
+          : const Color(0xFFCCCCCC);
+
+  /// 开关滑块中心填充色（关闭态：日间 alpha=0.8 白色，夜间纯黑；开启态：日间纯白，夜间纯黑）
+  static Color switchThumbFill(BuildContext context, {required bool checked}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (isDark) {
+      return const Color(0xFF000000);
+    }
+    return checked ? const Color(0xFFFFFFFF) : const Color(0xCCFFFFFF);
+  }
+
   // ===========================================================================
   // 3. 动效曲线与时长 (Motion Curves & Durations)
   // ===========================================================================
@@ -268,4 +417,89 @@ class OriginAppInfo {
 
   /// 软件英文代号
   static const String appNameEn = 'BeeCount';
+}
+
+/// 为全局 ThemeData 注入 OriginUI 的弹窗与开关主题规范
+///
+/// 遵循蓝河工具箱 `OriginUI/docs/` 规范与 vivo vigour 反编译真值：
+/// 1. 【弹窗】30dp 大圆角、日间纯白 #FFFFFF、夜间纯深灰 #1E1E1E，居中 16sp 标题与 14sp 正文，去除 Material 3 杂色；
+/// 2. 【开关】滑块与轨道严格取色接入应用当前主题色设置 [primary]，开启态与关闭态色彩对齐 OriginOS 规范；
+/// 3. 【按钮】实心胶囊按钮（高度 46dp，圆角 23dp）。
+ThemeData applyOriginTheme(
+  ThemeData source, {
+  required Color primary,
+  required bool isDark,
+}) {
+  final dialogBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+  final textPrimary = isDark ? const Color(0xFFE9E9E9) : const Color(0xFF1A1A1A);
+  final textSecondary = isDark ? const Color(0xFFA6A6A6) : const Color(0xFF666666);
+
+  return source.copyWith(
+    dialogTheme: source.dialogTheme.copyWith(
+      backgroundColor: dialogBg,
+      surfaceTintColor: Colors.transparent,
+      elevation: 12.0,
+      shadowColor: Colors.black.withValues(alpha: 0.15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(OriginTokens.dialogRadius),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 16.0,
+        fontWeight: FontWeight.w600,
+        color: textPrimary,
+        letterSpacing: -0.2,
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 14.0,
+        height: 1.5,
+        color: textSecondary,
+      ),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return isDark ? const Color(0xFF4D4D4D) : const Color(0xFFF8F8F8);
+        }
+        if (states.contains(WidgetState.selected)) {
+          return isDark ? Colors.black : Colors.white;
+        }
+        return isDark ? Colors.black : Colors.white;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return isDark ? const Color(0xFF222222) : const Color(0xFFE0E0E0);
+        }
+        if (states.contains(WidgetState.selected)) {
+          return primary;
+        }
+        return isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB);
+      }),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return Colors.transparent;
+        }
+        return isDark ? const Color(0x66333333) : const Color(0x14000000);
+      }),
+      trackOutlineWidth: const WidgetStatePropertyAll(1.5),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(0, OriginTokens.dialogButtonHeight),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(OriginTokens.dialogButtonRadius),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: primary,
+        minimumSize: const Size(0, OriginTokens.dialogButtonHeight),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(OriginTokens.dialogButtonRadius),
+        ),
+      ),
+    ),
+  );
 }

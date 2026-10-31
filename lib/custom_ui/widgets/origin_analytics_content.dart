@@ -10,6 +10,8 @@ import '../../utils/format_money.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
 import '../../pages/main/analytics/widgets/analytics_ranking.dart';
 import '../../pages/main/analytics/widgets/analytics_trend.dart';
+import '../styles/origin_tokens.dart';
+import 'origin_dialog.dart';
 
 /// vivo OriginOS 风格数据洞察统计内容视图 (OriginAnalyticsContent)
 ///
@@ -77,37 +79,44 @@ class OriginAnalyticsContent extends ConsumerWidget {
             ? l.analyticsOverallAvg
             : l.analyticsDailyAvg;
 
-    void average() => showDialog<void>(
-          context: context,
-          builder: (ctx) => BeeDialog(
-            title: Text(l.v4InsightsAverageTitle),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BeeSurface(
-                  child: Text(
-                    '${money(data.values.fold<double>(0, (sum, value) => sum + value))} ÷ ${data.values.length} '
-                    '${scope == 'month' ? l.v4InsightsDaysUnit : scope == 'year' ? l.v4InsightsMonthsUnit : l.v4InsightsYearsUnit}'
-                    ' = ${money(data.average)}',
-                    style: const TextStyle(fontSize: 14),
+    void average() => showOriginAlertDialog(
+          context,
+          title: l.v4InsightsAverageTitle,
+          okText: l.commonKnow,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
+                decoration: BoxDecoration(
+                  color: OriginTokens.cardSecondary(context),
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: Text(
+                  '${money(data.values.fold<double>(0, (sum, value) => sum + value))} ÷ ${data.values.length} '
+                  '${scope == 'month' ? l.v4InsightsDaysUnit : scope == 'year' ? l.v4InsightsMonthsUnit : l.v4InsightsYearsUnit}'
+                  ' = ${money(data.average)}',
+                  style: TextStyle(
+                    fontSize: 14.0,
+                    fontWeight: FontWeight.w500,
+                    color: OriginTokens.textPrimary(context),
                   ),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  scope == 'month'
-                      ? l.v4InsightsAverageDays
-                      : scope == 'year'
-                          ? l.v4InsightsAverageMonths
-                          : l.v4InsightsAverageYears,
-                  style: const TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 12.0),
+              Text(
+                scope == 'month'
+                    ? l.v4InsightsAverageDays
+                    : scope == 'year'
+                        ? l.v4InsightsAverageMonths
+                        : l.v4InsightsAverageYears,
+                style: TextStyle(
+                  fontSize: 13.0,
+                  height: 1.5,
+                  color: OriginTokens.textSecondary(context),
                 ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(l.commonKnow),
               ),
             ],
           ),

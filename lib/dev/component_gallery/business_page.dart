@@ -496,10 +496,16 @@ class _BusinessAcceptancePageState extends State<BusinessAcceptancePage> {
                       onPressed: menu,
                       icon: const BeeLineIcon('Ellipsis'))
                 ]),
-            SwitchListTile(
-                title: const Text('显示品牌'),
-                value: brand,
-                onChanged: (v) => setState(() => brand = v)),
+            InkWell(
+                onTap: () => setState(() => brand = !brand),
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(children: [
+                      const Expanded(child: Text('显示品牌')),
+                      OriginSwitch(
+                          value: brand,
+                          onChanged: (v) => setState(() => brand = v)),
+                    ]))),
             const Text('紧凑屏：上滑顶部卡片，保留账单列表的滚动区域'),
             const SizedBox(height: 8),
             SizedBox(
@@ -542,10 +548,16 @@ class _BusinessAcceptancePageState extends State<BusinessAcceptancePage> {
                     label: hidden ? '月预算 ••••' : '月预算 ¥5,000.00',
                     remaining: hidden ? '剩余 ••••' : '剩余 ¥1,713.50',
                     onTap: () => record('预算管理'))),
-            SwitchListTile(
-                title: const Text('隐藏金额与折算'),
-                value: hidden,
-                onChanged: (v) => setState(() => hidden = v))
+            InkWell(
+                onTap: () => setState(() => hidden = !hidden),
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(children: [
+                      const Expanded(child: Text('隐藏金额与折算')),
+                      OriginSwitch(
+                          value: hidden,
+                          onChanged: (v) => setState(() => hidden = v)),
+                    ])))
           ]),
         2 => Column(children: [
             BeeTransactionStreamHeader(title: '全部明细', count: '27笔', actions: [

@@ -21,6 +21,7 @@ import '../styles/origin_tokens.dart';
 import '../widgets/origin_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_scaffold.dart';
+import '../widgets/origin_menu.dart';
 import 'custom_transaction_sheet.dart';
 
 /// vivo OriginOS 风格自定义账户详情页面 (CustomAccountDetailPage)
@@ -366,8 +367,10 @@ class _CustomAccountDetailPageState
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.more_horiz_rounded, size: 22),
-                  color: OriginTokens.textPrimary(context),
+                  icon: OriginMoreIcon(
+                    size: 20,
+                    color: OriginTokens.textPrimary(context),
+                  ),
                   tooltip: l.commonMore,
                   onPressed: () => _perform(_menu),
                 ),

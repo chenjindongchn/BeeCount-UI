@@ -480,19 +480,39 @@ class RecordingFlagsForm extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (final option in options)
-              SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  title: Text(option.title,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: titleSize)),
-                  subtitle: Text(option.hint,
-                      style: TextStyle(
-                          color: Theme.of(context).hintColor,
-                          fontSize: hintSize)),
-                  value: option.value,
-                  activeColor: Theme.of(context).colorScheme.primary,
-                  onChanged: option.onChanged)
+              InkWell(
+                onTap: () => option.onChanged(!option.value),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(option.title,
+                                style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                    fontSize: titleSize)),
+                            const SizedBox(height: 2),
+                            Text(option.hint,
+                                style: TextStyle(
+                                    color: Theme.of(context).hintColor,
+                                    fontSize: hintSize)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OriginSwitch(
+                        value: option.value,
+                        activeColor: Theme.of(context).colorScheme.primary,
+                        onChanged: option.onChanged,
+                      ),
+                    ],
+                  ),
+                ),
+              )
           ]);
 }

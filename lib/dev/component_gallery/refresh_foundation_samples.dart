@@ -206,10 +206,16 @@ class _SystemBarsSampleState extends State<SystemBarsSample> {
   @override
   Widget build(BuildContext context) =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        SwitchListTile(
-            title: const Text('局部示例深色'),
-            value: dark,
-            onChanged: (v) => setState(() => dark = v)),
+        InkWell(
+            onTap: () => setState(() => dark = !dark),
+            child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(children: [
+                  const Expanded(child: Text('局部示例深色')),
+                  OriginSwitch(
+                      value: dark,
+                      onChanged: (v) => setState(() => dark = v)),
+                ]))),
         Theme(
             data:
                 beeTheme(brightness: dark ? Brightness.dark : Brightness.light),

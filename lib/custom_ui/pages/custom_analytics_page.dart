@@ -13,6 +13,8 @@ import '../styles/origin_tokens.dart';
 import '../widgets/origin_analytics_content.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_segmented_control.dart';
+import '../widgets/origin_dialog.dart';
+import '../widgets/origin_menu.dart';
 
 /// vivo OriginOS 风格数据洞察与统计分析页面 (CustomAnalyticsPage)
 ///
@@ -94,22 +96,12 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
 
   Future<void> _runRecalcForeignTx(int count) async {
     final l = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => BeeDialog(
-        title: Text(l.recalcForeignTxAction),
-        content: Text(l.recalcSyncCountHint(count)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l.commonConfirm),
-          ),
-        ],
-      ),
+    final confirmed = await showOriginConfirmDialog(
+      context,
+      title: l.recalcForeignTxAction,
+      message: l.recalcSyncCountHint(count),
+      confirmText: l.commonConfirm,
+      cancelText: l.commonCancel,
     );
     if (confirmed != true || !mounted) return;
     final repo = ref.read(repositoryProvider);
@@ -147,30 +139,29 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
         title: l10n.tabInsights,
         leading: widget.showBack ? const BackButton() : null,
         actions: [
-          // 搜索按钮（移自明细页，置于 AI 左侧）
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            tooltip: l10n.homeSearch,
-            onPressed: _openSearch,
-          ),
-          // 日历按钮（移自明细页，置于 AI 左侧）
-          IconButton(
-            icon: const Icon(Icons.calendar_month_outlined),
-            tooltip: '日历看板',
-            onPressed: _openCalendar,
-          ),
-          // AI 按钮
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: primaryColor,
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            ),
-            icon: const Icon(Icons.auto_awesome_rounded, size: 18.0),
-            label: const Text(
-              'AI',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            onPressed: _openAI,
+          // vivo OriginOS 规范：右上角“竖排双圆点”展示更多功能
+          OriginMoreButton(
+            tooltip: '更多与设置',
+            items: [
+              OriginMenuItem(
+                title: '日历看板',
+                icon: const Icon(Icons.calendar_month_outlined),
+                onTap: _openCalendar,
+              ),
+              OriginMenuItem(
+                title: l10n.homeSearch,
+                icon: const Icon(Icons.search_rounded),
+                onTap: _openSearch,
+              ),
+              OriginMenuItem(
+                title: l10n.aiChatTitle,
+                icon: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: primaryColor,
+                ),
+                onTap: _openAI,
+              ),
+            ],
           ),
         ],
       ),

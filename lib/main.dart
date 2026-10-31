@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'custom_ui/styles/origin_tokens.dart';
 import 'pages/auth/bindings/login_2fa_challenge_view.dart';
 import 'theme.dart';
 import 'providers.dart';
@@ -571,14 +572,17 @@ class MainApp extends ConsumerWidget {
         onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
         scrollBehavior: const NoGlowScrollBehavior(),
         debugShowCheckedModeBanner: false,
-        theme: applyBeeCardTheme(theme),
-        darkTheme:
-            applyBeeCardTheme(BeeTheme.darkTheme(platform: platform).copyWith(
-          colorScheme: BeeTheme.darkTheme(platform: platform)
-              .colorScheme
-              .copyWith(primary: primary),
-          primaryColor: primary,
-        )), // ⭐ 暗黑主题（使用动态主题色）
+        theme: applyOriginTheme(applyBeeCardTheme(theme), primary: primary, isDark: false),
+        darkTheme: applyOriginTheme(
+          applyBeeCardTheme(BeeTheme.darkTheme(platform: platform).copyWith(
+            colorScheme: BeeTheme.darkTheme(platform: platform)
+                .colorScheme
+                .copyWith(primary: primary),
+            primaryColor: primary,
+          )),
+          primary: primary,
+          isDark: true,
+        ), // ⭐ 暗黑主题（使用动态主题色与 OriginUI 规范）
         themeMode: ref.watch(themeModeProvider), // ⭐ 使用 provider 支持手动切换
         localizationsDelegates: const [
           AppLocalizations.delegate,

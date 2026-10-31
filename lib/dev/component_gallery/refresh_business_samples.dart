@@ -118,10 +118,16 @@ class _SyncHealthSampleState extends State<SyncHealthSample> {
   @override
   Widget build(BuildContext context) =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        SwitchListTile(
-            title: const Text('播放检查中动效'),
-            value: animate,
-            onChanged: (v) => setState(() => animate = v)),
+        InkWell(
+            onTap: () => setState(() => animate = !animate),
+            child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(children: [
+                  const Expanded(child: Text('播放检查中动效')),
+                  OriginSwitch(
+                      value: animate,
+                      onChanged: (v) => setState(() => animate = v)),
+                ]))),
         for (final state in ['已同步', '检查中', '本地与云端有差异', '连接失败']) ...[
           TickerMode(
               enabled: animate && !MediaQuery.disableAnimationsOf(context),

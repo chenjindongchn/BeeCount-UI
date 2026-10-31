@@ -101,6 +101,84 @@ class OriginAppInfo {
 * **使用方式**：在所有自定义页面中直接使用 `OriginAppInfo.appName`。
 * **上游影响**：原作者仓库完全没有 `lib/custom_ui/` 目录，100% 免疫上游合并冲突。
 
+### 2. 全局主题挂载点（`lib/main.dart`）
+
+为让上游既有界面的原生弹窗与开关零修改即可自动享受 OriginUI 30dp 大圆角与主题色开关样式，在 `lib/main.dart` 极简注入 `applyOriginTheme`：
+
+```dart
+<<<< 上游原版:
+        theme: applyBeeCardTheme(theme),
+        darkTheme:
+            applyBeeCardTheme(BeeTheme.darkTheme(platform: platform).copyWith(
+          colorScheme: BeeTheme.darkTheme(platform: platform)
+              .colorScheme
+              .copyWith(primary: primary),
+          primaryColor: primary,
+        )),
+==== 本地定制:
+        theme: applyOriginTheme(applyBeeCardTheme(theme), primary: primary, isDark: false),
+        darkTheme: applyOriginTheme(
+          applyBeeCardTheme(BeeTheme.darkTheme(platform: platform).copyWith(
+            colorScheme: BeeTheme.darkTheme(platform: platform)
+                .colorScheme
+                .copyWith(primary: primary),
+            primaryColor: primary,
+          )),
+          primary: primary,
+          isDark: true,
+        ),
+>>>>
+```
+
+* **冲突排查指引**：若上游更新 `MaterialApp` 构建，只需保持外层包裹 `applyOriginTheme(..., primary: primary, isDark: ...)` 即可。
+
+### 3. 全局基础组件库适配（`packages/beecount_ui`）
+
+为使原作者在所有设置与表单页面中广泛调用的开关行（`BeeToggleRow`）与弹窗（`BeeDialog`）自动呈现蓝河工具箱 1:1 的 OriginUI 样式：
+
+#### (1) `packages/beecount_ui/lib/src/form_components.dart`
+将 `BeeToggleRow` 中原先用 `Transform.scale` 缩放并强制写死样式的原生 `Switch`，替换为真正的 `OriginSwitch`：
+```dart
+<<<< 上游原版:
+                          SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Center(
+                                  child: Transform.scale(
+                                      scale: scale,
+                                      child: Switch(...))))
+==== 本地定制:
+                          OriginSwitch(
+                            value: value,
+                            onChanged: onChanged,
+                          )
+>>>>
+```
+
+#### (2) `packages/beecount_ui/lib/src/dialogs.dart`
+将 `BeeDialog` 卡片圆角升级为 30dp，实心胶囊按钮升级为 46dp 高度与 23dp 圆角，暗黑底色采用 OriginOS 真值 `#1E1E1E`。
+
+#### (3) `packages/beecount_ui/lib/beecount_ui.dart`
+导出 `export 'src/origin_switch.dart';`，供全项目基础与业务组件统一复用。
+
+### 4. 业务组件库与页面适配（`packages/beecount_business_ui` & `lib/pages/`）
+
+为使账单标记、自动记账规则、云备份设置与 S3 高级配置中的开关无死角覆盖为 OriginUI：
+
+#### (1) `packages/beecount_business_ui/lib/src/automation/recurring_bill.dart`
+将 `BeeRecurringBillCard` 中的 `Switch` 替换为 `OriginSwitch`。
+
+#### (2) `packages/beecount_business_ui/lib/src/recording/recording_fields.dart`
+将 `RecordingFlagsForm` 中的 `SwitchListTile` 替换为响应整行点击并使用 `OriginSwitch` 的表单行。
+
+#### (3) `packages/beecount_business_ui/lib/src/cloud_data/cloud_backup.dart`
+将 `BeeCloudBackupPreference` 中的 `SwitchListTile` 替换为响应整行点击并使用 `OriginSwitch` 的组件行。
+
+#### (4) `lib/pages/cloud/configuration/bindings/cloud_configuration_controls.dart`
+将 S3 配置表单第 2122 行的 SSL 开关 `SwitchListTile` 替换为带 `OriginSwitch` 的行。
+
+* **冲突排查指引**：若上游更新上述文件，只需按极简 Diff 保持使用 `OriginSwitch` 即可。
+
 ---
 
 ## 三、上游更新与变基冲突 10 秒排查手册

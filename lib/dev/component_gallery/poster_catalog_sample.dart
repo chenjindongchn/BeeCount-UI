@@ -119,10 +119,16 @@ class _PosterCatalogSampleState extends State<PosterCatalogSample> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const Text('沿用原目录的受控样例值；全部平铺。真实数据继续使用“分享卡与原海报预览”和“年度账单七段内容”中的当前账本入口。',
           style: TextStyle(fontSize: 11)),
-      SwitchListTile(
-          title: const Text('隐藏样例海报收入'),
-          value: hidden,
-          onChanged: (v) => setState(() => hidden = v)),
+      InkWell(
+          onTap: () => setState(() => hidden = !hidden),
+          child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(children: [
+                const Expanded(child: Text('隐藏样例海报收入')),
+                OriginSwitch(
+                    value: hidden,
+                    onChanged: (v) => setState(() => hidden = v)),
+              ]))),
       for (final entry in posters.entries) ...[
         const SizedBox(height: 14),
         Row(children: [
