@@ -9,7 +9,6 @@ import '../../utils/currencies.dart';
 import '../../pages/account/account_edit_page.dart';
 import '../../pages/account/account_detail_page.dart';
 import '../../pages/account/net_worth_trend_page.dart';
-import '../../pages/currency/exchange_rate_page.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
@@ -39,14 +38,6 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
     );
   }
 
-  void _openExchangeRate(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ExchangeRatePage(),
-      ),
-    );
-  }
-
   void _openNetWorthTrend(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -70,11 +61,6 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
         title: widget.asTab ? l10n.tabAssets : l10n.accountsTitle,
         leading: widget.asTab ? null : const BackButton(),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.currency_exchange_rounded),
-            tooltip: '汇率管理',
-            onPressed: () => _openExchangeRate(context),
-          ),
           IconButton(
             icon: Icon(Icons.add_circle_outline_rounded, color: primaryColor),
             tooltip: l10n.accountAddButton,

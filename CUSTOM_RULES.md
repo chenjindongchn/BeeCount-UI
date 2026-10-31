@@ -74,3 +74,10 @@
    git rebase main
    ```
    因绝大多数代码都在 `lib/custom_ui/`，Rebase 过程将极度平滑。
+
+---
+
+## 附录：非 `custom_ui` 侵入性改动登记
+
+所有因平台配置需要（如桌面 App 名称、图标、路由单点挂载）而对原工程文件的必要修改，必须在 **[CUSTOM_MODIFICATIONS.md](file:///Users/chenjindong/陈进东/Ⅲ软件项目/记账/CUSTOM_MODIFICATIONS.md)** 中逐项记录 Diff 与冲突解决指引，以便在 Rebase 发生冲突时秒级排查与恢复。
+

@@ -599,6 +599,18 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                 ),
             ],
           ),
+          const SizedBox(height: 28.0),
+          Center(
+            child: Text(
+              '${OriginAppInfo.appName} · 本地优先安全记账',
+              style: OriginTokens.captionStyle(context).copyWith(
+                color: OriginTokens.textTertiary(context),
+                fontSize: 11.5,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12.0),
         ],
       ),
     );

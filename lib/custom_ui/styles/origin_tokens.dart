@@ -255,3 +255,17 @@ class OriginTokens {
         height: 1.2,
       );
 }
+
+/// 定制应用与品牌信息（物理隔离存放于 custom_ui，零上游冲突）
+class OriginAppInfo {
+  OriginAppInfo._();
+
+  /// 软件正式名称
+  static const String appName = '记账蓝盒';
+
+  /// 软件测试版名称
+  static const String appNameTest = '记账蓝盒测试版';
+
+  /// 软件英文代号
+  static const String appNameEn = 'BeeCount';
+}
