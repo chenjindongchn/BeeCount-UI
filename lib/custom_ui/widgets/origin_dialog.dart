@@ -1232,7 +1232,7 @@ Future<T?> showOriginConfirmCard<T>(
 /// 对标蓝河工具箱全局高刷与系统设置确认卡形态：
 /// 1. 贴底滑升入场，304dp 限制宽度与 30dp 大圆角；
 /// 2. 账本单选列表带 OriginRadioButton 动效与触觉反馈；
-/// 3. 底部竖排双实心胶囊（主按钮“确认切换”，次按钮“管理账本”）。
+/// 3. 底部竖排实心胶囊（主按钮“确认切换”，次按钮“管理账本”，以及“取消”）。
 Future<void> showOriginLedgerPickerDialog(BuildContext context) {
   FocusManager.instance.primaryFocus?.unfocus();
 
@@ -1265,7 +1265,7 @@ class _OriginLedgerPickerConfirmDialogState
 
     return OriginConfirmCard(
       title: l.homeSwitchLedger,
-      subtitle: '切换当前记账工作账本',
+      textAlign: TextAlign.center,
       actions: [
         // 主操作胶囊：确认切换
         _OriginDialogCapsuleButton(
@@ -1297,6 +1297,18 @@ class _OriginLedgerPickerConfirmDialogState
             );
           },
         ),
+        const SizedBox(height: 10.0),
+        // 取消胶囊
+        _OriginDialogCapsuleButton(
+          text: l.commonCancel,
+          backgroundColor: OriginTokens.dialogButtonSecondary(context),
+          textColor: OriginTokens.textPrimary(context),
+          isPrimary: false,
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(context).pop();
+          },
+        ),
       ],
       content: ledgersAsync.when(
         data: (items) {
@@ -1326,8 +1338,6 @@ class _OriginLedgerPickerConfirmDialogState
                   ),
                 _OriginLedgerPickerTile(
                   name: items[i].name,
-                  currency: items[i].currency,
-                  transactionCount: items[i].transactionCount,
                   isShared: items[i].isShared,
                   isSelected: items[i].id == activeId,
                   primaryColor: primaryColor,
@@ -1373,8 +1383,6 @@ class _OriginLedgerPickerConfirmDialogState
 
 class _OriginLedgerPickerTile extends StatelessWidget {
   final String name;
-  final String currency;
-  final int transactionCount;
   final bool isShared;
   final bool isSelected;
   final Color primaryColor;
@@ -1382,8 +1390,6 @@ class _OriginLedgerPickerTile extends StatelessWidget {
 
   const _OriginLedgerPickerTile({
     required this.name,
-    required this.currency,
-    required this.transactionCount,
     required this.isShared,
     required this.isSelected,
     required this.primaryColor,
@@ -1425,33 +1431,17 @@ class _OriginLedgerPickerTile extends StatelessWidget {
             const SizedBox(width: 10.0),
             // 中间文本
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 15.0,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      color: isSelected
-                          ? primaryColor
-                          : OriginTokens.textPrimary(context),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2.0),
-                  Text(
-                    '$currency · $transactionCount笔明细',
-                    style: TextStyle(
-                      fontSize: 12.0,
-                      color: OriginTokens.textTertiary(context),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 15.0,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected
+                      ? primaryColor
+                      : OriginTokens.textPrimary(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 8.0),

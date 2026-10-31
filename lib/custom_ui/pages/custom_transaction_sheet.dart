@@ -48,7 +48,8 @@ Future<bool?> showCustomTransactionSheet(
       isCopy: isCopy,
       excludeFromStats: excludeFromStats,
       excludeFromBudget: excludeFromBudget,
-      showDragHandle: false,
+      showDragHandle: true,
+      dragHandleBarVisible: false,
     ),
   );
 }
@@ -70,6 +71,7 @@ class CustomTransactionSheet extends ConsumerStatefulWidget {
     this.excludeFromStats = false,
     this.excludeFromBudget = false,
     this.showDragHandle = true,
+    this.dragHandleBarVisible = true,
     this.showTopBar = false,
     this.onClose,
   });
@@ -87,6 +89,9 @@ class CustomTransactionSheet extends ConsumerStatefulWidget {
   final bool excludeFromStats;
   final bool excludeFromBudget;
   final bool showDragHandle;
+
+  /// 是否显示拉手横线（隐藏时仍保留同等高度与下拉关闭热区）
+  final bool dragHandleBarVisible;
   final bool showTopBar;
   final VoidCallback? onClose;
 
@@ -420,19 +425,23 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. 顶部拖拽热区条（抽屉模式下展示）
+          // 1. 顶部拖拽热区条（抽屉模式下展示，横线可隐藏但保留占位与热区）
           if (widget.showDragHandle)
             OriginSheetDragRegion(
-              child: Center(
-                child: Container(
-                  width: 32,
-                  height: 4,
-                  margin: const EdgeInsets.only(top: 7, bottom: 5),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+              child: SizedBox(
+                height: 16,
+                child: widget.dragHandleBarVisible
+                    ? Center(
+                        child: Container(
+                          width: 32,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white24 : Colors.black12,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      )
+                    : null,
               ),
             ),
 
