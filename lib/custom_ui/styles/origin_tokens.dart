@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'origin_page_transitions.dart';
+
 /// vivo OriginOS 视觉与交互规范设计系统 Token (OriginTokens)
 ///
 /// 遵循蓝河工具箱 `OriginUI/docs/` 全套反编译真值与实测规范：
@@ -424,7 +426,8 @@ class OriginAppInfo {
 /// 遵循蓝河工具箱 `OriginUI/docs/` 规范与 vivo vigour 反编译真值：
 /// 1. 【弹窗】30dp 大圆角、日间纯白 #FFFFFF、夜间纯深灰 #1E1E1E，居中 16sp 标题与 14sp 正文，去除 Material 3 杂色；
 /// 2. 【开关】滑块与轨道严格取色接入应用当前主题色设置 [primary]，开启态与关闭态色彩对齐 OriginOS 规范；
-/// 3. 【按钮】实心胶囊按钮（高度 46dp，圆角 23dp）。
+/// 3. 【按钮】实心胶囊按钮（高度 46dp，圆角 23dp）；
+/// 4. 【页面转场】二级页面统一 OriginUI 滑动转场（300ms / FastOutSlowIn，旧页退让 1/3 屏宽）。
 ThemeData applyOriginTheme(
   ThemeData source, {
   required Color primary,
@@ -435,6 +438,16 @@ ThemeData applyOriginTheme(
   final textSecondary = isDark ? const Color(0xFFA6A6A6) : const Color(0xFF666666);
 
   return source.copyWith(
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: <TargetPlatform, PageTransitionsBuilder>{
+        TargetPlatform.android: OriginPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: OriginPageTransitionsBuilder(),
+        TargetPlatform.iOS: OriginPageTransitionsBuilder(),
+        TargetPlatform.linux: OriginPageTransitionsBuilder(),
+        TargetPlatform.macOS: OriginPageTransitionsBuilder(),
+        TargetPlatform.windows: OriginPageTransitionsBuilder(),
+      },
+    ),
     dialogTheme: source.dialogTheme.copyWith(
       backgroundColor: dialogBg,
       surfaceTintColor: Colors.transparent,
