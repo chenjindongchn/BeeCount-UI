@@ -48,6 +48,7 @@ Future<bool?> showCustomTransactionSheet(
       isCopy: isCopy,
       excludeFromStats: excludeFromStats,
       excludeFromBudget: excludeFromBudget,
+      showDragHandle: false,
     ),
   );
 }
@@ -94,12 +95,13 @@ class CustomTransactionSheet extends ConsumerStatefulWidget {
       _CustomTransactionSheetState();
 }
 
-class _CustomTransactionSheetState
-    extends ConsumerState<CustomTransactionSheet> {
+class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
+    with SingleTickerProviderStateMixin {
   // 0=支出, 1=收入, 2=转账
   late int _selectedType;
   late int _ledgerId;
   late final PageController _pageController;
+  late final AnimationController _cursorController;
 
   // 金额相关
   String _amountExpression = '0';
@@ -125,6 +127,10 @@ class _CustomTransactionSheetState
             ? 2
             : 0;
     _pageController = PageController(initialPage: _selectedType);
+    _cursorController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    )..repeat(reverse: true);
     _selectedDate = widget.initialDate ?? DateTime.now();
     _ledgerId = ref.read(currentLedgerIdProvider);
     _selectedAccountId = widget.initialAccountId;
@@ -150,6 +156,7 @@ class _CustomTransactionSheetState
   void dispose() {
     _pageController.dispose();
     _noteController.dispose();
+    _cursorController.dispose();
     super.dispose();
   }
 
@@ -616,12 +623,12 @@ class _CustomTransactionSheetState
     );
   }
 
-  /// 金额输入展示区（位于备注正上方，字号 25sp，轻巧自然）
+  /// 金额输入展示区（位于备注正上方，字号 25sp，轻巧自然，末端带主题色闪烁光标）
   Widget _buildAmountDisplay(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -642,14 +649,30 @@ class _CustomTransactionSheetState
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   reverse: true,
-                  child: Text(
-                    _amountExpression,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.3,
-                      color: isDark ? Colors.white : const Color(0xFF1D1D1F),
-                    ),
+                  child: Row(
+                    children: [
+                      Text(
+                        _amountExpression,
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -0.3,
+                          color: isDark ? Colors.white : const Color(0xFF1D1D1F),
+                        ),
+                      ),
+                      FadeTransition(
+                        opacity: _cursorController,
+                        child: Container(
+                          width: 1.8,
+                          height: 26,
+                          margin: const EdgeInsets.only(left: 2.5),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            borderRadius: BorderRadius.circular(1),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
