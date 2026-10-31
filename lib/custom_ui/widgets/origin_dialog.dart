@@ -43,6 +43,7 @@ class OriginDialog extends StatelessWidget {
   final bool stackActions;
   final bool isDanger;
   final double maxWidth;
+  final Alignment alignment;
 
   const OriginDialog({
     super.key,
@@ -56,33 +57,45 @@ class OriginDialog extends StatelessWidget {
     this.cancelText,
     this.onCancel,
     this.customActions,
-    this.stackActions = false,
+    this.stackActions = true,
     this.isDanger = false,
     this.maxWidth = OriginTokens.dialogWidth,
+    this.alignment = Alignment.bottomCenter,
   });
 
   @override
   Widget build(BuildContext context) {
     final primaryColor = OriginTokens.primary(context);
     final confirmBgColor = isDanger ? OriginTokens.expenseRed : primaryColor;
+    final bottomInset = alignment == Alignment.bottomCenter
+        ? MediaQuery.of(context).padding.bottom + 28.0
+        : 24.0;
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: maxWidth,
-          minWidth: 260.0,
+    return Align(
+      alignment: alignment,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 28.0,
+          right: 28.0,
+          bottom: bottomInset,
+          top: 24.0,
         ),
-        child: Material(
-          color: OriginTokens.dialogBackground(context),
-          borderRadius: BorderRadius.circular(OriginTokens.dialogRadius),
-          elevation: 12.0,
-          shadowColor: Colors.black.withValues(alpha: 0.15),
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: OriginTokens.dialogContentPadding,
-              vertical: 24.0,
-            ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: maxWidth,
+            minWidth: 260.0,
+          ),
+          child: Material(
+            color: OriginTokens.dialogBackground(context),
+            borderRadius: BorderRadius.circular(OriginTokens.dialogRadius),
+            elevation: 12.0,
+            shadowColor: Colors.black.withValues(alpha: 0.15),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: OriginTokens.dialogContentPadding,
+                vertical: 24.0,
+              ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -137,15 +150,16 @@ class OriginDialog extends StatelessWidget {
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: content ??
-                          Text(
-                            message!,
-                            textAlign: (message!.contains('\n') || message!.length > 40)
-                                ? TextAlign.start
-                                : TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14.0,
-                              height: 1.5,
-                              color: OriginTokens.textSecondary(context),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              message!,
+                              textAlign: TextAlign.start,
+                              style: TextStyle(
+                                fontSize: 14.0,
+                                height: 1.5,
+                                color: OriginTokens.textSecondary(context),
+                              ),
                             ),
                           ),
                     ),
@@ -164,8 +178,9 @@ class OriginDialog extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildDefaultActions(BuildContext context, Color confirmBgColor) {
     final hasCancel = cancelText != null && cancelText!.isNotEmpty;
@@ -209,26 +224,15 @@ class OriginDialog extends StatelessWidget {
           )
         : null;
 
-    // 纵向堆叠（OriginOS 规范标准形态：确认在上，取消在下）
-    if (stackActions || (hasCancel && hasConfirm && (cancelText!.length > 4 || confirmText!.length > 4))) {
+    // 纵向堆叠（OriginOS 规范标准形态：每个按钮占满一行，确认在上，取消在下，间距 12dp）
+    if (hasCancel && hasConfirm) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (confirmBtn != null) confirmBtn,
-          if (confirmBtn != null && cancelBtn != null) const SizedBox(height: 10.0),
-          if (cancelBtn != null) cancelBtn,
-        ],
-      );
-    }
-
-    // 双按钮横排（空间紧凑并列）
-    if (hasCancel && hasConfirm) {
-      return Row(
-        children: [
-          Expanded(child: cancelBtn!),
-          const SizedBox(width: 12.0),
-          Expanded(child: confirmBtn!),
+          confirmBtn!,
+          const SizedBox(height: 12.0),
+          cancelBtn!,
         ],
       );
     }
@@ -311,7 +315,7 @@ Future<bool?> showOriginConfirmDialog(
   String? confirmText,
   String? cancelText,
   bool isDanger = false,
-  bool stackActions = false,
+  bool stackActions = true,
   bool barrierDismissible = true,
   Widget? icon,
 }) {
@@ -337,12 +341,15 @@ Future<bool?> showOriginConfirmDialog(
       final curved = CurvedAnimation(
         parent: anim,
         curve: OriginTokens.enterCurve,
-        reverseCurve: OriginTokens.exitCurve,
+        reverseCurve: Curves.easeInCubic,
       );
       return FadeTransition(
         opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 0.28),
+            end: Offset.zero,
+          ).animate(curved),
           child: child,
         ),
       );
@@ -379,12 +386,15 @@ Future<void> showOriginAlertDialog(
       final curved = CurvedAnimation(
         parent: anim,
         curve: OriginTokens.enterCurve,
-        reverseCurve: OriginTokens.exitCurve,
+        reverseCurve: Curves.easeInCubic,
       );
       return FadeTransition(
         opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 0.28),
+            end: Offset.zero,
+          ).animate(curved),
           child: child,
         ),
       );
@@ -413,8 +423,11 @@ Future<T?> showOriginCustomDialog<T>(
       );
       return FadeTransition(
         opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 0.28),
+            end: Offset.zero,
+          ).animate(curved),
           child: c,
         ),
       );

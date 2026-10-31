@@ -440,9 +440,12 @@ ThemeData applyOriginTheme(
       surfaceTintColor: Colors.transparent,
       elevation: 12.0,
       shadowColor: Colors.black.withValues(alpha: 0.15),
+      alignment: Alignment.bottomCenter,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(OriginTokens.dialogRadius),
       ),
+      insetPadding: const EdgeInsets.only(left: 28.0, right: 28.0, bottom: 28.0),
+      actionsPadding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 20.0),
       titleTextStyle: TextStyle(
         fontSize: 16.0,
         fontWeight: FontWeight.w600,

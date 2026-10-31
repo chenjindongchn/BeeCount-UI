@@ -15,9 +15,8 @@ import 'providers/font_scale_provider.dart';
 import 'utils/app_localizations_resolver.dart';
 import 'providers/cloud_mode_providers.dart';
 import 'utils/notification_factory.dart';
-import 'pages/auth/splash_page.dart';
-import 'pages/main/home/bindings/home_startup_gate.dart';
 import 'pages/auth/welcome_page.dart';
+import 'custom_ui/pages/custom_splash_page.dart';
 import 'pages/auth/app_lock_screen.dart';
 import 'providers/security_providers.dart';
 import 'services/system/reminder_monitor_service.dart';
@@ -467,7 +466,7 @@ class MainApp extends ConsumerWidget {
   Widget _getHomePage(AppInitState initState, WidgetRef ref) {
     // Resolve first-launch routing before starting a data snapshot. Otherwise
     // an empty pre-onboarding cache could survive until setup creates a ledger.
-    if (ref.watch(welcomeCheckProvider).isLoading) return const SplashPage();
+    if (ref.watch(welcomeCheckProvider).isLoading) return const CustomSplashPage();
     // 首先检查是否需要显示欢迎页面
     final shouldShowWelcome = ref.watch(shouldShowWelcomeProvider);
     if (shouldShowWelcome) {
@@ -476,7 +475,7 @@ class MainApp extends ConsumerWidget {
 
     // 欢迎页面完成后，根据初始化状态显示对应页面
     if (initState != AppInitState.ready) {
-      return const AppStartupGate(child: SizedBox.shrink());
+      return const CustomAppStartupGate(child: SizedBox.shrink());
     }
 
     // 检查是否需要显示锁屏
@@ -485,7 +484,7 @@ class MainApp extends ConsumerWidget {
       return const AppLockScreen();
     }
 
-    return const HomeStartupGate(child: BeeApp());
+    return const CustomHomeStartupGate(child: BeeApp());
   }
 
   @override

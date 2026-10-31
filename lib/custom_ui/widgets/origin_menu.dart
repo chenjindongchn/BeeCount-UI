@@ -210,66 +210,94 @@ class _OriginMenuRoute extends PopupRoute<void> {
     Animation<double> secondaryAnimation,
   ) {
     final mediaQuery = MediaQuery.of(context);
-    final topPadding = mediaQuery.padding.top;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 锚定在 targetRect 底部并略有重叠/间距，距离屏幕右缘固定 16dp
-    final menuTop = (targetRect.bottom + 4.0).clamp(topPadding + 8.0, mediaQuery.size.height - 100.0);
-    const rightMargin = 16.0;
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+    final topPadding = mediaQuery.padding.top;
+    final bottomPadding = mediaQuery.padding.bottom;
 
-    return SafeArea(
-      child: Stack(
-        children: [
-          Positioned(
-            top: menuTop,
-            right: rightMargin,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                constraints: const BoxConstraints(
-                  minWidth: OriginTokens.popupMenuMinWidth,
-                  maxWidth: OriginTokens.popupMenuMaxWidth,
-                ),
-                decoration: BoxDecoration(
-                  color: OriginTokens.surfacePopup(context),
-                  borderRadius: BorderRadius.circular(OriginTokens.popupMenuRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.38 : 0.12),
-                      blurRadius: 16.0,
-                      offset: const Offset(0, 6),
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: IntrinsicWidth(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (int i = 0; i < items.length; i++) ...[
-                          _OriginMenuItemWidget(item: items[i]),
-                          if (i < items.length - 1)
-                            Divider(
-                              height: 0.5,
-                              thickness: 0.5,
-                              indent: OriginTokens.popupMenuItemPadding,
-                              endIndent: OriginTokens.popupMenuItemPadding,
-                              color: OriginTokens.menuDivider(context),
-                            ),
-                        ],
-                      ],
+    // 锚定在 targetRect 底部并紧贴（间距 4.0dp），移除外层 SafeArea 避免全局坐标与状态栏内边距双重叠加
+    final menuTop = (targetRect.bottom + 4.0).clamp(
+      topPadding + 4.0,
+      screenHeight - bottomPadding - 60.0,
+    );
+
+    // 菜单右边距：与按钮右边缘保持协调一致（限制在 12.0~20.0dp 舒适区间）
+    final rightMargin = (screenWidth - targetRect.right).clamp(12.0, 20.0);
+
+    // 计算可用最大高度，防止极端屏幕或横屏下溢出
+    final maxMenuHeight = (screenHeight - menuTop - bottomPadding - 16.0).clamp(120.0, double.infinity);
+
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.fastOutSlowIn,
+      reverseCurve: const Cubic(0.4, 0.0, 1.0, 1.0),
+    );
+
+    return Stack(
+      children: [
+        Positioned(
+          top: menuTop,
+          right: rightMargin,
+          child: FadeTransition(
+            opacity: curvedAnimation,
+            child: ScaleTransition(
+              // 关键：以气泡菜单卡片自身的右上角为中心进行缩放展开，贴合两个点按钮的右下侧
+              alignment: Alignment.topRight,
+              scale: Tween<double>(begin: 0.85, end: 1.0).animate(curvedAnimation),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  constraints: BoxConstraints(
+                    minWidth: OriginTokens.popupMenuMinWidth,
+                    maxWidth: OriginTokens.popupMenuMaxWidth,
+                    maxHeight: maxMenuHeight,
+                  ),
+                  decoration: BoxDecoration(
+                    color: OriginTokens.surfacePopup(context),
+                    borderRadius: BorderRadius.circular(OriginTokens.popupMenuRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.38 : 0.12),
+                        blurRadius: 16.0,
+                        offset: const Offset(0, 6),
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: IntrinsicWidth(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (int i = 0; i < items.length; i++) ...[
+                              _OriginMenuItemWidget(item: items[i]),
+                              if (i < items.length - 1)
+                                Divider(
+                                  height: 0.5,
+                                  thickness: 0.5,
+                                  indent: OriginTokens.popupMenuItemPadding,
+                                  endIndent: OriginTokens.popupMenuItemPadding,
+                                  color: OriginTokens.menuDivider(context),
+                                ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -280,22 +308,8 @@ class _OriginMenuRoute extends PopupRoute<void> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    // 依据蓝河工具箱 OriginDropdownMenu 动效：
-    // TransformOrigin(1f, 0f) 右上角展开，Scale 0.85 -> 1.0，Alpha 0.0 -> 1.0
-    final curvedAnimation = CurvedAnimation(
-      parent: animation,
-      curve: Curves.fastOutSlowIn,
-      reverseCurve: const Cubic(0.4, 0.0, 1.0, 1.0),
-    );
-
-    return FadeTransition(
-      opacity: curvedAnimation,
-      child: ScaleTransition(
-        alignment: Alignment.topRight,
-        scale: Tween<double>(begin: 0.85, end: 1.0).animate(curvedAnimation),
-        child: child,
-      ),
-    );
+    // 菜单本身的缩放与淡入已由 buildPage 内部精确绑定到卡片右上角锚点，此处直接传递 child
+    return child;
   }
 }
 
