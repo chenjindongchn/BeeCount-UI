@@ -14,7 +14,7 @@ import '../styles/origin_tokens.dart';
 /// 2. 第一行：加粗分类名称（15.5sp SemiBold）+ 圆角浅灰细框标签（10.5sp 账户/标签）；
 /// 3. 第二行：时间与备注优雅混排（09:56 | 淘宝闪购，12.5sp 次级灰色）；
 /// 4. 右侧金额：支出黑色加粗（-22.54），收入橙色加粗（+0.01）；
-/// 5. 长按条目直接触发批量选择操作。
+/// 5. 长按条目触发删除确认操作。
 class OriginTransactionItem extends ConsumerWidget {
   final Transaction transaction;
   final Category? category;

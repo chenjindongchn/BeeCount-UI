@@ -1,0 +1,623 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/budget_repository.dart';
+import '../../l10n/app_localizations.dart';
+import '../../pages/shared/resources/bindings/recording_category_icon.dart';
+import '../../providers.dart';
+import '../../providers/budget_providers.dart';
+import '../../utils/category_utils.dart';
+import '../../utils/currencies.dart';
+import '../../utils/format_money.dart';
+import '../styles/origin_tokens.dart';
+import '../widgets/origin_card.dart';
+import '../widgets/origin_divider.dart';
+import '../widgets/origin_scaffold.dart';
+import '../widgets/origin_switch.dart';
+import '../widgets/origin_budget_dialog.dart';
+import '../providers/amount_format_provider.dart';
+
+/// vivo OriginOS 风格预算管理页面 (CustomBudgetPage)
+///
+/// 遵循全局定制与 OriginOS 设计规范：
+/// 1. 没有预算时，“添加总预算”按钮固定在屏幕最底部，视觉居中展示空状态；
+/// 2. 拥有预算时，纯色 12dp 卡片呈现月度预算进度、分类预算与首页展示开关；
+/// 3. 支持深色浅色模式完全自适应。
+class CustomBudgetPage extends ConsumerWidget {
+  const CustomBudgetPage({super.key});
+
+  Color _progressColor(BudgetUsage usage, Color primaryColor) {
+    if (usage.rate >= 1.0) return OriginTokens.expenseRed;
+    if (usage.rate >= 0.8) return Colors.orange;
+    return primaryColor;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(thousandSeparatorProvider);
+    final l10n = AppLocalizations.of(context);
+    final primaryColor = ref.watch(primaryColorProvider);
+    final overviewAsync = ref.watch(budgetOverviewProvider);
+    final ledger = ref.watch(currentLedgerProvider).asData?.value;
+    final currencySymbol = getCurrencySymbol(ledger?.currency ?? 'CNY');
+    final canEdit =
+        ledger == null || !ledger.isShared || ledger.myRole == 'owner';
+    final showOnHome = ref.watch(homeBudgetCardEnabledProvider);
+
+    return overviewAsync.when(
+      loading: () => OriginScaffold(
+        appBar: OriginSmallTopAppBar(
+          title: l10n.budgetTitle,
+          leading: const BackButton(),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => OriginScaffold(
+        appBar: OriginSmallTopAppBar(
+          title: l10n.budgetTitle,
+          leading: const BackButton(),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: OriginTokens.expenseRed,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${l10n.commonError}: $error',
+                style: TextStyle(
+                  color: OriginTokens.textSecondary(context),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(budgetOverviewProvider),
+                child: Text(l10n.v4RecordingRetry),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (data) {
+        final totalBudget = data?.totalBudget;
+        final hasBudget = data != null && totalBudget != null;
+
+        return OriginScaffold(
+          appBar: OriginSmallTopAppBar(
+            title: l10n.budgetTitle,
+            leading: const BackButton(),
+          ),
+          body: !hasBudget
+              // 1. 无预算状态：空状态图文居中展示
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Theme.of(context).brightness ==
+                                    Brightness.dark
+                                ? Colors.white.withValues(alpha: 0.06)
+                                : Colors.black.withValues(alpha: 0.04),
+                          ),
+                          child: Icon(
+                            Icons.account_balance_wallet_outlined,
+                            size: 40,
+                            color: OriginTokens.textTertiary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n.budgetEmptyHint,
+                          style: TextStyle(
+                            fontSize: 17.0,
+                            fontWeight: FontWeight.w600,
+                            color: OriginTokens.textPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.budgetManagementDesc,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13.0,
+                            color: OriginTokens.textTertiary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              // 2. 有预算状态：月度总预算、分类预算与首页设置卡片
+              : ListView(
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                    bottom: 24.0,
+                  ),
+                  children: [
+                    // A. 月度总预算大卡片
+                    OriginCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                l10n.budgetMonthlyBudget,
+                                style: TextStyle(
+                                  fontSize: 15.0,
+                                  fontWeight: FontWeight.w600,
+                                  color: OriginTokens.textPrimary(context),
+                                ),
+                              ),
+                              if (canEdit)
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () async {
+                                    final total = await ref
+                                        .read(totalBudgetProvider.future);
+                                    if (context.mounted && total != null) {
+                                      showOriginTotalBudgetDialog(
+                                        context: context,
+                                        ref: ref,
+                                        budget: total,
+                                        currencySymbol: currencySymbol,
+                                      );
+                                    }
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 2.0,
+                                      horizontal: 4.0,
+                                    ),
+                                    child: Text(
+                                      l10n.commonEdit,
+                                      style: TextStyle(
+                                        fontSize: 13.0,
+                                        fontWeight: FontWeight.w500,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 10.0),
+                          Text(
+                            '$currencySymbol ${formatMoneyCompact(totalBudget.budget, trimZeros: false)}',
+                            style: TextStyle(
+                              fontSize: 26.0,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                              color: OriginTokens.textPrimary(context),
+                            ),
+                          ),
+                          const SizedBox(height: 12.0),
+
+                          // 进度条
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4.0),
+                            child: LinearProgressIndicator(
+                              value: totalBudget.rate.clamp(0.0, 1.0),
+                              minHeight: 8.0,
+                              backgroundColor: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.white.withValues(alpha: 0.12)
+                                  : Colors.black.withValues(alpha: 0.06),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _progressColor(totalBudget, primaryColor),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14.0),
+
+                          // 指标四宫格行
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.budgetUsed,
+                                      style: TextStyle(
+                                        fontSize: 12.0,
+                                        color:
+                                            OriginTokens.textSecondary(context),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3.0),
+                                    Text(
+                                      '$currencySymbol ${formatMoneyCompact(totalBudget.used, trimZeros: false)}',
+                                      style: TextStyle(
+                                        fontSize: 14.0,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            OriginTokens.textPrimary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.budgetRemaining,
+                                      style: TextStyle(
+                                        fontSize: 12.0,
+                                        color:
+                                            OriginTokens.textSecondary(context),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3.0),
+                                    Text(
+                                      '$currencySymbol ${formatMoneyCompact(totalBudget.remaining, trimZeros: false)}',
+                                      style: TextStyle(
+                                        fontSize: 14.0,
+                                        fontWeight: FontWeight.w600,
+                                        color: totalBudget.remaining < 0
+                                            ? OriginTokens.expenseRed
+                                            : OriginTokens.textPrimary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '剩余天数',
+                                      style: TextStyle(
+                                        fontSize: 12.0,
+                                        color:
+                                            OriginTokens.textSecondary(context),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3.0),
+                                    Text(
+                                      '${data.daysRemaining} 天',
+                                      style: TextStyle(
+                                        fontSize: 14.0,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            OriginTokens.textPrimary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '日均可用',
+                                      style: TextStyle(
+                                        fontSize: 12.0,
+                                        color:
+                                            OriginTokens.textSecondary(context),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3.0),
+                                    Text(
+                                      '$currencySymbol ${formatMoneyCompact(data.dailyAvailable, trimZeros: false)}',
+                                      style: TextStyle(
+                                        fontSize: 14.0,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            OriginTokens.textPrimary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12.0),
+
+                    // B. 分类预算分组卡片（单卡片聚合，避免多入口冲突）
+                    OriginCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                l10n.budgetCategoryBudgets,
+                                style: TextStyle(
+                                  fontSize: 15.0,
+                                  fontWeight: FontWeight.w600,
+                                  color: OriginTokens.textPrimary(context),
+                                ),
+                              ),
+                              if (canEdit)
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
+                                    showOriginAddCategoryBudgetDialog(
+                                      context: context,
+                                      ref: ref,
+                                      currencySymbol: currencySymbol,
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 2.0,
+                                      horizontal: 4.0,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.add_rounded,
+                                          size: 16.0,
+                                          color: primaryColor,
+                                        ),
+                                        const SizedBox(width: 2.0),
+                                        Text(
+                                          l10n.commonAdd,
+                                          style: TextStyle(
+                                            fontSize: 13.0,
+                                            fontWeight: FontWeight.w500,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 10.0),
+                          if (data.categoryBudgets.isNotEmpty) ...[
+                            for (int i = 0;
+                                i < data.categoryBudgets.length;
+                                i++) ...[
+                              if (i > 0) ...[
+                                const SizedBox(height: 8.0),
+                                const OriginDivider(startIndent: 0),
+                                const SizedBox(height: 8.0),
+                              ],
+                              _CategoryBudgetTile(
+                                item: data.categoryBudgets[i],
+                                symbol: currencySymbol,
+                                primaryColor: primaryColor,
+                                canEdit: canEdit,
+                              ),
+                            ],
+                          ] else ...[
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: canEdit
+                                  ? () {
+                                      showOriginAddCategoryBudgetDialog(
+                                        context: context,
+                                        ref: ref,
+                                        currencySymbol: currencySymbol,
+                                      );
+                                    }
+                                  : null,
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14.0,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  canEdit
+                                      ? '点击右上角「+ 添加」，按分类精细化管理开支'
+                                      : '暂未设置分类预算',
+                                  style: TextStyle(
+                                    fontSize: 13.0,
+                                    color: OriginTokens.textTertiary(context),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12.0),
+
+                    // C. 设置卡片：在首页显示预算
+                    OriginCard(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            l10n.budgetShowOnHome,
+                            style: TextStyle(
+                              fontSize: 15.0,
+                              fontWeight: FontWeight.w500,
+                              color: OriginTokens.textPrimary(context),
+                            ),
+                          ),
+                          OriginSwitch(
+                            value: showOnHome,
+                            activeColor: primaryColor,
+                            onChanged: (val) {
+                              ref
+                                  .read(homeBudgetCardEnabledProvider.notifier)
+                                  .toggle(val);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24.0),
+                  ],
+                ),
+          // 3. 严格遵循用户规范 2-a：没有预算时添加预算的按钮要在页面的最底下
+          bottomNavigationBar: (!hasBudget && canEdit)
+              ? SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: OriginTokens.cardMargin,
+                      vertical: 12.0,
+                    ),
+                    child: SizedBox(
+                      height: OriginTokens.buttonHeight,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              OriginTokens.buttonRadius,
+                            ),
+                          ),
+                        ),
+                        onPressed: () {
+                          showOriginTotalBudgetDialog(
+                            context: context,
+                            ref: ref,
+                            budget: null,
+                            currencySymbol: currencySymbol,
+                          );
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.add_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.budgetAddTotal,
+                              style: const TextStyle(
+                                fontSize: 16.0,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : null,
+        );
+      },
+    );
+  }
+}
+
+class _CategoryBudgetTile extends ConsumerWidget {
+  final CategoryBudgetUsage item;
+  final String symbol;
+  final Color primaryColor;
+  final bool canEdit;
+
+  const _CategoryBudgetTile({
+    required this.item,
+    required this.symbol,
+    required this.primaryColor,
+    required this.canEdit,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final usage = item.usage;
+    final categoryName = item.category != null
+        ? CategoryUtils.getDisplayName(item.category!.name, context)
+        : item.categoryName;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: canEdit
+          ? () async {
+              final budgets = await ref.read(allBudgetsProvider.future);
+              final budget =
+                  budgets.where((b) => b.id == item.budgetId).firstOrNull;
+              if (context.mounted && budget != null) {
+                showOriginCategoryBudgetEditDialog(
+                  context: context,
+                  ref: ref,
+                  budget: budget,
+                  categoryName: categoryName,
+                  category: item.category,
+                  currencySymbol: symbol,
+                );
+              }
+            }
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                if (item.category != null)
+                  RecordingCategoryIcon(category: item.category!, size: 24)
+                else
+                  const Icon(Icons.category_outlined, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    categoryName,
+                    style: TextStyle(
+                      fontSize: 14.0,
+                      fontWeight: FontWeight.w500,
+                      color: OriginTokens.textPrimary(context),
+                    ),
+                  ),
+                ),
+                Text(
+                  '${l10n.budgetRemaining} $symbol${formatMoneyCompact(usage.remaining, trimZeros: false)}',
+                  style: TextStyle(
+                    fontSize: 13.0,
+                    fontWeight: FontWeight.w500,
+                    color: usage.remaining < 0
+                        ? OriginTokens.expenseRed
+                        : OriginTokens.textSecondary(context),
+                  ),
+                ),
+                if (canEdit)
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: OriginTokens.textTertiary(context),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6.0),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3.0),
+              child: LinearProgressIndicator(
+                value: usage.rate.clamp(0.0, 1.0),
+                minHeight: 5.0,
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.black.withValues(alpha: 0.06),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  usage.rate >= 1.0
+                      ? OriginTokens.expenseRed
+                      : (usage.rate >= 0.8 ? Colors.orange : primaryColor),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

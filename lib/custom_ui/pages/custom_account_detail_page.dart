@@ -23,6 +23,7 @@ import '../widgets/origin_divider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_menu.dart';
 import 'custom_transaction_sheet.dart';
+import '../providers/amount_format_provider.dart';
 
 /// vivo OriginOS 风格自定义账户详情页面 (CustomAccountDetailPage)
 ///
@@ -341,6 +342,7 @@ class _CustomAccountDetailPageState
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
+    ref.watch(thousandSeparatorProvider);
     ref.listen(statsRefreshProvider, (_, __) => _onDataChanged());
     ref.listen(syncGenerationProvider, (_, __) => _onDataChanged());
     final refs = ref.watch(accountDetailReferencesProvider);

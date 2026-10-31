@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'currencies.dart';
 import '../l10n/app_localizations.dart';
+import 'format_money.dart' show globalUseThousandSeparator;
 
 /// 格式化余额显示，支持多语言单位和多币种
 ///
@@ -107,18 +108,21 @@ String formatBalance(double balance, String currencyCode,
   }
 }
 
-/// 格式化完整余额显示（带千分号）
+/// 格式化完整余额显示
+
 ///
 /// [balance] 金额
 /// [currencyCode] 币种代码 (如 'CNY', 'USD')
 ///
-/// 始终显示完整金额，使用千分号分隔
-String formatBalanceFull(double balance, String currencyCode) {
+/// 始终显示完整金额，根据开关决定是否使用千分号分隔
+String formatBalanceFull(double balance, String currencyCode,
+    {bool? useThousandSeparator}) {
   final absBalance = balance.abs();
   final currencySymbol = getCurrencySymbol(currencyCode);
   final sign = balance >= 0 ? currencySymbol : '-$currencySymbol';
+  final useSeparator = useThousandSeparator ?? globalUseThousandSeparator;
 
-  // 格式化为带千分号的字符串
+  // 格式化为字符串
   final parts = absBalance.toStringAsFixed(2).split('.');
   final intPart = parts[0];
   final decPart = parts[1];
@@ -126,7 +130,7 @@ String formatBalanceFull(double balance, String currencyCode) {
   // 添加千分号
   final buffer = StringBuffer();
   for (int i = 0; i < intPart.length; i++) {
-    if (i > 0 && (intPart.length - i) % 3 == 0) {
+    if (useSeparator && i > 0 && (intPart.length - i) % 3 == 0) {
       buffer.write(',');
     }
     buffer.write(intPart[i]);
@@ -134,6 +138,7 @@ String formatBalanceFull(double balance, String currencyCode) {
 
   return '$sign${buffer.toString()}.$decPart';
 }
+
 
 /// 翻译账本名称
 ///

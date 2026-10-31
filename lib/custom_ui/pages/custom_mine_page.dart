@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beecount_ui/beecount_ui.dart';
+import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import '../../l10n/app_localizations.dart';
 import '../../providers/github_star_provider.dart';
 import '../../providers/feature_highlight_providers.dart';
@@ -24,8 +25,13 @@ import '../../pages/settings/header_skin_page.dart';
 import '../../pages/settings/language_settings_page.dart';
 import '../../pages/settings/personalize_page.dart';
 import '../../pages/settings/widget_management_page.dart';
+import '../../cloud/sync_service.dart';
 import '../../pages/shared/selectors/currency_picker_sheet.dart';
 import '../../pages/currency/exchange_rate_page.dart';
+import '../../pages/category/category_manage_page.dart';
+import '../../pages/cloud/cloud_service_page.dart';
+import '../../pages/cloud/cloud_sync_page.dart';
+import '../../pages/cloud/beecount_cloud_sync_page.dart';
 import '../../pages/report/annual_report_page.dart';
 import '../../pages/donation/donation_page.dart';
 import '../../pages/shared/widgets/feature_dot.dart';
@@ -36,14 +42,17 @@ import '../widgets/origin_card.dart';
 import '../widgets/origin_setting_card.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_bottom_sheet.dart';
+import '../providers/amount_format_provider.dart';
 
 /// vivo OriginOS 风格“我的”与设置页面 (CustomMinePage)
 ///
 /// 遵循 `OriginUI/docs/13-card-corner-and-hairline-divider.md` 与 `24`:
-/// 1. 大标题栏（84dp / 22sp SemiBold）；
-/// 2. 分组设置卡片（12dp 圆角，20dp 边距，0.5dp 发丝线）；
-/// 3. 日间纯白卡片，夜间 #202020 纯深色卡片；
-/// 4. 纯 Riverpod 驱动，将原通用/外观设置页面内容完整平铺迁移至本页面，保持 100% 逻辑复用。
+/// 1. 大标题栏（84dp / 22sp SemiBold），规范 AppBar 导航行为（仅 push 时显示返回）；
+/// 2. 沉浸式 OriginProfileCard：56dp 头像、问候语、记账天数/笔数徽章与账本选择；
+/// 3. 分组设置卡片（12dp 圆角，20dp 边距，0.5dp 发丝线）；
+/// 4. 核心功能直达：提拔「分类管理」入口，彻底消除寻找路径过深的问题；
+/// 5. 云服务卡片全面 OriginOS 风格化，消除原版组件混搭割裂；
+/// 6. 100% 复用 Riverpod 驱动，保持零冲突变基能力。
 class CustomMinePage extends ConsumerStatefulWidget {
   const CustomMinePage({super.key});
 
@@ -129,12 +138,11 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final primaryColor = ref.watch(primaryColorProvider);
+    final primaryColor = OriginTokens.primary(context);
     final stars =
         ref.watch(githubStarCountProvider).valueOrNull ?? githubStarFallbackCount;
 
     final canPop = Navigator.of(context).canPop();
-    final tabIdx = ref.watch(bottomTabIndexProvider);
 
     // 外观与主题
     final mode = ref.watch(themeModeProvider);
@@ -151,6 +159,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
 
     // 记账显示与偏好
     final compactAmount = ref.watch(compactAmountProvider);
+    final thousandSeparator = ref.watch(thousandSeparatorProvider);
     final showTime = ref.watch(showTransactionTimeProvider);
     final noteMode = ref.watch(noteDisplayModeProvider);
     final colorScheme = ref.watch(incomeExpenseColorSchemeProvider);
@@ -169,39 +178,120 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
     final baseCurrencyName =
         displayCurrency(baseCurrency.toUpperCase(), context);
 
+    // 云同步状态
+    final cfg = ref.watch(activeCloudConfigProvider);
+    final version = ref.watch(beecountCloudServerVersionProvider).valueOrNull;
+    final auth = ref.watch(mineCloudUserProvider);
+    final ledgerId = ref.watch(currentLedgerIdProvider);
+    final live = ref.watch(syncStatusProvider(ledgerId));
+    final status =
+        live.valueOrNull ?? ref.watch(lastSyncStatusProvider(ledgerId));
+    final local = cfg.valueOrNull?.type == CloudBackendType.local;
+    final canUseCloud = !local &&
+        (cfg.valueOrNull?.type == CloudBackendType.icloud ||
+            auth.valueOrNull != null);
+    final projection =
+        mineSyncPresentation(local ? SyncDiff.notConfigured : status?.diff, l);
+    final syncError = cfg.error ?? auth.error ?? live.error;
+    final syncLabel = syncError != null
+        ? l.mineSyncError
+        : (canUseCloud && live.isLoading)
+            ? l.mineCloudServiceLoading
+            : projection.label;
+
+    final cloudName = cfg.when(
+      loading: () => l.mineCloudServiceLoading,
+      error: (e, _) => '${l.commonError}: $e',
+      data: (value) => switch (value.type) {
+        CloudBackendType.local => l.mineCloudServiceOffline,
+        CloudBackendType.webdav => l.mineCloudServiceWebDAV,
+        CloudBackendType.icloud => 'iCloud',
+        CloudBackendType.supabase => l.mineCloudServiceCustom,
+        CloudBackendType.s3 => 'S3',
+        CloudBackendType.beecountCloud => version?.isNotEmpty == true
+            ? 'BeeCount Cloud v$version'
+            : 'BeeCount Cloud',
+      },
+    );
+
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return OriginScaffold(
       appBar: OriginLargeTopAppBar(
         title: l.mineTitle,
-        leading: (canPop || tabIdx == 3)
-            ? BackButton(
-                onPressed: () {
-                  if (ref.read(bottomTabIndexProvider) == 3) {
-                    ref.read(bottomTabIndexProvider.notifier).state = 0;
-                  }
-                  if (canPop) {
-                    Navigator.of(context).pop();
-                  }
-                },
-              )
-            : null,
+        leading: canPop ? const BackButton() : null,
       ),
       body: ListView(
-        padding: const EdgeInsets.only(top: 8.0, bottom: 120.0),
+        padding: EdgeInsets.only(
+          top: 6.0,
+          bottom: 120.0 + bottomInset,
+        ),
         children: [
-          // 1. 云同步与服务
-          OriginSectionTitle(title: l.v4MineCloudGroup),
-          const OriginCard(
-            margin: EdgeInsets.symmetric(
-              horizontal: OriginTokens.cardMargin,
-              vertical: 4.0,
+          // 1. 云同步与协同服务
+          OriginSectionTitle(
+            title: l.v4MineCloudGroup,
+            margin: const EdgeInsets.fromLTRB(
+              OriginTokens.cardMargin,
+              8.0,
+              OriginTokens.cardMargin,
+              6.0,
             ),
-            child: MineCloudBinding(),
+          ),
+          OriginSettingGroup(
+            items: [
+              OriginSettingItem(
+                title: l.mineCloudService,
+                subtitle: cloudName,
+                leading: Icon(
+                  Icons.cloud_outlined,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                valueText: syncLabel,
+                onTap: () => _open(const CloudServicePage()),
+              ),
+              if (!local)
+                OriginSettingItem(
+                  title: l.cloudSyncPageTitle,
+                  subtitle: syncLabel,
+                  leading: Icon(
+                    Icons.sync_rounded,
+                    color: primaryColor,
+                    size: 22.0,
+                  ),
+                  onTap: () => _open(
+                    cfg.valueOrNull?.type == CloudBackendType.beecountCloud
+                        ? const BeeCountCloudSyncPage()
+                        : const CloudSyncPage(),
+                  ),
+                ),
+            ],
           ),
 
-          // 2. 核心功能分组
+          // 2. 核心记账功能与管理（直达分类管理）
           OriginSectionTitle(title: l.v4MineFeaturesGroup),
           OriginSettingGroup(
             items: [
+              OriginSettingItem(
+                title: l.mineCategoryManagement,
+                subtitle: l.mineCategoryManagementSubtitle,
+                leading: Icon(
+                  Icons.category_outlined,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                onTap: () => _open(const CategoryManagePage()),
+              ),
+              OriginSettingItem(
+                title: '账户偏好设置',
+                subtitle: '设置默认支出与收入账户',
+                leading: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                onTap: () => showOriginAccountPreferencesSheet(context, ref),
+              ),
               OriginSettingItem(
                 title: l.smartBilling,
                 subtitle: l.smartBillingDesc,
@@ -216,7 +306,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                 title: l.dataManagement,
                 subtitle: l.dataManagementDesc,
                 leading: Icon(
-                  Icons.folder_shared_rounded,
+                  Icons.folder_shared_outlined,
                   color: primaryColor,
                   size: 22.0,
                 ),
@@ -232,20 +322,10 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                 ),
                 onTap: () => _open(const AutomationPage()),
               ),
-              OriginSettingItem(
-                title: '账户偏好设置',
-                subtitle: '设置默认支出与收入账户',
-                leading: Icon(
-                  Icons.account_balance_wallet_outlined,
-                  color: primaryColor,
-                  size: 22.0,
-                ),
-                onTap: () => showOriginAccountPreferencesSheet(context, ref),
-              ),
             ],
           ),
 
-          // 3. 外观与个性化（原设置页面内容迁移）
+          // 3. 外观与个性化
           OriginSectionTitle(title: l.appearanceSettingsPageTitle),
           OriginSettingGroup(
             items: [
@@ -278,7 +358,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                 leading: FeatureDot(
                   anchor: 'personalize',
                   child: Icon(
-                    Icons.palette_rounded,
+                    Icons.palette_outlined,
                     color: primaryColor,
                     size: 22.0,
                   ),
@@ -331,7 +411,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
             ],
           ),
 
-          // 4. 记账显示偏好（原设置页面内容迁移）
+          // 4. 记账显示偏好
           OriginSectionTitle(title: l.appearanceSettingsPageSubtitle),
           OriginSettingGroup(
             items: [
@@ -341,7 +421,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                     ? l.appearanceAmountFormatCompact
                     : l.appearanceAmountFormatFull,
                 leading: Icon(
-                  Icons.account_balance_wallet_outlined,
+                  Icons.wallet_outlined,
                   color: primaryColor,
                   size: 22.0,
                 ),
@@ -364,6 +444,28 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                   ],
                   (v) => ref.read(compactAmountProvider.notifier).state = v,
                 ),
+              ),
+              OriginSettingItem(
+                title: '金额千分位',
+                subtitle: thousandSeparator
+                    ? '开启：显示为 8,888.00'
+                    : '关闭：显示为 8888.00',
+                leading: Icon(
+                  Icons.pin_outlined,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                showArrow: false,
+                trailing: OriginSwitch(
+                  value: thousandSeparator,
+                  activeColor: primaryColor,
+                  onChanged: (v) => ref
+                      .read(thousandSeparatorProvider.notifier)
+                      .setEnabled(v),
+                ),
+                onTap: () => ref
+                    .read(thousandSeparatorProvider.notifier)
+                    .toggle(),
               ),
               OriginSettingItem(
                 title: l.appearanceShowTransactionTime,
@@ -461,7 +563,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
             ],
           ),
 
-          // 5. 货币与汇率（原设置页面内容迁移）
+          // 5. 货币与汇率
           OriginSectionTitle(title: l.exchangeRatePageTitle),
           OriginSettingGroup(
             items: [
@@ -488,7 +590,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
             ],
           ),
 
-          // 6. 系统与安全（原设置页面内容迁移）
+          // 6. 系统与安全
           OriginSectionTitle(title: l.commonSettings),
           OriginSettingGroup(
             items: [

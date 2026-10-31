@@ -4,17 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_list_view/flutter_list_view.dart';
 import 'package:intl/intl.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:beecount_ui/beecount_ui.dart';
 import '../../../data/repositories/base_repository.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/home_transaction_preview.dart';
-import '../../../providers/database_providers.dart';
+import '../../../providers.dart';
+import '../../../providers/budget_providers.dart';
 import '../../../providers/home_startup_preview_provider.dart';
+import '../../../services/billing/post_processor.dart';
 import '../../../utils/transaction_edit_utils.dart';
 import '../../../utils/format_money.dart';
 import '../../../utils/month_range.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_divider.dart';
+import 'origin_dialog.dart';
 import 'origin_transaction_item.dart';
+import '../providers/amount_format_provider.dart';
 
 /// vivo OriginOS 风格交易流加载器 (OriginTransactionFeed)
 class OriginTransactionFeed extends ConsumerStatefulWidget {
@@ -27,6 +32,7 @@ class OriginTransactionFeed extends ConsumerStatefulWidget {
   final ValueChanged<HomeTransactionPreview>? onPreviewReady;
   final HomeStartupPreview? startupPreview;
   final VoidCallback? onBatch;
+  final Future<void> Function(dynamic item)? onDelete;
   final Widget? header;
 
   const OriginTransactionFeed({
@@ -40,6 +46,7 @@ class OriginTransactionFeed extends ConsumerStatefulWidget {
     this.onPreviewReady,
     this.startupPreview,
     this.onBatch,
+    this.onDelete,
     this.header,
   });
 
@@ -211,6 +218,7 @@ class _OriginTransactionFeedState extends ConsumerState<OriginTransactionFeed> {
       controller: widget.controller,
       emptyWidget: widget.emptyWidget,
       onBatch: widget.onBatch,
+      onDelete: widget.onDelete,
       header: widget.header,
     );
   }
@@ -232,6 +240,7 @@ class OriginTransactionList extends ConsumerStatefulWidget {
   final bool sourceLoading;
   final VoidCallback? onRetrySource;
   final VoidCallback? onBatch;
+  final Future<void> Function(dynamic item)? onDelete;
   final Widget? header;
 
   const OriginTransactionList({
@@ -250,6 +259,7 @@ class OriginTransactionList extends ConsumerStatefulWidget {
     this.sourceLoading = false,
     this.onRetrySource,
     this.onBatch,
+    this.onDelete,
     this.header,
   });
 
@@ -292,6 +302,38 @@ class OriginTransactionListState extends ConsumerState<OriginTransactionList> {
     setState(() {
       _usePreloadedData = false;
     });
+  }
+
+  /// 长按记账条目触发删除，弹出符合截图与 OriginOS 规范的危险删除确认弹窗
+  Future<void> _handleDeleteTransaction(dynamic transaction) async {
+    final confirmed = await showOriginConfirmDialog(
+      context,
+      title: '确定要删除该条账单吗？删除后不可恢复',
+      confirmText: '确定',
+      cancelText: '取消',
+      isDanger: true,
+    );
+
+    if (confirmed == true && mounted) {
+      switchToStreamMode();
+      try {
+        final repo = ref.read(repositoryProvider);
+        await repo.deleteTransaction(transaction.id);
+        if (!mounted) return;
+        final curLedger = ref.read(currentLedgerIdProvider);
+        ref.invalidate(countsForLedgerProvider(curLedger));
+        ref.read(statsRefreshProvider.notifier).state++;
+        ref.read(budgetRefreshProvider.notifier).state++;
+        PostProcessor.sync(ref, ledgerId: curLedger);
+        if (mounted) {
+          showBeeToast(context, '删除成功');
+        }
+      } catch (e) {
+        if (mounted) {
+          showBeeToast(context, '删除失败: $e', tone: BeeTone.error);
+        }
+      }
+    }
   }
 
   void jumpToTop() {
@@ -360,6 +402,7 @@ class OriginTransactionListState extends ConsumerState<OriginTransactionList> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(thousandSeparatorProvider);
     _buildGroups();
 
     final hasHeader = widget.header != null;
@@ -519,8 +562,14 @@ class OriginTransactionListState extends ConsumerState<OriginTransactionList> {
                         items[i].category,
                       );
                     },
-                    // 长按条目触发批量
-                    onLongPress: widget.onBatch,
+                    // 长按条目触发删除确认弹窗
+                    onLongPress: () {
+                      if (widget.onDelete != null) {
+                        widget.onDelete!(items[i].t);
+                      } else {
+                        _handleDeleteTransaction(items[i].t);
+                      }
+                    },
                   ),
                   if (i < items.length - 1)
                     const OriginDivider(startIndent: 56.0),

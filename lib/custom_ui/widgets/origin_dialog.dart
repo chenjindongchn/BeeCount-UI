@@ -44,6 +44,7 @@ class OriginDialog extends StatelessWidget {
   final bool isDanger;
   final double maxWidth;
   final Alignment alignment;
+  final TextAlign textAlign;
 
   const OriginDialog({
     super.key,
@@ -61,6 +62,7 @@ class OriginDialog extends StatelessWidget {
     this.isDanger = false,
     this.maxWidth = OriginTokens.dialogWidth,
     this.alignment = Alignment.bottomCenter,
+    this.textAlign = TextAlign.start,
   });
 
   @override
@@ -112,26 +114,27 @@ class OriginDialog extends StatelessWidget {
                   const SizedBox(height: 12.0),
                 ],
 
-                // 2. 标题（16sp SemiBold 居中）
+                // 2. 标题（16sp SemiBold）
                 if (title != null && title!.isNotEmpty) ...[
                   Text(
                     title!,
-                    textAlign: TextAlign.center,
+                    textAlign: textAlign,
                     style: TextStyle(
                       fontSize: 16.0,
                       fontWeight: FontWeight.w600,
                       color: OriginTokens.textPrimary(context),
                       letterSpacing: -0.2,
+                      height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 6.0),
                 ],
 
-                // 3. 可选副标题（12sp Regular 居中弱化灰）
+                // 3. 可选副标题（12sp Regular 弱化灰）
                 if (subtitle != null && subtitle!.isNotEmpty) ...[
                   Text(
                     subtitle!,
-                    textAlign: TextAlign.center,
+                    textAlign: textAlign,
                     style: TextStyle(
                       fontSize: 12.0,
                       color: OriginTokens.summaryText(context),
@@ -188,12 +191,18 @@ class OriginDialog extends StatelessWidget {
 
     if (!hasCancel && !hasConfirm) return const SizedBox.shrink();
 
+    final effectiveConfirmBg = isDanger
+        ? OriginTokens.dialogButtonSecondary(context)
+        : confirmBgColor;
+    final effectiveConfirmTextColor =
+        isDanger ? OriginTokens.expenseRed : Colors.white;
+
     // 确认胶囊按钮
     final confirmBtn = hasConfirm
         ? _OriginDialogCapsuleButton(
             text: confirmText!,
-            backgroundColor: confirmBgColor,
-            textColor: Colors.white,
+            backgroundColor: effectiveConfirmBg,
+            textColor: effectiveConfirmTextColor,
             isPrimary: true,
             onPressed: () {
               HapticFeedback.lightImpact();
@@ -243,14 +252,15 @@ class OriginDialog extends StatelessWidget {
 }
 
 /// OriginUI 对话框大胶囊按钮 (高度 46dp, 圆角 23dp)
-class _OriginDialogCapsuleButton extends StatefulWidget {
+class OriginDialogCapsuleButton extends StatefulWidget {
   final String text;
   final Color backgroundColor;
   final Color textColor;
   final bool isPrimary;
   final VoidCallback onPressed;
 
-  const _OriginDialogCapsuleButton({
+  const OriginDialogCapsuleButton({
+    super.key,
     required this.text,
     required this.backgroundColor,
     required this.textColor,
@@ -259,11 +269,13 @@ class _OriginDialogCapsuleButton extends StatefulWidget {
   });
 
   @override
-  State<_OriginDialogCapsuleButton> createState() =>
+  State<OriginDialogCapsuleButton> createState() =>
       _OriginDialogCapsuleButtonState();
 }
 
-class _OriginDialogCapsuleButtonState extends State<_OriginDialogCapsuleButton> {
+typedef _OriginDialogCapsuleButton = OriginDialogCapsuleButton;
+
+class _OriginDialogCapsuleButtonState extends State<OriginDialogCapsuleButton> {
   bool _isPressed = false;
 
   @override
@@ -318,6 +330,7 @@ Future<bool?> showOriginConfirmDialog(
   bool stackActions = true,
   bool barrierDismissible = true,
   Widget? icon,
+  TextAlign textAlign = TextAlign.start,
 }) {
   return showGeneralDialog<bool>(
     context: context,
@@ -335,6 +348,7 @@ Future<bool?> showOriginConfirmDialog(
         isDanger: isDanger,
         stackActions: stackActions,
         icon: icon,
+        textAlign: textAlign,
       );
     },
     transitionBuilder: (ctx, anim, secondaryAnim, child) {
@@ -366,6 +380,7 @@ Future<void> showOriginAlertDialog(
   String? okText,
   bool barrierDismissible = true,
   Widget? icon,
+  TextAlign textAlign = TextAlign.start,
 }) {
   return showGeneralDialog<void>(
     context: context,
@@ -380,6 +395,7 @@ Future<void> showOriginAlertDialog(
         content: content,
         confirmText: okText ?? '我知道了',
         icon: icon,
+        textAlign: textAlign,
       );
     },
     transitionBuilder: (ctx, anim, secondaryAnim, child) {
@@ -1032,6 +1048,7 @@ class OriginConfirmCard extends StatelessWidget {
   final VoidCallback? onSecondary;
   final double maxWidth;
   final double maxHeight;
+  final TextAlign textAlign;
 
   const OriginConfirmCard({
     super.key,
@@ -1045,6 +1062,7 @@ class OriginConfirmCard extends StatelessWidget {
     this.onSecondary,
     this.maxWidth = OriginTokens.dialogWidth,
     this.maxHeight = 340.0,
+    this.textAlign = TextAlign.start,
   });
 
   @override
@@ -1080,11 +1098,11 @@ class OriginConfirmCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. 标题（16sp SemiBold 居中）
+                  // 1. 标题（16sp SemiBold）
                   if (title != null && title!.isNotEmpty) ...[
                     Text(
                       title!,
-                      textAlign: TextAlign.center,
+                      textAlign: textAlign,
                       style: TextStyle(
                         fontSize: 16.0,
                         fontWeight: FontWeight.w600,
@@ -1095,11 +1113,11 @@ class OriginConfirmCard extends StatelessWidget {
                     const SizedBox(height: 6.0),
                   ],
 
-                  // 2. 可选副标题（12sp Regular 居中弱化灰）
+                  // 2. 可选副标题（12sp Regular 弱化灰）
                   if (subtitle != null && subtitle!.isNotEmpty) ...[
                     Text(
                       subtitle!,
-                      textAlign: TextAlign.center,
+                      textAlign: textAlign,
                       style: TextStyle(
                         fontSize: 12.0,
                         color: OriginTokens.summaryText(context),

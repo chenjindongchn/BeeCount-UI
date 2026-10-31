@@ -16,6 +16,7 @@ import 'custom_ui/pages/custom_home_page.dart';
 import 'custom_ui/pages/custom_analytics_page.dart';
 import 'custom_ui/pages/custom_accounts_page.dart';
 import 'custom_ui/pages/custom_mine_page.dart';
+import 'custom_ui/pages/custom_budget_page.dart';
 import 'custom_ui/widgets/origin_bottom_nav_bar.dart';
 import 'providers.dart';
 import 'l10n/app_localizations.dart';
@@ -568,7 +569,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
         nav.push(MaterialPageRoute(builder: (_) => const AccountsPage()));
         break;
       case 'budget':
-        nav.push(MaterialPageRoute(builder: (_) => const BudgetPage()));
+        nav.push(MaterialPageRoute(builder: (_) => const CustomBudgetPage()));
         break;
       case 'detail':
         // 最近交易 / 仪表盘主体 → 首页明细列表:App 没有独立的明细页,首页

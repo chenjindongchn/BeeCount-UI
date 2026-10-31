@@ -16,6 +16,7 @@ import '../widgets/origin_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_menu.dart';
+import '../providers/amount_format_provider.dart';
 
 /// vivo OriginOS 风格资产总览与账户管理页面 (CustomAccountsPage)
 ///
@@ -74,6 +75,7 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
     final allStatsAsync = ref.watch(allAccountStatsProvider);
     final hideAmounts = ref.watch(hideAmountsProvider);
     final baseCurrency = ref.watch(baseCurrencyProvider);
+    ref.watch(thousandSeparatorProvider);
 
     return OriginScaffold(
       appBar: OriginLargeTopAppBar(

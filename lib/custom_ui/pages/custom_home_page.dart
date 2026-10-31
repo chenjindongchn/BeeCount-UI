@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_list_view/flutter_list_view.dart';
@@ -9,6 +10,7 @@ import '../../providers.dart';
 import '../../providers/avatar_providers.dart';
 import '../../utils/month_range.dart';
 import '../../utils/format_money.dart';
+import '../../utils/format_utils.dart';
 import '../../utils/currencies.dart';
 import '../widgets/origin_transaction_feed.dart';
 import '../../pages/main/home/widgets/home_reminders.dart';
@@ -18,16 +20,46 @@ import '../../pages/shared/pickers/wheel_date_picker.dart';
 import '../../pages/shared/widgets/feature_dot.dart';
 import '../../pages/transaction/search_page.dart';
 import '../../pages/report/annual_report_page.dart';
+import '../../providers/budget_providers.dart';
+import 'custom_budget_page.dart';
 import '../../pages/ai/ai_chat_page.dart';
 import '../../services/export/share_poster_service.dart';
 import '../../providers/shared_ledger_providers.dart';
 import '../../providers/home_startup_preview_provider.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
+import '../providers/amount_format_provider.dart';
 import '../widgets/origin_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_menu.dart';
 import 'custom_mine_page.dart';
+
+/// 今日支出缓存值（避免刷新闪烁）
+final lastTodayExpenseProvider =
+    StateProvider.family<double?, int>((ref, ledgerId) => null);
+
+/// 今日支出 Provider（响应统计刷新 tick 与当前账本）
+final todayExpenseProvider =
+    FutureProvider.family.autoDispose<double, int>((ref, ledgerId) async {
+  ref.watch(statsRefreshProvider);
+  if (ledgerId <= 0) return 0.0;
+  final repo = ref.watch(repositoryProvider);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final tomorrow = today.add(const Duration(days: 1));
+  final categories = await repo.totalsByCategory(
+    ledgerId: ledgerId,
+    type: 'expense',
+    start: today,
+    end: tomorrow,
+  );
+  var sum = 0.0;
+  for (final c in categories) {
+    sum += c.total;
+  }
+  ref.read(lastTodayExpenseProvider(ledgerId).notifier).state = sum;
+  return sum;
+});
 
 /// vivo OriginOS 风格流水看板首页 (CustomHomePage)
 ///
@@ -95,6 +127,13 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     _transactionListKey.currentState?.switchToStreamMode();
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const CustomMinePage()),
+    );
+  }
+
+  void _openBudgetPage() {
+    _transactionListKey.currentState?.switchToStreamMode();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CustomBudgetPage()),
     );
   }
 
@@ -169,14 +208,30 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     final hideAmounts = ref.watch(hideAmountsProvider);
     final primaryColor = ref.watch(primaryColorProvider);
     final avatarPath = ref.watch(avatarPathProvider).asData?.value;
+    ref.watch(thousandSeparatorProvider);
 
     final params = (ledgerId: ledgerId, month: month);
     ref.watch(monthlyTotalsProvider(params));
     final (income, expense) =
         ref.watch(lastMonthlyTotalsProvider(params)) ?? (0.0, 0.0);
-    final balance = income - expense;
     final currency = ledger?.currency ?? 'CNY';
     final currencySymbol = getCurrencySymbol(currency);
+    final isPrimaryLight =
+        ThemeData.estimateBrightnessForColor(primaryColor) == Brightness.light;
+    final cardMainTextColor =
+        isPrimaryLight ? const Color(0xFF1D1D1F) : Colors.white;
+    final cardSubTextColor = isPrimaryLight
+        ? const Color(0xFF1D1D1F).withValues(alpha: 0.65)
+        : Colors.white.withValues(alpha: 0.75);
+    final cardUnitText = currency == 'CNY' ? '元' : currencySymbol;
+
+    // 今日支出与预算数据
+    final todayExpenseAsync = ref.watch(todayExpenseProvider(ledgerId));
+    final todayExpense = todayExpenseAsync.valueOrNull ??
+        ref.watch(lastTodayExpenseProvider(ledgerId)) ??
+        0.0;
+    final budgetOverview = ref.watch(budgetOverviewProvider).valueOrNull;
+    final budgetUsage = budgetOverview?.totalBudget;
 
     final initialPreview =
         _startupPreview?.matches(ref.watch(repositoryProvider), ledgerId) == true
@@ -209,7 +264,11 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
 
     return OriginScaffold(
       appBar: OriginLargeTopAppBar(
-        title: ledger?.name ?? '日常账本',
+        title: ledger != null
+            ? translateLedgerName(context, ledger.name)
+            : '日常账本',
+        showDropdown: true,
+        onTitleTap: _openLedgerPicker,
         actions: [
           // vivo OriginOS 规范：右上角“竖排双圆点”展示更多设置与功能入口
           FeatureDot(
@@ -219,10 +278,14 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
               tooltip: '设置与功能',
               items: [
                 OriginMenuItem(
-                  title: '切换账本',
-                  subtitle: ledger?.name ?? '日常账本',
-                  icon: const Icon(Icons.menu_book_outlined),
-                  onTap: _openLedgerPicker,
+                  title: '多选',
+                  icon: const Icon(Icons.check_box_outlined),
+                  onTap: () => _openSearch(batch: true),
+                ),
+                OriginMenuItem(
+                  title: l10n.budgetTitle,
+                  icon: const Icon(Icons.pie_chart_outline_rounded),
+                  onTap: _openBudgetPage,
                 ),
                 OriginMenuItem(
                   title: l10n.aiChatTitle,
@@ -231,11 +294,6 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                     color: primaryColor,
                   ),
                   onTap: _openAIChat,
-                ),
-                OriginMenuItem(
-                  title: l10n.searchTitle,
-                  icon: const Icon(Icons.search_rounded),
-                  onTap: () => _openSearch(),
                 ),
                 OriginMenuItem(
                   title: l10n.tabMine,
@@ -277,103 +335,238 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
             child: OriginTransactionFeed(
               header: Column(
                 children: [
-                  // 1. 月度收支看板卡片（彻底移除“支出”字样，大金额与小眼睛同行，收缩卡片高度）
+                  // 1. 收支与预算看板卡片 (总底色和进度条采用软件主题色，月预算小条采用半透明高斯模糊白色)
                   OriginCard(
-                    onTap: _handleDateSelection,
+                    color: primaryColor,
+                    padding: EdgeInsets.zero,
+                    radius: 18.0,
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              hideAmounts
-                                  ? '****'
-                                  : '$currencySymbol ${formatMoneyCompact(expense)}',
-                              style: TextStyle(
-                                fontSize: 26.0,
-                                fontWeight: FontWeight.bold,
-                                color: OriginTokens.textPrimary(context),
-                                letterSpacing: -0.5,
-                              ),
+                        // 上半部分主统计区域 (今日支出与月度收支，对齐用户提供的界面)
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _handleDateSelection,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 今日支出标题行与眼睛控制按钮 (标题与眼睛图标紧邻)
+                                Row(
+                                  children: [
+                                    Text(
+                                      l10n.todayExpense,
+                                      style: TextStyle(
+                                        fontSize: 13.0,
+                                        fontWeight: FontWeight.w500,
+                                        color: cardSubTextColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      '($cardUnitText)',
+                                      style: TextStyle(
+                                        fontSize: 13.0,
+                                        fontWeight: FontWeight.w500,
+                                        color: cardSubTextColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6.0),
+                                    GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {
+                                        ref.read(hideAmountsProvider.notifier).state =
+                                            !hideAmounts;
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(2.0),
+                                        child: Icon(
+                                          hideAmounts
+                                              ? Icons.visibility_off_outlined
+                                              : Icons.visibility_outlined,
+                                          size: 18.0,
+                                          color: cardSubTextColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6.0),
+                                Text(
+                                  hideAmounts
+                                      ? '****'
+                                      : formatMoneyCompact(todayExpense, trimZeros: false),
+                                  style: TextStyle(
+                                    fontSize: 32.0,
+                                    fontWeight: FontWeight.bold,
+                                    color: cardMainTextColor,
+                                    letterSpacing: -0.5,
+                                    height: 1.15,
+                                  ),
+                                ),
+                                const SizedBox(height: 16.0),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                l10n.monthExpense,
+                                                style: TextStyle(
+                                                  fontSize: 12.0,
+                                                  color: cardSubTextColor,
+                                                ),
+                                              ),
+                                              Text(
+                                                '($cardUnitText)',
+                                                style: TextStyle(
+                                                  fontSize: 12.0,
+                                                  color: cardSubTextColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4.0),
+                                          Text(
+                                            hideAmounts
+                                                ? '****'
+                                                : formatMoneyCompact(expense, trimZeros: false),
+                                            style: TextStyle(
+                                              fontSize: 18.0,
+                                              fontWeight: FontWeight.bold,
+                                              color: cardMainTextColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                l10n.monthIncome,
+                                                style: TextStyle(
+                                                  fontSize: 12.0,
+                                                  color: cardSubTextColor,
+                                                ),
+                                              ),
+                                              Text(
+                                                '($cardUnitText)',
+                                                style: TextStyle(
+                                                  fontSize: 12.0,
+                                                  color: cardSubTextColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4.0),
+                                          Text(
+                                            hideAmounts
+                                                ? '****'
+                                                : formatMoneyCompact(income, trimZeros: false),
+                                            style: TextStyle(
+                                              fontSize: 18.0,
+                                              fontWeight: FontWeight.bold,
+                                              color: cardMainTextColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                            IconButton(
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              icon: Icon(
-                                hideAmounts
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 20.0,
-                                color: OriginTokens.textTertiary(context),
-                              ),
-                              onPressed: () {
-                                ref.read(hideAmountsProvider.notifier).state =
-                                    !hideAmounts;
-                              },
-                            ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 10.0),
-                        const OriginDivider(startIndent: 0),
-                        const SizedBox(height: 10.0),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '本月收入',
-                                    style: TextStyle(
-                                      fontSize: 12.0,
-                                      color: OriginTokens.textSecondary(context),
+
+                        // 下半部分：月预算小条 (透明高斯模糊白色覆盖底色，进度条采用主题色)
+                        if (budgetUsage != null)
+                          ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(18.0),
+                              bottomRight: Radius.circular(18.0),
+                            ),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: _openBudgetPage,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18.0,
+                                    vertical: 10.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.42),
+                                    border: Border(
+                                      top: BorderSide(
+                                        color: Colors.white.withValues(alpha: 0.35),
+                                        width: 0.5,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 3.0),
-                                  Text(
-                                    hideAmounts
-                                        ? '****'
-                                        : '$currencySymbol ${formatMoneyCompact(income)}',
-                                    style: const TextStyle(
-                                      fontSize: 15.0,
-                                      fontWeight: FontWeight.w600,
-                                      color: OriginTokens.incomeGreen,
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            '月预算剩余 ${hideAmounts ? '****' : formatMoneyCompact(budgetUsage.remaining, trimZeros: false)}',
+                                            style: TextStyle(
+                                              fontSize: 12.0,
+                                              fontWeight: FontWeight.w600,
+                                              color: cardMainTextColor.withValues(alpha: 0.85),
+                                            ),
+                                          ),
+                                          Text(
+                                            '${l10n.budgetUsed} ${(budgetUsage.rate * 100).clamp(0, 999).toStringAsFixed(0)}%',
+                                            style: TextStyle(
+                                              fontSize: 12.0,
+                                              fontWeight: FontWeight.w600,
+                                              color: budgetUsage.rate >= 1.0
+                                                  ? OriginTokens.expenseRed
+                                                  : cardMainTextColor.withValues(alpha: 0.75),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8.0),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(4.0),
+                                        child: SizedBox(
+                                          height: 5.5,
+                                          child: LinearProgressIndicator(
+                                            value: budgetUsage.rate.clamp(0.0, 1.0),
+                                            backgroundColor: Colors.white.withValues(alpha: 0.65),
+                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                              budgetUsage.rate >= 1.0
+                                                  ? OriginTokens.expenseRed
+                                                  : primaryColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '月度结余',
-                                    style: TextStyle(
-                                      fontSize: 12.0,
-                                      color: OriginTokens.textSecondary(context),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3.0),
-                                  Text(
-                                    hideAmounts
-                                        ? '****'
-                                        : '$currencySymbol ${formatMoneyCompact(balance)}',
-                                    style: TextStyle(
-                                      fontSize: 15.0,
-                                      fontWeight: FontWeight.w600,
-                                      color: balance < 0
-                                          ? OriginTokens.expenseRed
-                                          : OriginTokens.textPrimary(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
                       ],
                     ),
                   ),
@@ -392,12 +585,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                         builder: (_) => AnnualReportPage(initialYear: y),
                       ),
                     ),
-                    onBudget: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AnnualReportPage(),
-                      ),
-                    ),
+                    onBudget: _openBudgetPage,
                   ),
                   const SizedBox(height: 6.0),
                 ],
