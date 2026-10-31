@@ -17,6 +17,7 @@ import '../../pages/settings/help_center_page.dart';
 import '../../pages/settings/data_management_page.dart';
 import '../../pages/settings/smart_billing_page.dart';
 import '../../pages/settings/automation_page.dart';
+import '../../pages/settings/appearance_settings_page.dart';
 import '../../pages/settings/about_page.dart';
 import '../../pages/settings/appearance/bindings/appearance_dialogs.dart';
 import '../../pages/settings/app_lock_settings_page.dart';
@@ -28,7 +29,8 @@ import '../../pages/settings/widget_management_page.dart';
 import '../../cloud/sync_service.dart';
 import '../../pages/shared/selectors/currency_picker_sheet.dart';
 import '../../pages/currency/exchange_rate_page.dart';
-import '../../pages/category/category_manage_page.dart';
+import 'custom_category_manage_page.dart';
+import 'custom_tag_manage_page.dart';
 import '../../pages/cloud/cloud_service_page.dart';
 import '../../pages/cloud/cloud_sync_page.dart';
 import '../../pages/cloud/beecount_cloud_sync_page.dart';
@@ -42,6 +44,7 @@ import '../widgets/origin_card.dart';
 import '../widgets/origin_setting_card.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_bottom_sheet.dart';
+import '../widgets/origin_menu.dart';
 import '../providers/amount_format_provider.dart';
 
 /// vivo OriginOS 风格“我的”与设置页面 (CustomMinePage)
@@ -220,6 +223,32 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
       appBar: OriginLargeTopAppBar(
         title: l.mineTitle,
         leading: canPop ? const BackButton() : null,
+        actions: [
+          OriginMoreButton(
+            items: [
+              OriginMenuItem(
+                title: l.appearanceSettings,
+                icon: const Icon(Icons.palette_outlined, size: 20),
+                onTap: () => _open(const AppearanceSettingsPage()),
+              ),
+              OriginMenuItem(
+                title: l.dataManagement,
+                icon: const Icon(Icons.storage_outlined, size: 20),
+                onTap: () => _open(const DataManagementPage()),
+              ),
+              OriginMenuItem(
+                title: l.automation,
+                icon: const Icon(Icons.schedule_outlined, size: 20),
+                onTap: () => _open(const AutomationPage()),
+              ),
+              OriginMenuItem(
+                title: l.about,
+                icon: const Icon(Icons.info_outline_rounded, size: 20),
+                onTap: () => _open(const AboutPage()),
+              ),
+            ],
+          ),
+        ],
       ),
       body: ListView(
         padding: EdgeInsets.only(
@@ -280,7 +309,17 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                   color: primaryColor,
                   size: 22.0,
                 ),
-                onTap: () => _open(const CategoryManagePage()),
+                onTap: () => _open(const CustomCategoryManagePage()),
+              ),
+              OriginSettingItem(
+                title: l.tagManageTitle,
+                subtitle: l.tagManageSubtitle,
+                leading: Icon(
+                  Icons.label_outline_rounded,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                onTap: () => _open(const CustomTagManagePage()),
               ),
               OriginSettingItem(
                 title: '账户偏好设置',

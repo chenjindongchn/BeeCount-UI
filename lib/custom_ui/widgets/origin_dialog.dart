@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../pages/currency/exchange_rate_page.dart';
-import '../../pages/main/ledgers_page_new.dart';
+import '../pages/custom_ledgers_page.dart';
 import '../../providers.dart';
 import '../../utils/account_type_utils.dart';
 import '../styles/origin_tokens.dart';
@@ -1293,7 +1293,7 @@ class _OriginLedgerPickerConfirmDialogState
             final navigator = Navigator.of(context);
             navigator.pop();
             navigator.push(
-              MaterialPageRoute(builder: (_) => const LedgersPageNew()),
+              MaterialPageRoute(builder: (_) => const CustomLedgersPage()),
             );
           },
         ),

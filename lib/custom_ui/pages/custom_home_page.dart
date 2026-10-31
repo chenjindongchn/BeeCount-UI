@@ -14,7 +14,7 @@ import '../../utils/format_utils.dart';
 import '../../utils/currencies.dart';
 import '../widgets/origin_transaction_feed.dart';
 import '../../pages/main/home/widgets/home_reminders.dart';
-import '../../pages/main/ledgers_page_new.dart';
+import 'custom_ledgers_page.dart';
 import '../widgets/origin_dialog.dart';
 import '../../pages/shared/pickers/wheel_date_picker.dart';
 import '../../pages/shared/widgets/feature_dot.dart';
@@ -161,7 +161,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const LedgersPageNew(autoOpenCreateDialog: true),
+          builder: (_) => const CustomLedgersPage(autoOpenCreateDialog: true),
         ),
       );
     } else {

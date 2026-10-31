@@ -210,6 +210,10 @@ class _CustomHiddenAccountsPageState extends ConsumerState<CustomHiddenAccountsP
                             hiddenAccounts[i].initialBalance,
                         currencySymbol: currencySymbol,
                         hideAmounts: hideAmounts,
+                        borderRadius: BorderRadius.vertical(
+                          top: i == 0 ? const Radius.circular(OriginTokens.cardRadius) : Radius.zero,
+                          bottom: i == hiddenAccounts.length - 1 ? const Radius.circular(OriginTokens.cardRadius) : Radius.zero,
+                        ),
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -241,6 +245,7 @@ class _HiddenAccountRow extends StatelessWidget {
   final double balance;
   final String currencySymbol;
   final bool hideAmounts;
+  final BorderRadius? borderRadius;
   final VoidCallback onTap;
   final VoidCallback onRestore;
 
@@ -249,6 +254,7 @@ class _HiddenAccountRow extends StatelessWidget {
     required this.balance,
     required this.currencySymbol,
     required this.hideAmounts,
+    this.borderRadius,
     required this.onTap,
     required this.onRestore,
   });
@@ -259,6 +265,7 @@ class _HiddenAccountRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
+      borderRadius: borderRadius,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),

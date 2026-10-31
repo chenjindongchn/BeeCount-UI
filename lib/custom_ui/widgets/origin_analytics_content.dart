@@ -4,13 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
-import '../../pages/category/category_manage_page.dart';
+import '../pages/custom_category_manage_page.dart';
 import '../../providers.dart';
 import '../../utils/format_money.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
-import '../../pages/main/analytics/widgets/analytics_ranking.dart';
+import '../../pages/main/analytics/widgets/analytics_ranking.dart' show AnalyticsPie;
 import '../../pages/main/analytics/widgets/analytics_trend.dart';
 import '../styles/origin_tokens.dart';
+import 'origin_analytics_ranking.dart';
 import 'origin_dialog.dart';
 
 /// vivo OriginOS 风格数据洞察统计内容视图 (OriginAnalyticsContent)
@@ -281,7 +282,7 @@ class OriginAnalyticsContent extends ConsumerWidget {
                   await Navigator.push(
                     context,
                     MaterialPageRoute<void>(
-                      builder: (_) => CategoryManagePage(
+                      builder: (_) => CustomCategoryManagePage(
                         initialTabIndex: type == 'income' ? 1 : 0,
                       ),
                     ),
@@ -308,7 +309,7 @@ class OriginAnalyticsContent extends ConsumerWidget {
             ),
           card(
             l.analyticsCategoryRanking,
-            AnalyticsRanking(
+            OriginAnalyticsRanking(
               key: ValueKey((scope, month, type, data.total)),
               data: data,
               scope: scope,

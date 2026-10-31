@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
@@ -10,6 +13,7 @@ import '../../pages/account/account_edit_page.dart';
 import 'custom_account_detail_page.dart';
 import 'custom_hidden_accounts_page.dart';
 import '../../pages/account/net_worth_trend_page.dart';
+import '../../services/billing/post_processor.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
@@ -17,6 +21,7 @@ import '../widgets/origin_divider.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_menu.dart';
 import '../providers/amount_format_provider.dart';
+import '../providers/account_display_preferences_provider.dart';
 
 /// vivo OriginOS 风格资产总览与账户管理页面 (CustomAccountsPage)
 ///
@@ -24,7 +29,9 @@ import '../providers/amount_format_provider.dart';
 /// 1. 大标题栏（84dp / 22sp SemiBold）；
 /// 2. 资产总览采用 12dp 纯色卡片，清晰呈现净资产、总资产、总负债；
 /// 3. 分类账户列表使用 12dp 卡片 + 0.5dp 发丝分割线；
-/// 4. 纯 Riverpod 驱动，不修改业务表与数据库逻辑。
+/// 4. 支持右上角切换是否按类别分组展示；
+/// 5. 支持长按触发拖拽排序（分组内及平铺全量排序）；
+/// 6. 纯 Riverpod 驱动，不修改业务表与数据库逻辑。
 class CustomAccountsPage extends ConsumerStatefulWidget {
   final bool asTab;
   const CustomAccountsPage({super.key, this.asTab = true});
@@ -35,6 +42,12 @@ class CustomAccountsPage extends ConsumerStatefulWidget {
 
 class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
   final ScrollController _scrollController = ScrollController();
+
+  /// 分组模式拖拽乐观更新本地锁，防止 stream 刷新导致瞬时闪烁
+  Map<String, List<db.Account>>? _reorderingGroups;
+
+  /// 平铺模式拖拽乐观更新本地锁
+  List<db.Account>? _reorderingFlatAccounts;
 
   @override
   void dispose() {
@@ -66,6 +79,132 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
     );
   }
 
+  void _openAccountDetail(BuildContext context, db.Account account) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        allowSnapshotting: false,
+        builder: (_) => CustomAccountDetailPage(account: account),
+      ),
+    );
+  }
+
+  /// 拖拽浮起装饰器（vivo OriginOS 悬浮卡片微阴影动效）
+  Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final double animValue = Curves.easeInOut.transform(animation.value);
+        final double elevation = (lerpDouble(0, 6, animValue) ?? 0);
+        return Material(
+          elevation: elevation,
+          color: OriginTokens.cardBackground(context),
+          shadowColor: Colors.black.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(OriginTokens.cardRadius),
+          child: child,
+        );
+      },
+      child: child,
+    );
+  }
+
+  /// 分组模式下的组内拖拽重排序
+  void _onReorderGroup(
+    String type,
+    List<db.Account> currentGroupAccounts,
+    int oldIndex,
+    int newIndex,
+  ) {
+    if (oldIndex < newIndex) newIndex -= 1;
+    if (oldIndex == newIndex) return;
+
+    HapticFeedback.mediumImpact();
+
+    setState(() {
+      _reorderingGroups ??= {};
+      final list = List<db.Account>.from(
+        _reorderingGroups![type] ?? currentGroupAccounts,
+      );
+      final item = list.removeAt(oldIndex);
+      list.insert(newIndex, item);
+      _reorderingGroups![type] = list;
+    });
+
+    final list = _reorderingGroups![type]!;
+    final updates = <({int id, int sortOrder})>[];
+    for (int i = 0; i < list.length; i++) {
+      updates.add((id: list[i].id, sortOrder: i));
+    }
+
+    ref.read(repositoryProvider).updateAccountSortOrders(updates).then((_) {
+      final activeLedgerId = ref.read(currentLedgerIdProvider);
+      if (activeLedgerId > 0) {
+        unawaited(PostProcessor.sync(ref, ledgerId: activeLedgerId));
+      }
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) setState(() => _reorderingGroups = null);
+      });
+    });
+  }
+
+  /// 平铺模式下的全量拖拽重排序
+  void _onReorderFlat(
+    List<db.Account> currentFlatAccounts,
+    int oldIndex,
+    int newIndex,
+  ) {
+    if (oldIndex < newIndex) newIndex -= 1;
+    if (oldIndex == newIndex) return;
+
+    HapticFeedback.mediumImpact();
+
+    final list = List<db.Account>.from(currentFlatAccounts);
+    final item = list.removeAt(oldIndex);
+    list.insert(newIndex, item);
+
+    setState(() {
+      _reorderingFlatAccounts = list;
+    });
+
+    // 保存全局顺序 ID 列表到本地持久化
+    final newOrderIds = list.map((a) => a.id).toList();
+    ref.read(customAccountOrderProvider.notifier).updateOrder(newOrderIds);
+
+    // 将全局顺序映射为每个类型内部的相对 sortOrder 并更新数据库
+    final typeCounter = <String, int>{};
+    final updates = <({int id, int sortOrder})>[];
+    for (final acc in list) {
+      final currentIdx = typeCounter[acc.type] ?? 0;
+      updates.add((id: acc.id, sortOrder: currentIdx));
+      typeCounter[acc.type] = currentIdx + 1;
+    }
+
+    ref.read(repositoryProvider).updateAccountSortOrders(updates).then((_) {
+      final activeLedgerId = ref.read(currentLedgerIdProvider);
+      if (activeLedgerId > 0) {
+        unawaited(PostProcessor.sync(ref, ledgerId: activeLedgerId));
+      }
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) setState(() => _reorderingFlatAccounts = null);
+      });
+    });
+  }
+
+  /// 依据自定义全局 ID 顺序排布平铺账户
+  List<db.Account> _sortFlatAccounts(
+    List<db.Account> accounts,
+    List<int> orderIds,
+  ) {
+    if (orderIds.isEmpty) return accounts;
+    final map = {for (final a in accounts) a.id: a};
+    final sorted = <db.Account>[];
+    for (final id in orderIds) {
+      final acc = map.remove(id);
+      if (acc != null) sorted.add(acc);
+    }
+    sorted.addAll(map.values);
+    return sorted;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -75,6 +214,8 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
     final allStatsAsync = ref.watch(allAccountStatsProvider);
     final hideAmounts = ref.watch(hideAmountsProvider);
     final baseCurrency = ref.watch(baseCurrencyProvider);
+    final showGrouping = ref.watch(showAccountGroupingProvider);
+    final globalOrderIds = ref.watch(customAccountOrderProvider);
     ref.watch(thousandSeparatorProvider);
 
     return OriginScaffold(
@@ -95,6 +236,18 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
                 title: '净资产趋势',
                 icon: const Icon(Icons.trending_up_rounded),
                 onTap: () => _openNetWorthTrend(context),
+              ),
+              OriginMenuItem(
+                title: '按类别分组',
+                icon: Icon(
+                  showGrouping ? Icons.grid_view_rounded : Icons.view_agenda_outlined,
+                ),
+                trailing: showGrouping
+                    ? Icon(Icons.check_rounded, size: 18.0, color: primaryColor)
+                    : null,
+                onTap: () {
+                  ref.read(showAccountGroupingProvider.notifier).toggle();
+                },
               ),
               OriginMenuItem(
                 title: '资产偏好设置',
@@ -162,11 +315,13 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
           }
           final netAssets = totalAssets - totalLiabilities;
 
-          // 核心修复：分离在用（未隐藏）账户与已隐藏账户
+          // 核心分离：在用（未隐藏）账户与已隐藏账户
           final visibleAccounts = accounts.where((a) => !a.hidden).toList();
           final hiddenAccounts = accounts.where((a) => a.hidden).toList();
 
-          // 按账户类型分组（主列表只显示未隐藏账户）
+          final currencySymbol = getCurrencySymbol(baseCurrency);
+
+          // 按账户类型分组
           final Map<String, List<db.Account>> grouped = {};
           for (final account in visibleAccounts) {
             grouped.putIfAbsent(account.type, () => []).add(account);
@@ -185,7 +340,9 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
             }
           }
 
-          final currencySymbol = getCurrencySymbol(baseCurrency);
+          // 平铺账户列表（优先读取拖拽乐观锁缓存，否则按照全局自定义顺序排序）
+          final flatAccounts = _reorderingFlatAccounts ??
+              _sortFlatAccounts(visibleAccounts, globalOrderIds);
 
           return ListView(
             controller: _scrollController,
@@ -306,7 +463,7 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
                 ),
               ),
 
-              // 2. 分类账户列表（只显示未隐藏账户）
+              // 2. 空隐藏账户提示
               if (visibleAccounts.isEmpty && hiddenAccounts.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 20.0),
@@ -321,61 +478,141 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
                   ),
                 ),
 
-              for (final type in sortedTypes) ...[
-                Builder(
-                  builder: (context) {
-                    final items = grouped[type]!;
-                    double groupTotal = 0.0;
-                    for (final acc in items) {
-                      groupTotal += statsMap[acc.id]?.balance ?? acc.initialBalance;
-                    }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        OriginSectionTitle(
-                          title: getAccountTypeLabel(context, type),
-                          trailing: Text(
-                            hideAmounts
-                                ? '****'
-                                : '$currencySymbol ${formatMoneyCompact(groupTotal)}',
-                            style: TextStyle(
-                              fontSize: 12.0,
-                              fontWeight: FontWeight.w500,
-                              color: OriginTokens.textTertiary(context),
+              // 3. 账户展示模式：按类别分组展示 VS 平铺全量展示
+              if (showGrouping) ...[
+                // === 模式 A：分组展示 ===
+                for (final type in sortedTypes) ...[
+                  Builder(
+                    builder: (context) {
+                      final items = _reorderingGroups?[type] ?? grouped[type]!;
+                      double groupTotal = 0.0;
+                      for (final acc in items) {
+                        groupTotal += statsMap[acc.id]?.balance ?? acc.initialBalance;
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          OriginSectionTitle(
+                            title: getAccountTypeLabel(context, type),
+                            trailing: Text(
+                              hideAmounts
+                                  ? '****'
+                                  : '$currencySymbol ${formatMoneyCompact(groupTotal)}',
+                              style: TextStyle(
+                                fontSize: 12.0,
+                                fontWeight: FontWeight.w500,
+                                color: OriginTokens.textTertiary(context),
+                              ),
                             ),
                           ),
-                        ),
-                        OriginCard(
-                          padding: EdgeInsets.zero,
-                          child: Column(
-                            children: [
-                              for (var i = 0; i < items.length; i++) ...[
-                                if (i > 0) const OriginDivider(startIndent: 52.0),
-                                _OriginAccountRow(
-                                  account: items[i],
-                                  balance: statsMap[items[i].id]?.balance ??
-                                      items[i].initialBalance,
-                                  currencySymbol: currencySymbol,
-                                  hideAmounts: hideAmounts,
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        allowSnapshotting: false,
-                                        builder: (_) => CustomAccountDetailPage(
-                                          account: items[i],
-                                        ),
+                          OriginCard(
+                            padding: EdgeInsets.zero,
+                            child: ReorderableListView.builder(
+                              key: ValueKey('group-reorder-$type'),
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              buildDefaultDragHandles: false,
+                              proxyDecorator: _proxyDecorator,
+                              itemCount: items.length,
+                              onReorder: (oldIndex, newIndex) =>
+                                  _onReorderGroup(type, items, oldIndex, newIndex),
+                              itemBuilder: (context, index) {
+                                final account = items[index];
+                                final isFirst = index == 0;
+                                final isLast = index == items.length - 1;
+                                final rowRadius = BorderRadius.vertical(
+                                  top: isFirst ? const Radius.circular(OriginTokens.cardRadius) : Radius.zero,
+                                  bottom: isLast ? const Radius.circular(OriginTokens.cardRadius) : Radius.zero,
+                                );
+
+                                return ReorderableDelayedDragStartListener(
+                                  key: ValueKey('grp-acc-${account.id}'),
+                                  index: index,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _OriginAccountRow(
+                                        account: account,
+                                        balance: statsMap[account.id]?.balance ??
+                                            account.initialBalance,
+                                        currencySymbol: currencySymbol,
+                                        hideAmounts: hideAmounts,
+                                        borderRadius: rowRadius,
+                                        onTap: () =>
+                                            _openAccountDetail(context, account),
                                       ),
-                                    );
-                                  },
-                                ),
-                              ],
+                                      if (index < items.length - 1)
+                                        const OriginDivider(startIndent: 52.0),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ] else ...[
+                // === 模式 B：平铺展示 ===
+                if (flatAccounts.isNotEmpty) ...[
+                  OriginSectionTitle(
+                    title: '全部账户',
+                    trailing: Text(
+                      '长按可拖动排序',
+                      style: TextStyle(
+                        fontSize: 12.0,
+                        fontWeight: FontWeight.w400,
+                        color: OriginTokens.textTertiary(context),
+                      ),
+                    ),
+                  ),
+                  OriginCard(
+                    padding: EdgeInsets.zero,
+                    child: ReorderableListView.builder(
+                      key: const ValueKey('flat-accounts-reorderable-list'),
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      proxyDecorator: _proxyDecorator,
+                      itemCount: flatAccounts.length,
+                      onReorder: (oldIndex, newIndex) =>
+                          _onReorderFlat(flatAccounts, oldIndex, newIndex),
+                      itemBuilder: (context, index) {
+                        final account = flatAccounts[index];
+                        final isFirst = index == 0;
+                        final isLast = index == flatAccounts.length - 1;
+                        final rowRadius = BorderRadius.vertical(
+                          top: isFirst ? const Radius.circular(OriginTokens.cardRadius) : Radius.zero,
+                          bottom: isLast ? const Radius.circular(OriginTokens.cardRadius) : Radius.zero,
+                        );
+
+                        return ReorderableDelayedDragStartListener(
+                          key: ValueKey('flat-acc-${account.id}'),
+                          index: index,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _OriginAccountRow(
+                                account: account,
+                                balance: statsMap[account.id]?.balance ??
+                                    account.initialBalance,
+                                currencySymbol: currencySymbol,
+                                hideAmounts: hideAmounts,
+                                typeLabel: getAccountTypeLabel(context, account.type),
+                                borderRadius: rowRadius,
+                                onTap: () => _openAccountDetail(context, account),
+                              ),
+                              if (index < flatAccounts.length - 1)
+                                const OriginDivider(startIndent: 52.0),
                             ],
                           ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ],
             ],
           );
@@ -392,6 +629,8 @@ class _OriginAccountRow extends StatelessWidget {
   final double balance;
   final String currencySymbol;
   final bool hideAmounts;
+  final String? typeLabel;
+  final BorderRadius? borderRadius;
   final VoidCallback onTap;
 
   const _OriginAccountRow({
@@ -399,12 +638,25 @@ class _OriginAccountRow extends StatelessWidget {
     required this.balance,
     required this.currencySymbol,
     required this.hideAmounts,
+    this.typeLabel,
+    this.borderRadius,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    // 构造副标题文字：平铺模式下优先附带账户类别标签
+    String? subtitleText;
+    if (typeLabel != null && account.note != null && account.note!.isNotEmpty) {
+      subtitleText = '$typeLabel · ${account.note}';
+    } else if (typeLabel != null) {
+      subtitleText = typeLabel;
+    } else if (account.note != null && account.note!.isNotEmpty) {
+      subtitleText = account.note;
+    }
+
     return InkWell(
+      borderRadius: borderRadius,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),
@@ -438,10 +690,10 @@ class _OriginAccountRow extends StatelessWidget {
                       color: OriginTokens.textPrimary(context),
                     ),
                   ),
-                  if (account.note != null && account.note!.isNotEmpty) ...[
+                  if (subtitleText != null && subtitleText.isNotEmpty) ...[
                     const SizedBox(height: 2.0),
                     Text(
-                      account.note!,
+                      subtitleText,
                       style: TextStyle(
                         fontSize: 12.0,
                         color: OriginTokens.textSecondary(context),
@@ -475,5 +727,3 @@ class _OriginAccountRow extends StatelessWidget {
     );
   }
 }
-
-

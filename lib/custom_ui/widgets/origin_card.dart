@@ -89,14 +89,14 @@ class _OriginCardState extends State<OriginCard>
         widget.padding ?? const EdgeInsets.all(OriginTokens.cardInnerPadding);
     final cardBg = widget.color ?? OriginTokens.cardBackground(context);
 
-    Widget content = Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(widget.radius),
-      ),
+    Widget content = Material(
+      color: cardBg,
+      borderRadius: BorderRadius.circular(widget.radius),
       clipBehavior: widget.clipBehavior,
-      padding: effectivePadding,
-      child: widget.child,
+      child: Padding(
+        padding: effectivePadding,
+        child: widget.child,
+      ),
     );
 
     if (widget.onTap != null || widget.onLongPress != null) {

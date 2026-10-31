@@ -63,6 +63,7 @@ class OriginMenuItem {
   final String title;
   final Widget? icon;
   final String? subtitle;
+  final Widget? trailing;
   final bool showBadge;
   final bool isDestructive;
   final VoidCallback onTap;
@@ -72,6 +73,7 @@ class OriginMenuItem {
     required this.onTap,
     this.icon,
     this.subtitle,
+    this.trailing,
     this.showBadge = false,
     this.isDestructive = false,
   });
@@ -398,6 +400,10 @@ class _OriginMenuItemWidget extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
+              ],
+              if (item.trailing != null) ...[
+                const SizedBox(width: 8.0),
+                item.trailing!,
               ],
             ],
           ),

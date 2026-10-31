@@ -13,6 +13,7 @@ import 'origin_card.dart';
 import 'origin_divider.dart';
 import 'origin_dialog.dart';
 import 'origin_switch.dart';
+import '../providers/account_display_preferences_provider.dart';
 
 /// 以 OriginUI 规范弹出自底向上升起的抽屉 (OriginBottomSheet)
 ///
@@ -617,6 +618,38 @@ class _OriginAccountPreferencesSheet extends ConsumerWidget {
                           onChanged: (val) async {
                             await ref.read(accountFeatureSetterProvider).setEnabled(val);
                             ref.invalidate(accountFeatureEnabledProvider);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const OriginDivider(startIndent: 50.0, endIndent: 16.0),
+
+                  // 2. 按类别分组显示开关
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.grid_view_rounded,
+                          size: 22.0,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Text(
+                            '按类别分组显示',
+                            style: TextStyle(
+                              fontSize: 15.0,
+                              fontWeight: FontWeight.w500,
+                              color: OriginTokens.textPrimary(context),
+                            ),
+                          ),
+                        ),
+                        OriginSwitch(
+                          value: ref.watch(showAccountGroupingProvider),
+                          onChanged: (val) {
+                            ref.read(showAccountGroupingProvider.notifier).setEnabled(val);
                           },
                         ),
                       ],

@@ -283,60 +283,6 @@ class _CustomAccountDetailPageState
     }
   }
 
-  Future<void> _menu() async {
-    final l = AppLocalizations.of(context);
-    final action = await showBeeSheet<String>(
-      context,
-      title: l.v4AccountActions,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (c.account.id >= 0)
-            BeeMenuRow(
-              title: l.accountEditTitle,
-              leading: const BeeLineIcon('PencilLine'),
-              onTap: () => Navigator.pop(context, 'edit'),
-            ),
-          if (!isValuationOnlyType(c.account.type))
-            BeeMenuRow(
-              title: l.searchTitle,
-              leading: const BeeLineIcon('Search'),
-              onTap: () => Navigator.pop(context, 'search'),
-            ),
-          BeeMenuRow(
-            title: l.v4AccountLinkedBooks,
-            leading: const BeeLineIcon('BookOpen'),
-            onTap: () => Navigator.pop(context, 'ledgers'),
-          ),
-          if (c.account.id >= 0) ...[
-            BeeMenuRow(
-              title: c.account.hidden ? l.accountRestore : l.accountHide,
-              leading: const BeeLineIcon('EyeOff'),
-              onTap: () => Navigator.pop(context, 'hide'),
-            ),
-            BeeMenuRow(
-              title: l.commonDelete,
-              leading: const BeeLineIcon('Trash2'),
-              onTap: () => Navigator.pop(context, 'delete'),
-            ),
-          ],
-        ],
-      ),
-    );
-    if (!mounted) return;
-    switch (action) {
-      case 'edit':
-        await _edit();
-      case 'search':
-        await _search();
-      case 'ledgers':
-        await _ledgers();
-      case 'hide':
-        await _toggleHidden();
-      case 'delete':
-        await _delete();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,13 +314,44 @@ class _CustomAccountDetailPageState
                 onPressed: () => Navigator.of(context).pop(),
               ),
               actions: [
-                IconButton(
-                  icon: OriginMoreIcon(
-                    size: 20,
-                    color: OriginTokens.textPrimary(context),
-                  ),
+                OriginMoreButton(
                   tooltip: l.commonMore,
-                  onPressed: () => _perform(_menu),
+                  items: [
+                    if (c.account.id >= 0)
+                      OriginMenuItem(
+                        title: l.accountEditTitle,
+                        icon: const Icon(Icons.edit_outlined),
+                        onTap: () => _perform(_edit),
+                      ),
+                    if (!valuation)
+                      OriginMenuItem(
+                        title: l.searchTitle,
+                        icon: const Icon(Icons.search_rounded),
+                        onTap: () => _perform(_search),
+                      ),
+                    OriginMenuItem(
+                      title: l.v4AccountLinkedBooks,
+                      icon: const Icon(Icons.auto_stories_outlined),
+                      onTap: () => _perform(_ledgers),
+                    ),
+                    if (c.account.id >= 0) ...[
+                      OriginMenuItem(
+                        title: c.account.hidden ? l.accountRestore : l.accountHide,
+                        icon: Icon(
+                          c.account.hidden
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onTap: () => _perform(_toggleHidden),
+                      ),
+                      OriginMenuItem(
+                        title: l.commonDelete,
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        isDestructive: true,
+                        onTap: () => _perform(_delete),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -527,52 +504,57 @@ class _CustomAccountDetailPageState
                           final isFirst = index == 1;
                           final isLast = index == c.rows.length;
 
-                          return Container(
-                            margin: const EdgeInsets.symmetric(
+                          final cardBorderRadius = BorderRadius.vertical(
+                            top: isFirst
+                                ? const Radius.circular(
+                                    OriginTokens.cardRadius)
+                                : Radius.zero,
+                            bottom: isLast
+                                ? const Radius.circular(
+                                    OriginTokens.cardRadius)
+                                : Radius.zero,
+                          );
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: OriginTokens.cardMargin,
                             ),
-                            decoration: BoxDecoration(
+                            child: Material(
                               color: OriginTokens.cardBackground(context),
-                              borderRadius: BorderRadius.vertical(
-                                top: isFirst
-                                    ? const Radius.circular(
-                                        OriginTokens.cardRadius)
-                                    : Radius.zero,
-                                bottom: isLast
-                                    ? const Radius.circular(
-                                        OriginTokens.cardRadius)
-                                    : Radius.zero,
-                              ),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: Column(
-                              children: [
-                                TransactionTileBinding(
-                                  key: ValueKey('account-transaction-${t.id}'),
-                                  row: (
-                                    t: t,
-                                    category: resources?.categoryFor(t),
-                                    account: resources?.accounts[t.accountId],
-                                    toAccount:
-                                        resources?.accounts[t.toAccountId],
-                                  ),
-                                  tags: metadata.valueOrNull?.tags[t.id] ??
-                                      const [],
-                                  attachmentCount: metadata
-                                          .valueOrNull?.attachments[t.id] ??
-                                      0,
-                                  fullDate: true,
-                                  allLedgers: true,
-                                  ledgerName:
-                                      resources?.ledgers[t.ledgerId]?.name,
-                                  baseCurrency:
-                                      resources?.ledgers[t.ledgerId]?.currency,
-                                  transferDirection: direction,
-                                  onReturned: _refresh,
+                              borderRadius: cardBorderRadius,
+                              clipBehavior: Clip.antiAlias,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                child: Column(
+                                  children: [
+                                    TransactionTileBinding(
+                                      key: ValueKey('account-transaction-${t.id}'),
+                                      row: (
+                                        t: t,
+                                        category: resources?.categoryFor(t),
+                                        account: resources?.accounts[t.accountId],
+                                        toAccount:
+                                            resources?.accounts[t.toAccountId],
+                                      ),
+                                      tags: metadata.valueOrNull?.tags[t.id] ??
+                                          const [],
+                                      attachmentCount: metadata
+                                              .valueOrNull?.attachments[t.id] ??
+                                          0,
+                                      fullDate: true,
+                                      allLedgers: true,
+                                      ledgerName:
+                                          resources?.ledgers[t.ledgerId]?.name,
+                                      baseCurrency:
+                                          resources?.ledgers[t.ledgerId]?.currency,
+                                      transferDirection: direction,
+                                      onReturned: _refresh,
+                                    ),
+                                    if (!isLast)
+                                      const OriginDivider(startIndent: 48),
+                                  ],
                                 ),
-                                if (!isLast)
-                                  const OriginDivider(startIndent: 48),
-                              ],
+                              ),
                             ),
                           );
                         },
