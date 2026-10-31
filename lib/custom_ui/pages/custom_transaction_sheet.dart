@@ -673,9 +673,8 @@ class _CustomTransactionSheetState
     );
 
     return categoriesAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
+      // 骨架屏与真实网格同布局同尺寸，数据到达时切换近似无缝，避免上升动画中视觉跳变
+      loading: () => _buildCategoryGridSkeleton(context),
       error: (_, __) => const Center(child: Text('分类加载失败')),
       data: (categories) {
         if (categories.isEmpty) {
@@ -770,6 +769,46 @@ class _CustomTransactionSheetState
           ),
         );
       },
+    );
+  }
+
+  /// 分类网格骨架屏：复用未选中分类的底色与尺寸，保证 loading→data 无视觉跳变
+  Widget _buildCategoryGridSkeleton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final circleColor = isDark ? const Color(0xFF28282C) : const Color(0xFFF4F5F7);
+    final labelColor = isDark ? Colors.white12 : const Color(0xFFE5E7EB);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 5,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+          childAspectRatio: 0.92,
+        ),
+        itemCount: 10,
+        itemBuilder: (context, index) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(color: circleColor, shape: BoxShape.circle),
+            ),
+            const SizedBox(height: 2),
+            Container(
+              width: 26,
+              height: 7,
+              decoration: BoxDecoration(
+                color: labelColor,
+                borderRadius: BorderRadius.circular(3.5),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
