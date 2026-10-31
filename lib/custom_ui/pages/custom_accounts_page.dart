@@ -7,7 +7,7 @@ import '../../utils/format_money.dart';
 import '../../utils/account_type_utils.dart';
 import '../../utils/currencies.dart';
 import '../../pages/account/account_edit_page.dart';
-import '../../pages/account/account_detail_page.dart';
+import 'custom_account_detail_page.dart';
 import '../../pages/account/net_worth_trend_page.dart';
 import '../../pages/currency/exchange_rate_page.dart';
 import '../styles/origin_tokens.dart';
@@ -272,7 +272,8 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => AccountDetailPage(
+                                allowSnapshotting: false,
+                                builder: (_) => CustomAccountDetailPage(
                                   account: entry.value[i],
                                 ),
                               ),

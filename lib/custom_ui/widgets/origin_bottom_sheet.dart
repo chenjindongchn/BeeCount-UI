@@ -51,6 +51,12 @@ class OriginBottomSheetRoute<T> extends PopupRoute<T> {
   String? get barrierLabel => 'dismiss';
 
   @override
+  bool canTransitionFrom(TransitionRoute<dynamic> previousRoute) => false;
+
+  @override
+  bool canTransitionTo(TransitionRoute<dynamic> nextRoute) => false;
+
+  @override
   Widget buildPage(
     BuildContext context,
     Animation<double> animation,

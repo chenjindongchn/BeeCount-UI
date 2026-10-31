@@ -17,7 +17,7 @@ import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_keypad.dart';
 
 /// 弹出 OriginOS 规范的定制记账底部抽屉
-Future<void> showCustomTransactionSheet(
+Future<bool?> showCustomTransactionSheet(
   BuildContext context, {
   String initialKind = 'expense',
   int? initialCategoryId,
@@ -32,7 +32,7 @@ Future<void> showCustomTransactionSheet(
   bool excludeFromStats = false,
   bool excludeFromBudget = false,
 }) {
-  return showOriginBottomSheet<void>(
+  return showOriginBottomSheet<bool>(
     context,
     heightFactor: 0.72, // 参照参考图，约占屏幕 72%，顶部露出背景卡片
     builder: (_) => CustomTransactionSheet(
