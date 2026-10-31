@@ -6,12 +6,12 @@ import 'package:intl/intl.dart';
 
 import '../../data/db.dart';
 import '../../providers.dart';
-import '../../providers/database_providers.dart';
 import '../../pages/shared/resources/bindings/recording_category_icon.dart';
 import '../../pages/tag/widgets/tag_selector.dart';
 import '../../pages/transaction/recording/bindings/amount_editor_sheet.dart';
 import '../../pages/transaction/recording/bindings/recording_category_section.dart';
 import '../../pages/transaction/recording/bindings/recording_save.dart';
+import '../../utils/account_type_utils.dart';
 import '../styles/origin_sheet_tokens.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_keypad.dart';
@@ -172,6 +172,17 @@ class _CustomTransactionSheetState
       default:
         return 'expense';
     }
+  }
+
+  Future<void> _updateDefaultAccountForKind(int index) async {
+    if (index == 2 || widget.initialAccountId != null || widget.editingTransactionId != null) return;
+    try {
+      final kind = index == 1 ? 'income' : 'expense';
+      final acc = await defaultRecordingAccount(ref, kind, _ledgerId);
+      if (mounted) {
+        setState(() => _selectedAccountId = acc);
+      }
+    } catch (_) {}
   }
 
   // --- 键盘计算器逻辑 ---
@@ -435,6 +446,7 @@ class _CustomTransactionSheetState
                     _selectedType = index;
                     _selectedCategory = null;
                   });
+                  _updateDefaultAccountForKind(index);
                 }
               },
               itemBuilder: (context, index) {
@@ -568,6 +580,7 @@ class _CustomTransactionSheetState
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutCubic,
           );
+          _updateDefaultAccountForKind(index);
         }
       },
       child: AnimatedContainer(
@@ -895,10 +908,10 @@ class _CustomTransactionSheetState
   Widget _buildMetaSelectorRow(BuildContext context) {
     final accountsAsync = ref.watch(accountsStreamProvider(_ledgerId));
 
-    String accountTitle = '账户';
+    String accountTitle = '选择账户';
     accountsAsync.whenData((accounts) {
-      if (accounts.isNotEmpty) {
-        final acc = accounts.where((a) => a.id == _selectedAccountId).firstOrNull ?? accounts.firstOrNull;
+      if (accounts.isNotEmpty && _selectedAccountId != null) {
+        final acc = accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
         if (acc != null) {
           accountTitle = acc.name;
         }
@@ -1040,7 +1053,10 @@ class _CustomTransactionSheetState
     bool isSourceAccount,
   ) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selected = await showModalBottomSheet<Account>(
+    final primaryColor = ref.read(primaryColorProvider);
+    final currentId = isSourceAccount ? _selectedAccountId : _transferToAccountId;
+
+    final selectedId = await showModalBottomSheet<int>(
       context: context,
       backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       shape: const RoundedRectangleBorder(
@@ -1058,17 +1074,80 @@ class _CustomTransactionSheetState
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
+              const Divider(height: 1, thickness: 0.5),
               Flexible(
-                child: ListView.builder(
+                child: ListView(
                   shrinkWrap: true,
-                  itemCount: accounts.length,
-                  itemBuilder: (_, i) {
-                    final acc = accounts[i];
-                    return ListTile(
-                      title: Text(acc.name),
-                      onTap: () => Navigator.pop(ctx, acc),
-                    );
-                  },
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  children: [
+                    if (_selectedType != 2 && isSourceAccount)
+                      ListTile(
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.not_interested_rounded,
+                            size: 18,
+                            color: isDark ? Colors.white54 : Colors.black45,
+                          ),
+                        ),
+                        title: Text(
+                          '不选择账户',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: currentId == null ? FontWeight.w600 : FontWeight.normal,
+                            color: currentId == null
+                                ? primaryColor
+                                : (isDark ? Colors.white : Colors.black87),
+                          ),
+                        ),
+                        trailing: currentId == null
+                            ? Icon(Icons.check_rounded, color: primaryColor)
+                            : null,
+                        onTap: () => Navigator.pop(ctx, -1),
+                      ),
+                    for (final acc in accounts)
+                      ListTile(
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            getIconForAccountType(acc.type),
+                            size: 18,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        title: Text(
+                          acc.name,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: currentId == acc.id ? FontWeight.w600 : FontWeight.normal,
+                            color: currentId == acc.id
+                                ? primaryColor
+                                : (isDark ? Colors.white : Colors.black87),
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${acc.currency} · ${getAccountTypeLabel(context, acc.type)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white54 : Colors.black45,
+                          ),
+                        ),
+                        trailing: currentId == acc.id
+                            ? Icon(Icons.check_rounded, color: primaryColor)
+                            : null,
+                        onTap: () => Navigator.pop(ctx, acc.id),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -1077,12 +1156,13 @@ class _CustomTransactionSheetState
       },
     );
 
-    if (selected != null && mounted) {
+    if (selectedId != null && mounted) {
       setState(() {
+        final newId = selectedId == -1 ? null : selectedId;
         if (isSourceAccount) {
-          _selectedAccountId = selected.id;
+          _selectedAccountId = newId;
         } else {
-          _transferToAccountId = selected.id;
+          _transferToAccountId = newId;
         }
       });
     }
