@@ -17,9 +17,9 @@
 
 | 平台 | 文件路径 | 修改内容 | 冲突排查指引 |
 | :--- | :--- | :--- | :--- |
-| **Android** | `android/app/src/main/res/values/strings.xml` | `app_name` 与 `app_name_test` 替换为 `记账蓝盒` 与 `记账蓝盒测试版` | 若上游更新该文件，保留 `<string name="app_name">记账蓝盒</string>` 即可 |
+| **Android** | `android/app/src/main/res/values/strings.xml` | `app_name` 与 `app_name_test` 均统一为 `记账蓝盒`（去除“测试版”后缀） | 若上游更新该文件，保留 `<string name="app_name">记账蓝盒</string>` 与 `<string name="app_name_test">记账蓝盒</string>` |
 | **iOS** | `ios/Runner/zh-Hans.lproj/InfoPlist.strings` | `CFBundleDisplayName` 与 `CFBundleName` 替换为 `记账蓝盒` | 保留两行名字为 `记账蓝盒` |
-| **iOS** | `ios/Flutter/Debug.xcconfig` | `APP_DISPLAY_NAME=记账蓝盒测试版` | 保留该环境变量定义 |
+| **iOS** | `ios/Flutter/Debug.xcconfig` | `APP_DISPLAY_NAME=记账蓝盒` | 保留该环境变量定义 |
 | **iOS** | `ios/Flutter/Release.xcconfig` | `APP_DISPLAY_NAME=记账蓝盒` | 保留该环境变量定义 |
 | **iOS** | `ios/Runner/Info.plist` | 隐私权限描述中的“蜜蜂记账”变更为“记账蓝盒” | 若上游新增权限，同步文案即可 |
 | **iOS** | `ios/BeeCountWidget/BeeCountWidget.swift` | 小组件预览与配置名称替换为“记账蓝盒” | 保留小组件展示名为“记账蓝盒” |
@@ -35,7 +35,7 @@
     <string name="app_name_test">蜜蜂记账测试版</string>
 ==== 本地定制:
     <string name="app_name">记账蓝盒</string>
-    <string name="app_name_test">记账蓝盒测试版</string>
+    <string name="app_name_test">记账蓝盒</string>
 >>>>
 ```
 
@@ -55,7 +55,7 @@
 <<<< 上游原版:
 APP_DISPLAY_NAME=蜜蜂记账测试版 (Debug) / 蜜蜂记账 (Release)
 ==== 本地定制:
-APP_DISPLAY_NAME=记账蓝盒测试版 (Debug) / 记账蓝盒 (Release)
+APP_DISPLAY_NAME=记账蓝盒 (Debug 与 Release 均统一)
 >>>>
 ```
 
