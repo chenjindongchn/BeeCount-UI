@@ -13,17 +13,15 @@ import '../../utils/format_money.dart';
 import '../../utils/format_utils.dart';
 import '../../utils/currencies.dart';
 import '../widgets/origin_transaction_feed.dart';
-import '../../pages/main/home/widgets/home_reminders.dart';
 import 'custom_ledgers_page.dart';
 import '../widgets/origin_dialog.dart';
 import '../../pages/shared/pickers/wheel_date_picker.dart';
 import '../../pages/shared/widgets/feature_dot.dart';
 import '../../pages/transaction/search_page.dart';
-import '../../pages/report/annual_report_page.dart';
 import '../../providers/budget_providers.dart';
 import 'custom_budget_page.dart';
 import '../../pages/ai/ai_chat_page.dart';
-import '../../services/export/share_poster_service.dart';
+
 import '../../providers/shared_ledger_providers.dart';
 import '../../providers/home_startup_preview_provider.dart';
 import '../styles/origin_tokens.dart';
@@ -571,23 +569,8 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                     ),
                   ),
 
-                  // 2. 提醒模块 (月度报告、年度账单、预算提醒)
-                  HomeReminders(
-                    onMonthly: (m) =>
-                        SharePosterService.showPosterCarouselPreview(
-                      context,
-                      year: m.year,
-                      month: m.month,
-                    ),
-                    onAnnual: (y) => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AnnualReportPage(initialYear: y),
-                      ),
-                    ),
-                    onBudget: _openBudgetPage,
-                  ),
-                  const SizedBox(height: 6.0),
+                  // 预算卡片与明细列表之间的间距（隐藏提醒模块）
+                  const SizedBox(height: 8.0),
                 ],
               ),
               startupPreview: initialPreview,
