@@ -11,7 +11,7 @@ import '../../services/billing/post_processor.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/month_range.dart';
 import '../widgets/origin_date_picker.dart';
-import '../../pages/transaction/category_detail_page.dart';
+import 'custom_category_detail_page.dart';
 import '../../pages/transaction/transaction_editor_page.dart';
 import '../../pages/tag/tag_edit_page.dart';
 import '../styles/origin_tokens.dart';
@@ -238,7 +238,7 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
                       data: data,
                       allLedgers: widget.allLedgers,
                       onRetry: retry,
-                      onCategory: (category) => _open(CategoryDetailPage(
+                      onCategory: (category) => _open(CustomCategoryDetailPage(
                         categoryId: category.id,
                         categoryName: CategoryUtils.getDisplayName(
                             category.name, context, kind: category.kind),

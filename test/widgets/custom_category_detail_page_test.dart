@@ -126,4 +126,68 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('CustomCategoryDetailPage 底部置底常驻 OriginUI 规范胶囊大按钮且文案为“记一笔”', (tester) async {
+    await repo.createCategory(
+      name: '餐饮',
+      kind: 'expense',
+      icon: 'restaurant',
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(database),
+        repositoryProvider.overrideWithValue(repo),
+        currentLedgerIdProvider.overrideWith((ref) => 1),
+        baseCurrencyProvider.overrideWith((ref) => 'CNY'),
+        hideAmountsProvider.overrideWith((ref) => false),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          locale: Locale('zh', 'CN'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CustomCategoryDetailPage(
+            categoryId: 1,
+            categoryName: '餐饮',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // 1. 验证底部常驻胶囊按钮：文案为“记一笔”（不再是“+记一笔·餐饮”）
+    final quickAddButtonFinder = find.widgetWithText(ElevatedButton, '记一笔');
+    expect(quickAddButtonFinder, findsOneWidget);
+    expect(find.text('记一笔 · 餐饮'), findsNothing);
+
+    // 2. 验证该按钮确实位于 Scaffold 的 bottomNavigationBar 槽位中（置底常驻）
+    final scaffoldFinder = find.byType(Scaffold);
+    expect(scaffoldFinder, findsOneWidget);
+    final scaffold = tester.widget<Scaffold>(scaffoldFinder);
+    expect(scaffold.bottomNavigationBar, isNotNull);
+
+    // 3. 验证按钮图标为加号
+    expect(find.descendant(of: quickAddButtonFinder, matching: find.byIcon(Icons.add_rounded)), findsOneWidget);
+
+    // 4. 点击该置底按钮，能成功呼出记账抽屉
+    await tester.tap(quickAddButtonFinder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 抽屉展开后应该能看到保存按钮或金额键盘
+    expect(find.text('保存'), findsOneWidget);
+
+    // 清理
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+  });
 }
+

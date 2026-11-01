@@ -186,9 +186,6 @@ class OriginAnalyticsContent extends ConsumerWidget {
         unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
         mainAmount: formatMoneyCompact(data.total, trimZeros: false),
         hideAmounts: hide,
-        onToggleHideAmounts: () {
-          ref.read(hideAmountsProvider.notifier).state = !hide;
-        },
         onTap: onPeriod,
         action: Container(
           padding: const EdgeInsets.all(2.0),

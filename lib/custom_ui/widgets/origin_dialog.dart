@@ -39,6 +39,8 @@ class OriginDialog extends StatelessWidget {
   final VoidCallback? onConfirm;
   final String? cancelText;
   final VoidCallback? onCancel;
+  final String? destructiveText;
+  final VoidCallback? onDestructive;
   final List<Widget>? customActions;
   final bool stackActions;
   final bool isDanger;
@@ -57,6 +59,8 @@ class OriginDialog extends StatelessWidget {
     this.onConfirm,
     this.cancelText,
     this.onCancel,
+    this.destructiveText,
+    this.onDestructive,
     this.customActions,
     this.stackActions = true,
     this.isDanger = false,
@@ -188,8 +192,12 @@ class OriginDialog extends StatelessWidget {
   Widget _buildDefaultActions(BuildContext context, Color confirmBgColor) {
     final hasCancel = cancelText != null && cancelText!.isNotEmpty;
     final hasConfirm = confirmText != null && confirmText!.isNotEmpty;
+    final hasDestructive =
+        destructiveText != null && destructiveText!.isNotEmpty;
 
-    if (!hasCancel && !hasConfirm) return const SizedBox.shrink();
+    if (!hasCancel && !hasConfirm && !hasDestructive) {
+      return const SizedBox.shrink();
+    }
 
     final effectiveConfirmBg = isDanger
         ? OriginTokens.dialogButtonSecondary(context)
@@ -197,7 +205,7 @@ class OriginDialog extends StatelessWidget {
     final effectiveConfirmTextColor =
         isDanger ? OriginTokens.expenseRed : Colors.white;
 
-    // 确认胶囊按钮
+    // 1. 确认胶囊按钮（主强调色实心，居顶部）
     final confirmBtn = hasConfirm
         ? _OriginDialogCapsuleButton(
             text: confirmText!,
@@ -215,7 +223,25 @@ class OriginDialog extends StatelessWidget {
           )
         : null;
 
-    // 取消胶囊按钮
+    // 2. 破坏性操作胶囊按钮（如删除预算，中性底 + 警示红字，居中间）
+    final destructiveBtn = hasDestructive
+        ? _OriginDialogCapsuleButton(
+            text: destructiveText!,
+            backgroundColor: OriginTokens.dialogButtonSecondary(context),
+            textColor: OriginTokens.expenseRed,
+            isPrimary: false,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              if (onDestructive != null) {
+                onDestructive!();
+              } else {
+                Navigator.of(context).pop(false);
+              }
+            },
+          )
+        : null;
+
+    // 3. 取消胶囊按钮（中性底，居最底）
     final cancelBtn = hasCancel
         ? _OriginDialogCapsuleButton(
             text: cancelText!,
@@ -233,21 +259,27 @@ class OriginDialog extends StatelessWidget {
           )
         : null;
 
-    // 纵向堆叠（OriginOS 规范标准形态：每个按钮占满一行，确认在上，取消在下，间距 12dp）
-    if (hasCancel && hasConfirm) {
+    final buttons = <Widget>[
+      if (confirmBtn != null) confirmBtn,
+      if (destructiveBtn != null) destructiveBtn,
+      if (cancelBtn != null) cancelBtn,
+    ];
+
+    // 纵向堆叠（OriginOS 规范标准形态：每个胶囊按钮占满一行，高 46dp，圆角 23dp，间距 12dp）
+    if (buttons.length > 1) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          confirmBtn!,
-          const SizedBox(height: 12.0),
-          cancelBtn!,
+          for (int i = 0; i < buttons.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12.0),
+            buttons[i],
+          ],
         ],
       );
     }
 
-    // 单按钮居中全宽
-    return confirmBtn ?? cancelBtn!;
+    return buttons.isNotEmpty ? buttons.first : const SizedBox.shrink();
   }
 }
 

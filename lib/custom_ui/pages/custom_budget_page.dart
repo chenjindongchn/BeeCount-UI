@@ -32,6 +32,9 @@ class CustomBudgetPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
     final overviewAsync = ref.watch(budgetOverviewProvider);
+    // 提前预热总预算与分类预算缓存，避免用户点击编辑按钮时因等待异步查询而产生卡顿感
+    ref.watch(totalBudgetProvider);
+    ref.watch(allBudgetsProvider);
     final ledger = ref.watch(currentLedgerProvider).asData?.value;
     final showCurrency = ref.watch(currencySymbolVisibleProvider);
     final actualSymbol = getCurrencySymbol(ledger?.currency ?? 'CNY');
@@ -150,7 +153,9 @@ class CustomBudgetPage extends ConsumerWidget {
                           ? GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () async {
-                                final total =
+                                final total = ref
+                                        .read(totalBudgetProvider)
+                                        .valueOrNull ??
                                     await ref.read(totalBudgetProvider.future);
                                 if (context.mounted && total != null) {
                                   showOriginTotalBudgetDialog(
@@ -455,9 +460,10 @@ class _CategoryBudgetTile extends ConsumerWidget {
       behavior: HitTestBehavior.opaque,
       onTap: canEdit
           ? () async {
-              final budgets = await ref.read(allBudgetsProvider.future);
+              final budgets = ref.read(allBudgetsProvider).valueOrNull ??
+                  await ref.read(allBudgetsProvider.future);
               final budget =
-                  budgets.where((b) => b.id == item.budgetId).firstOrNull;
+                  budgets?.where((b) => b.id == item.budgetId).firstOrNull;
               if (context.mounted && budget != null) {
                 showOriginCategoryBudgetEditDialog(
                   context: context,

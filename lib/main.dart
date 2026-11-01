@@ -53,6 +53,39 @@ Future<void> main() async {
   logger.info('App', '应用启动，日志系统已初始化');
   print('📱 LoggerService 已初始化');
 
+  // 创建全局ProviderContainer
+  final container = ProviderContainer(
+    observers: const [_WidgetUpdateObserver()],
+  );
+
+  // 初始化应用模式（从 SharedPreferences 读取并设置到 appModeProvider）
+  await _initializeAppMode(container);
+
+  // 启动 URL 监听（用于快捷指令/AppLink 自动记账）
+  _setupUrlListener(container);
+
+  // 注册 BeeCount Cloud 2FA challenge handler
+  BeeCountCloudProvider.globalTwoFactorHandler = (request) async {
+    final ctx = globalNavigatorKey.currentContext;
+    if (ctx == null) {
+      return false;
+    }
+    return await Login2FAChallengeDialog.show(ctx, request);
+  };
+
+  // 核心启动优化（第一性原理）：
+  // 所有非首屏必须的后台系统服务（时区、本地通知、记账提醒、信用卡提醒、小组件回调、截图监听、孤立文件GC等）
+  // 统一异步延后执行，绝不在 runApp() 之前串行阻塞首帧渲染！
+  unawaited(_runDeferredBackgroundTasks(container));
+
+  runApp(ProviderScope(
+    parent: container,
+    child: const MainApp(),
+  ));
+}
+
+/// 后台延时异步初始化的非关键系统服务
+Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
   // 初始化时区（必须在通知服务之前，修复iOS通知问题）
   try {
     NotificationFactory.initializeTimeZone();
@@ -77,33 +110,15 @@ Future<void> main() async {
     print('⚠️  通知服务初始化失败（可能在不支持的平台上运行）: $e');
   }
 
-  // 恢复用户的记账提醒设置（关键修复：应用重启后自动恢复提醒）
+  // 恢复用户的记账提醒设置
   await _restoreUserReminder();
 
-  // 启动提醒监控服务（监听应用生命周期，自动恢复丢失的提醒）
+  // 启动提醒监控服务
   try {
     ReminderMonitorService().startMonitoring();
   } catch (e) {
     print('⚠️  提醒监控服务启动失败（可能在不支持的平台上运行）: $e');
   }
-
-  // 创建全局ProviderContainer（需要在周期交易生成之前创建，因为需要使用 repositoryProvider）
-  // observers 必须挂在这里(根容器):无 override 的全局 provider 元素都挂载
-  // 于根容器,riverpod 只通知元素所属容器的 observers;历史上挂在下面
-  // ProviderScope(parent: ...) 子作用域上,didUpdateProvider 从未被回调,
-  // _WidgetUpdateObserver 一直是死代码(2026-07 review 发现)——启动预热/
-  // 切账本触发的小组件渲染全靠它,必须真正生效。
-  final container = ProviderContainer(
-    observers: const [_WidgetUpdateObserver()],
-  );
-
-  // 初始化应用模式（需要在生成重复交易之前，确保模式正确）
-  // 直接从 SharedPreferences 读取并设置到 appModeProvider
-  await _initializeAppMode(container);
-
-  // 注意：不再在启动时生成重复交易
-  // 周期交易生成已移至 appSplashInitProvider 中（等待数据库完全初始化后执行）
-  // await _generatePendingRecurringTransactions(container);
 
   // 恢复信用卡还款提醒
   try {
@@ -112,12 +127,8 @@ Future<void> main() async {
       getCreditCardAccounts: () => repo.getCreditCardAccounts(),
     );
   } catch (e) {
-    // 静默失败，不影响启动
+    // 静默失败，不影响运行
   }
-
-  // [已删除] v1.15.0 账户独立迁移 & v2.7.1 转账分类迁移
-  // 所有活跃用户已完成，Drift onUpgrade 已覆盖相关 schema 变更
-  // 硬编码 SQL 重建表会导致新增字段丢失（如 sort_order），故移除
 
   // 注册小组件交互回调
   try {
@@ -126,7 +137,7 @@ Future<void> main() async {
     logger.warning('App', '小组件回调注册失败（可能在不支持的平台上运行）: $e');
   }
 
-  // 恢复截图自动识别设置（Android专属），传入container
+  // 恢复截图自动识别设置（Android专属）
   await _restoreScreenshotMonitor(container);
 
   // 初始化图片分享处理服务（Android专属）
@@ -134,30 +145,8 @@ Future<void> main() async {
     _setupImageShareHandler(container);
   }
 
-  // 启动 URL 监听（用于快捷指令/AppLink 自动记账）
-  _setupUrlListener(container);
-
-  // 注册 BeeCount Cloud 2FA challenge handler。当 server 返回 requires_2fa=true,
-  // service 层会调这个 handler 弹出 Login2FAChallengeDialog 让用户输码。
-  // 验证失败留在对话框就地展示错误,验证通过 / 用户取消才关闭。详见 .docs/2fa-design.md
-  BeeCountCloudProvider.globalTwoFactorHandler = (request) async {
-    final ctx = globalNavigatorKey.currentContext;
-    if (ctx == null) {
-      // 极端场景:cloud auth 在 navigator 还没 attach 之前触发,只能视为取消
-      return false;
-    }
-    return await Login2FAChallengeDialog.show(ctx, request);
-  };
-
-  // 启动一次性磁盘孤立文件 GC(attachments / attachment_thumbs / custom_icons),
-  // 清理历史版本遗留的文件。标志位 SharedPreferences 保证只跑一次。后台异步
-  // 执行,失败不致命。
-  unawaited(_runOrphanFileGcOnce(container));
-
-  runApp(ProviderScope(
-    parent: container,
-    child: const MainApp(),
-  ));
+  // 启动一次性磁盘孤立文件 GC
+  await _runOrphanFileGcOnce(container);
 }
 
 /// Provider observer to update widget on app start
@@ -178,18 +167,14 @@ class _WidgetUpdateObserver extends ProviderObserver {
 
   void _updateWidgetOnStart(ProviderContainer container) async {
     try {
-      // 先等主币种从 prefs 恢复完成再取值:本回调由 currentLedgerIdProvider
-      // 首次赋值触发,与 baseCurrencyInitProvider 的异步恢复是并行的两条链,
-      // 不等的话可能读到 StateProvider 的默认 'CNY',把净资产系列首轮渲成
-      // 错误的 ¥ 符号,要到下一次触发才纠正(2026-07 用户实机反馈)。
+      // 延后 1.5 秒执行，优先让首屏关键帧渲染完成，避免主线程发生离屏截图与 SQLite 争抢
+      await Future.delayed(const Duration(milliseconds: 1500));
       await container.read(baseCurrencyInitProvider.future);
       final repository = container.read(repositoryProvider);
       final ledgerId = container.read(currentLedgerIdProvider);
       final primaryColor = container.read(primaryColorProvider);
       final redForIncome = container.read(incomeExpenseColorSchemeProvider);
       final baseCurrency = container.read(baseCurrencyProvider);
-      // 没有 BuildContext,靠 languageProvider 还原当前 App 语言(见
-      // widget_manager.dart resolveWidgetLocalizations 文档)。
       final locale = container.read(languageProvider);
 
       final widgetManager = WidgetManager();
@@ -200,13 +185,11 @@ class _WidgetUpdateObserver extends ProviderObserver {
         explicitLocale: locale,
         redForIncome: redForIncome,
         baseCurrency: baseCurrency,
-        // 预热:启动 / 切账本时把全部类型×尺寸的图渲染齐,这样用户随后往桌面
-        // 添加任何一种小组件都立刻有图可显,不用等下一次 App 内触发渲染
-        // (「添加小组件后得等一会」的修复;高频数据变化触发仍只渲已安装)。
-        warmUpAllSpecs: true,
+        // 冷启动时不全量预热 14 个小组件规格（会严重阻塞主线程），仅刷新已安装组件
+        warmUpAllSpecs: false,
       );
 
-      logger.info('App', '小组件数据已更新(全目录预热)');
+      logger.info('App', '小组件数据已更新');
     } catch (e) {
       logger.warning('App', '更新小组件失败（可能在不支持的平台上运行）: $e');
     }

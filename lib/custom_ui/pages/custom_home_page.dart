@@ -227,7 +227,10 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     final todayExpense = todayExpenseAsync.valueOrNull ??
         ref.watch(lastTodayExpenseProvider(ledgerId)) ??
         0.0;
-    final budgetOverview = ref.watch(budgetOverviewProvider).valueOrNull;
+    final showBudgetOnHome = ref.watch(homeBudgetCardEnabledProvider);
+    final budgetOverview = showBudgetOnHome
+        ? ref.watch(budgetOverviewProvider).valueOrNull
+        : null;
     final budgetUsage = budgetOverview?.totalBudget;
 
     final initialPreview =
@@ -339,9 +342,6 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                     mainAmount:
                         '$symbolPrefix${formatMoneyCompact(todayExpense, trimZeros: false)}',
                     hideAmounts: hideAmounts,
-                    onToggleHideAmounts: () {
-                      ref.read(hideAmountsProvider.notifier).state = !hideAmounts;
-                    },
                     metrics: [
                       OriginHeroMetric(
                         label: l10n.monthExpense,

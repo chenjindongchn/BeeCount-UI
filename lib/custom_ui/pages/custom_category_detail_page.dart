@@ -14,7 +14,7 @@ import '../../pages/shared/resources/bindings/recording_category_icon.dart';
 import '../../pages/shared/resources/widgets/detail_period_controls.dart'
     show detailRangeLabel;
 import '../widgets/origin_period_picker.dart';
-import '../../pages/shared/transactions/bindings/transaction_tile.dart';
+import '../widgets/custom_transaction_tile.dart';
 import '../../pages/transaction/category_detail/bindings/category_detail.dart';
 import '../../pages/transaction/category_detail_page.dart'
     show categoryDetailSortProvider;
@@ -38,7 +38,7 @@ import 'custom_transaction_sheet.dart';
 /// 1. 右上角采用 OriginOS 规范双圆点入口 (OriginMoreButton)，点击呼出高质感气泡菜单；
 /// 2. 气泡菜单保留原分类功能（搜索、编辑、迁移、分类管理），并新增“累计金额趋势”勾选项；
 /// 3. “累计金额趋势”默认关闭（不显示趋势图），点击切换打勾并实时控制页面内趋势卡片的展开/收起；
-/// 4. 底部“记一笔”与条目操作无缝联动 OriginOS 记账抽屉，保持设计语言高度一致。
+/// 4. 底部常驻 OriginUI 规范胶囊大按钮（“记一笔”），无缝联动 OriginOS 记账抽屉，保持设计语言高度一致。
 class CustomCategoryDetailPage extends ConsumerStatefulWidget {
   const CustomCategoryDetailPage({
     super.key,
@@ -451,6 +451,48 @@ class _CustomCategoryDetailPageState
               ),
             ],
           ),
+          // 底部常驻符合 OriginUI 规范的胶囊大按钮（“记一笔”）
+          bottomNavigationBar: (category == null || category.id < 0)
+              ? null
+              : SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: OriginTokens.cardMargin,
+                      vertical: 12.0,
+                    ),
+                    child: SizedBox(
+                      height: OriginTokens.buttonHeight,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              OriginTokens.buttonRadius,
+                            ),
+                          ),
+                        ),
+                        onPressed: _record,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.add_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              l.widgetQuickAddLabel,
+                              style: const TextStyle(
+                                fontSize: 16.0,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
         );
       },
     );
@@ -766,34 +808,25 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
       ],
     );
 
+    final hasExpandButton = c.rows.length > 4;
+
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(17, 4, 17, 24),
-      itemCount: rows.length + 2,
+      padding: const EdgeInsets.fromLTRB(17, 4, 17, 16),
+      itemCount: rows.length + 1 + (hasExpandButton ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == 0) return header;
-        if (index == rows.length + 1) {
+        if (hasExpandButton && index == rows.length + 1) {
           return Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (c.rows.length > 4)
-                  TextButton(
-                    onPressed: onShowAll,
-                    child: Text(
-                      showAll
-                          ? l.v4DetailCollapse
-                          : l.v4DetailAllTransactions(c.rows.length),
-                    ),
-                  ),
-                BeeButton(
-                  label: category.kind == 'transfer'
-                      ? l.transferTitle
-                      : l.v4DetailRecord(name(category)),
-                  icon: const BeeLineIcon('Plus', size: 18),
-                  onPressed: onRecord,
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: Center(
+              child: TextButton(
+                onPressed: onShowAll,
+                child: Text(
+                  showAll
+                      ? l.v4DetailCollapse
+                      : l.v4DetailAllTransactions(c.rows.length),
                 ),
-              ],
+              ),
             ),
           );
         }
@@ -827,7 +860,7 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
                       '${l.searchSummaryIncome} ${money(totals.income)}',
                   ],
                 ),
-              TransactionTileBinding(
+              CustomTransactionTileBinding(
                 key: ValueKey('category-transaction-${row.t.id}'),
                 row: row,
                 tags: c.tags[row.t.id] ?? const [],

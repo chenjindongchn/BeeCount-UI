@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,11 +16,12 @@ import 'origin_amount_field.dart';
 
 /// vivo OriginOS 风格预算操作弹窗体系 (OriginBudgetDialog)
 ///
-/// 严格遵守项目中所有其他 OriginOS 对话框的统一设计规范：
+/// 严格遵守项目中所有其他 OriginOS 对话框的统一设计规范与第一性人机工程学：
 /// 1. 【贴底弹出】：对齐 Alignment.bottomCenter，入场动效自底部平滑滑升（SlideUp + Fade）；
 /// 2. 【上下堆叠双胶囊】：确认按钮在上方（实心强调色），取消按钮在下方（中性灰底），高度 46dp，圆角 23dp；
-/// 3. 【软键盘避让】：通过 AnimatedPadding 响应 viewInsets，键盘弹起时弹窗贴在键盘上方，键盘收起时贴在屏幕底部；
-/// 4. 【完全复用 OriginDialog】：统一视觉风格、几何圆角 (30dp) 与阴影深度。
+/// 3. 【动效时序解耦】：弹窗入场动画（260ms）平滑就位后再自动聚焦软键盘，避免动效与键盘/文本选择竞争导致的掉帧；
+/// 4. 【软键盘锁步避让】：采用自然 Padding 响应 viewInsets，消除 AnimatedPadding 导致的二次补间打断抖动；
+/// 5. 【完全复用 OriginDialog】：统一视觉风格、几何圆角 (30dp) 与阴影深度。
 
 /// 弹出修改/设置总预算对话框（贴底弹出，按钮上下排列）
 Future<void> showOriginTotalBudgetDialog({
@@ -89,12 +91,14 @@ class _TotalBudgetDialog extends ConsumerStatefulWidget {
 
 class _TotalBudgetDialogState extends ConsumerState<_TotalBudgetDialog> {
   late final TextEditingController _controller;
+  late final FocusNode _focusNode;
   String? _error;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
     final amount = widget.budget?.amount;
     final initialText = amount != null
         ? (amount.truncateToDouble() == amount
@@ -102,16 +106,27 @@ class _TotalBudgetDialogState extends ConsumerState<_TotalBudgetDialog> {
             : amount.toStringAsFixed(2))
         : '';
     _controller = TextEditingController(text: initialText);
-    if (initialText.isNotEmpty) {
-      _controller.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: initialText.length,
-      );
-    }
+
+    // 第一性原理：待弹窗入场平移动画（260ms）就位后，再平滑唤起软键盘并全选文本
+    // 彻底避免弹窗入场动画、软键盘推入、文本工具栏浮层三者在第 0 帧冲突竞争导致的剧烈掉帧
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 260), () {
+        if (mounted) {
+          _focusNode.requestFocus();
+          if (_controller.text.isNotEmpty) {
+            _controller.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _controller.text.length,
+            );
+          }
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -194,21 +209,29 @@ class _TotalBudgetDialogState extends ConsumerState<_TotalBudgetDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final viewInsets = MediaQuery.viewInsetsOf(context);
+    final bottomInset = viewInsets.bottom > 0
+        ? math.max(
+            0.0,
+            viewInsets.bottom -
+                MediaQuery.of(context).padding.bottom -
+                12.0,
+          )
+        : 0.0;
 
     final title = widget.budget != null
         ? l10n.budgetMonthlyBudget
         : l10n.budgetAddTotal;
 
-    return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: viewInsets.bottom),
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
       child: OriginDialog(
         alignment: Alignment.bottomCenter,
         title: title,
         textAlign: TextAlign.center,
         confirmText: _saving ? '...' : l10n.commonSave,
         onConfirm: _save,
+        destructiveText: widget.budget != null ? '删除总预算' : null,
+        onDestructive: _saving ? null : _delete,
         cancelText: l10n.commonCancel,
         onCancel: () => Navigator.of(context).pop(),
         stackActions: true,
@@ -220,8 +243,9 @@ class _TotalBudgetDialogState extends ConsumerState<_TotalBudgetDialog> {
             // 金额输入槽 (OriginAmountField)
             OriginAmountField(
               controller: _controller,
+              focusNode: _focusNode,
               currencySymbol: widget.currencySymbol,
-              autofocus: true,
+              autofocus: false,
               clearable: true,
               borderRadius: 16.0,
               onChanged: (_) {
@@ -239,28 +263,6 @@ class _TotalBudgetDialogState extends ConsumerState<_TotalBudgetDialog> {
                 style: TextStyle(
                   fontSize: 12.0,
                   color: OriginTokens.expenseRed,
-                ),
-              ),
-            ],
-
-            // 可选删除操作
-            if (widget.budget != null) ...[
-              const SizedBox(height: 12.0),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _saving ? null : _delete,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Center(
-                    child: Text(
-                      '删除总预算',
-                      style: TextStyle(
-                        fontSize: 13.0,
-                        color: OriginTokens.expenseRed,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -289,6 +291,7 @@ class _AddCategoryBudgetDialog extends ConsumerStatefulWidget {
 class _AddCategoryBudgetDialogState
     extends ConsumerState<_AddCategoryBudgetDialog> {
   late final TextEditingController _controller;
+  late final FocusNode _focusNode;
   Category? _selectedCategory;
   List<Category> _categories = [];
   bool _loading = true;
@@ -298,12 +301,23 @@ class _AddCategoryBudgetDialogState
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
     _controller = TextEditingController();
     _loadCategories();
+
+    // 弹窗平滑滑入后激活焦点
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 260), () {
+        if (mounted) {
+          _focusNode.requestFocus();
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -427,11 +441,17 @@ class _AddCategoryBudgetDialogState
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final viewInsets = MediaQuery.viewInsetsOf(context);
+    final bottomInset = viewInsets.bottom > 0
+        ? math.max(
+            0.0,
+            viewInsets.bottom -
+                MediaQuery.of(context).padding.bottom -
+                12.0,
+          )
+        : 0.0;
 
-    return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: viewInsets.bottom),
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
       child: OriginDialog(
         alignment: Alignment.bottomCenter,
         title: '添加分类预算',
@@ -513,8 +533,9 @@ class _AddCategoryBudgetDialogState
             // 金额输入槽 (OriginAmountField)
             OriginAmountField(
               controller: _controller,
+              focusNode: _focusNode,
               currencySymbol: widget.currencySymbol,
-              autofocus: true,
+              autofocus: false,
               clearable: true,
               borderRadius: 16.0,
               onChanged: (_) {
@@ -566,25 +587,40 @@ class _EditCategoryBudgetDialog extends ConsumerStatefulWidget {
 class _EditCategoryBudgetDialogState
     extends ConsumerState<_EditCategoryBudgetDialog> {
   late final TextEditingController _controller;
+  late final FocusNode _focusNode;
   String? _error;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
     final amount = widget.budget.amount;
     final initialText = amount.truncateToDouble() == amount
         ? amount.toStringAsFixed(0)
         : amount.toStringAsFixed(2);
     _controller = TextEditingController(text: initialText);
-    _controller.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: initialText.length,
-    );
+
+    // 第一性原理：待弹窗平滑滑升（260ms）就位后再聚焦软键盘并全选现有金额
+    // 消除入场动画、软键盘推入、文本选区工具栏并发冲突卡顿
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 260), () {
+        if (mounted) {
+          _focusNode.requestFocus();
+          if (_controller.text.isNotEmpty) {
+            _controller.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _controller.text.length,
+            );
+          }
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -658,17 +694,25 @@ class _EditCategoryBudgetDialogState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final viewInsets = MediaQuery.viewInsetsOf(context);
+    final bottomInset = viewInsets.bottom > 0
+        ? math.max(
+            0.0,
+            viewInsets.bottom -
+                MediaQuery.of(context).padding.bottom -
+                12.0,
+          )
+        : 0.0;
 
-    return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: viewInsets.bottom),
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
       child: OriginDialog(
         alignment: Alignment.bottomCenter,
         title: widget.categoryName,
         textAlign: TextAlign.center,
         confirmText: _saving ? '...' : l10n.commonSave,
         onConfirm: _save,
+        destructiveText: '删除分类预算',
+        onDestructive: _saving ? null : _delete,
         cancelText: l10n.commonCancel,
         onCancel: () => Navigator.of(context).pop(),
         stackActions: true,
@@ -692,8 +736,9 @@ class _EditCategoryBudgetDialogState
             // 金额输入槽 (OriginAmountField)
             OriginAmountField(
               controller: _controller,
+              focusNode: _focusNode,
               currencySymbol: widget.currencySymbol,
-              autofocus: true,
+              autofocus: false,
               clearable: true,
               borderRadius: 16.0,
               onChanged: (_) {
@@ -714,26 +759,6 @@ class _EditCategoryBudgetDialogState
                 ),
               ),
             ],
-
-            // 删除该分类预算入口
-            const SizedBox(height: 12.0),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _saving ? null : _delete,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Center(
-                  child: Text(
-                    '删除分类预算',
-                    style: TextStyle(
-                      fontSize: 13.0,
-                      color: OriginTokens.expenseRed,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),

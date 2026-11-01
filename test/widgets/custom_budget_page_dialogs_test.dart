@@ -1,5 +1,6 @@
 import 'package:beecount/cloud/sync_service.dart';
 import 'package:beecount/custom_ui/pages/custom_budget_page.dart';
+import 'package:beecount/custom_ui/widgets/origin_dialog.dart';
 import 'package:beecount/data/db.dart';
 import 'package:beecount/data/repositories/local/local_repository.dart';
 import 'package:beecount/l10n/app_localizations.dart';
@@ -197,6 +198,66 @@ void main() {
       // 验证保存成功
       final total = await repo.getTotalBudget(1);
       expect(total?.amount, 6000.0);
+    });
+
+    testWidgets('4. 编辑总预算弹窗展示标准3胶囊按钮（保存/删除总预算/取消），点击删除能正确删除', (tester) async {
+      await repo.createBudget(
+        ledgerId: 1,
+        type: 'total',
+        amount: 2500,
+        startDay: 1,
+      );
+
+      final container = ProviderContainer(overrides: [
+        databaseProvider.overrideWithValue(db),
+        repositoryProvider.overrideWithValue(repo),
+        currentLedgerIdProvider.overrideWith((ref) => 1),
+        syncServiceProvider.overrideWithValue(LocalOnlySyncService()),
+      ]);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CustomBudgetPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 点击右上角编辑
+      await tester.tap(find.text('编辑'));
+      await tester.pumpAndSettle();
+
+      // 验证 3 胶囊按钮均存在
+      expect(find.text('保存'), findsOneWidget);
+      expect(find.text('删除总预算'), findsOneWidget);
+      expect(find.text('取消'), findsOneWidget);
+
+      // 点击“删除总预算”胶囊按钮
+      await tester.tap(find.text('删除总预算'));
+      await tester.pumpAndSettle();
+
+      // 弹出 OriginOS 风格二次确认弹窗
+      expect(find.text('确定删除此预算？'), findsOneWidget);
+
+      // 点击确认弹窗的“删除”按钮
+      final deleteConfirmBtn =
+          find.widgetWithText(OriginDialogCapsuleButton, '删除');
+      expect(deleteConfirmBtn, findsOneWidget);
+      await tester.tap(deleteConfirmBtn);
+      await tester.pumpAndSettle();
+
+      // 消化 Toast 2 秒定时器
+      await tester.pump(const Duration(seconds: 3));
+
+      // 验证数据库中总预算已清空
+      final total = await repo.getTotalBudget(1);
+      expect(total, isNull);
     });
   });
 }

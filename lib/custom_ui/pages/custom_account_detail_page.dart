@@ -9,7 +9,7 @@ import '../../pages/account/account_edit_page.dart';
 import '../../pages/account/detail/bindings/account_detail.dart';
 import '../../pages/account/detail/controllers/account_detail_controller.dart';
 import '../../pages/account/detail/widgets/account_detail_sections.dart';
-import '../../pages/shared/transactions/bindings/transaction_tile.dart';
+import '../widgets/custom_transaction_tile.dart';
 import '../../providers.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/currency/rate_math.dart';
@@ -18,7 +18,7 @@ import '../../utils/credit_card_amounts.dart';
 import '../../utils/currencies.dart';
 import '../../utils/format_money.dart';
 import '../styles/origin_tokens.dart';
-import '../widgets/origin_card.dart';
+import '../widgets/origin_hero_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_menu.dart';
@@ -527,7 +527,7 @@ class _CustomAccountDetailPageState
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 child: Column(
                                   children: [
-                                    TransactionTileBinding(
+                                    CustomTransactionTileBinding(
                                       key: ValueKey('account-transaction-${t.id}'),
                                       row: (
                                         t: t,
@@ -543,6 +543,7 @@ class _CustomAccountDetailPageState
                                           0,
                                       fullDate: true,
                                       allLedgers: true,
+                                      allowCategoryNavigation: false,
                                       ledgerName:
                                           resources?.ledgers[t.ledgerId]?.name,
                                       baseCurrency:
@@ -667,10 +668,7 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
             ? (liability ? l.valuationCurrentDebt : l.valuationCurrentValue)
             : l.accountBalance;
 
-    // 严格与资产页面保持一致：隐藏状态下为 ****
-    final amountText = hidden
-        ? '****'
-        : formatMoneyCompact(value, trimZeros: false);
+    final due = daysUntilAccountPayment(account.paymentDueDay, DateTime.now());
 
     // 外币换算提示（未隐藏且币种不同于账本基准币时呈现）
     String? conversionText;
@@ -690,100 +688,83 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
       }
     }
 
-    final due = daysUntilAccountPayment(account.paymentDueDay, DateTime.now());
+    final List<OriginHeroMetric> metrics = [];
 
-    return OriginCard(
-      radius: OriginTokens.heroCardRadius,
-      // margin 默认即为 horizontal: OriginTokens.cardMargin (20dp), vertical: 6.0
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // 左侧：余额标题及信用卡额度提醒（若有）
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  balanceLabel,
-                  style: TextStyle(
-                    fontSize: 14.0,
-                    fontWeight: FontWeight.w500,
-                    color: OriginTokens.textSecondary(context),
-                  ),
-                ),
-                if (credit && (account.creditLimit != null || due != null)) ...[
-                  const SizedBox(height: 4.0),
-                  Text(
-                    [
-                      if (account.creditLimit != null)
-                        '${l.creditLimit} ${hidden ? '****' : '$symbol${formatMoneyCompact(account.creditLimit!, trimZeros: false)}'}',
-                      if (due != null)
-                        (due == 0
-                            ? l.creditCardPaymentDueToday
-                            : l.creditCardDaysUntilPayment(due)),
-                    ].join(' · '),
-                    style: TextStyle(
-                      fontSize: 11.0,
-                      color: due != null && due <= 3
-                          ? Theme.of(context).colorScheme.error
-                          : OriginTokens.textTertiary(context),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+    if (credit) {
+      if (account.creditLimit != null) {
+        metrics.add(
+          OriginHeroMetric(
+            label: l.creditLimit,
+            unit: account.currency == 'CNY' ? '元' : symbol,
+            value: formatMoneyCompact(account.creditLimit!, trimZeros: false),
           ),
-          const SizedBox(width: 12),
+        );
+      }
+      if (due != null) {
+        metrics.add(
+          OriginHeroMetric(
+            label: '还款提醒',
+            value: due == 0
+                ? l.creditCardPaymentDueToday
+                : l.creditCardDaysUntilPayment(due),
+            valueColor: due <= 3 ? const Color(0xFFFF5252) : null,
+          ),
+        );
+      }
+    } else if (conversionText != null) {
+      metrics.add(
+        OriginHeroMetric(
+          label: '折合基准币',
+          value: conversionText,
+        ),
+      );
+      metrics.add(
+        OriginHeroMetric(
+          label: '账户币种',
+          value: account.currency.toUpperCase(),
+        ),
+      );
+    } else {
+      metrics.add(
+        OriginHeroMetric(
+          label: '初始金额',
+          unit: account.currency == 'CNY' ? '元' : symbol,
+          value: formatMoneyCompact(account.initialBalance, trimZeros: false),
+        ),
+      );
+      metrics.add(
+        OriginHeroMetric(
+          label: '账户币种',
+          value: account.currency.toUpperCase(),
+        ),
+      );
+    }
 
-          // 右侧：核心数字金额及外币换算（若有）
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  if (!hidden && symbol.isNotEmpty) ...[
-                    Text(
-                      symbol,
-                      style: TextStyle(
-                        fontSize: 16.0,
-                        fontWeight: FontWeight.w600,
-                        color: OriginTokens.textPrimary(context),
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                  ],
-                  Text(
-                    amountText,
-                    style: TextStyle(
-                      fontSize: 22.0,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                      color: OriginTokens.textPrimary(context),
-                    ),
-                  ),
-                ],
-              ),
-              if (!hidden && conversionText != null) ...[
-                const SizedBox(height: 2.0),
-                Text(
-                  conversionText,
-                  style: TextStyle(
-                    fontSize: 11.0,
-                    color: OriginTokens.textTertiary(context),
-                  ),
-                ),
-              ],
-            ],
+    // 单项资产大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
+    return OriginHeroCard(
+      title: balanceLabel,
+      unit: account.currency == 'CNY' ? '元' : symbol,
+      mainAmount: formatMoneyCompact(value, trimZeros: false),
+      hideAmounts: hidden,
+      onToggleHideAmounts: () {
+        ref.read(hideAmountsProvider.notifier).state = !hidden;
+      },
+      action: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Text(
+          getAccountTypeLabel(context, account.type),
+          style: const TextStyle(
+            fontSize: 11.0,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
           ),
-        ],
+        ),
       ),
+      metrics: metrics,
     );
   }
 }
