@@ -15,6 +15,7 @@ import '../styles/origin_sheet_tokens.dart';
 import '../widgets/custom_account_grid_picker.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_keypad.dart';
+import '../widgets/origin_text_field.dart';
 
 /// 弹出 OriginOS 规范的定制记账底部抽屉
 Future<bool?> showCustomTransactionSheet(
@@ -939,37 +940,14 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF262629) : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(17),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _noteController,
-                style: const TextStyle(fontSize: 12.5),
-                decoration: InputDecoration(
-                  hintText: '点击填写备注',
-                  hintStyle: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark ? Colors.white38 : const Color(0xFF9E9E9E),
-                  ),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.camera_alt_outlined,
-              size: 18,
-              color: isDark ? Colors.white38 : const Color(0xFF9E9E9E),
-            ),
-          ],
+      child: OriginTextField.compact(
+        controller: _noteController,
+        hintText: '点击填写备注',
+        clearable: true,
+        suffixIcon: Icon(
+          Icons.camera_alt_outlined,
+          size: 18,
+          color: isDark ? Colors.white38 : const Color(0xFF9E9E9E),
         ),
       ),
     );

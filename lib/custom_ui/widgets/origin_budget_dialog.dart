@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
@@ -12,6 +11,7 @@ import '../../services/billing/post_processor.dart';
 import '../../utils/category_utils.dart';
 import '../styles/origin_tokens.dart';
 import 'origin_dialog.dart';
+import 'origin_amount_field.dart';
 
 /// vivo OriginOS 风格预算操作弹窗体系 (OriginBudgetDialog)
 ///
@@ -193,7 +193,6 @@ class _TotalBudgetDialogState extends ConsumerState<_TotalBudgetDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final viewInsets = MediaQuery.viewInsetsOf(context);
 
     final title = widget.budget != null
@@ -218,91 +217,18 @@ class _TotalBudgetDialogState extends ConsumerState<_TotalBudgetDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 12.0),
-            // 金额输入槽
-            Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 10.0,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    widget.currencySymbol,
-                    style: TextStyle(
-                      fontSize: 22.0,
-                      fontWeight: FontWeight.bold,
-                      color: OriginTokens.textPrimary(context),
-                    ),
-                  ),
-                  const SizedBox(width: 8.0),
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      autofocus: true,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}'),
-                        ),
-                      ],
-                      style: TextStyle(
-                        fontSize: 24.0,
-                        fontWeight: FontWeight.bold,
-                        color: OriginTokens.textPrimary(context),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '0.00',
-                        hintStyle: TextStyle(
-                          fontSize: 24.0,
-                          fontWeight: FontWeight.bold,
-                          color: OriginTokens.textTertiary(context),
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onChanged: (_) {
-                        if (_error != null) {
-                          setState(() => _error = null);
-                        }
-                      },
-                    ),
-                  ),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _controller,
-                    builder: (_, val, __) {
-                      if (val.text.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          _controller.clear();
-                          if (_error != null) {
-                            setState(() => _error = null);
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Icon(
-                            Icons.cancel_rounded,
-                            size: 18.0,
-                            color: OriginTokens.textTertiary(context),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+            // 金额输入槽 (OriginAmountField)
+            OriginAmountField(
+              controller: _controller,
+              currencySymbol: widget.currencySymbol,
+              autofocus: true,
+              clearable: true,
+              borderRadius: 16.0,
+              onChanged: (_) {
+                if (_error != null) {
+                  setState(() => _error = null);
+                }
+              },
             ),
 
             // 错误提示
@@ -584,91 +510,18 @@ class _AddCategoryBudgetDialogState
             ),
             const SizedBox(height: 10.0),
 
-            // 金额输入槽
-            Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 10.0,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    widget.currencySymbol,
-                    style: TextStyle(
-                      fontSize: 22.0,
-                      fontWeight: FontWeight.bold,
-                      color: OriginTokens.textPrimary(context),
-                    ),
-                  ),
-                  const SizedBox(width: 8.0),
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      autofocus: true,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}'),
-                        ),
-                      ],
-                      style: TextStyle(
-                        fontSize: 24.0,
-                        fontWeight: FontWeight.bold,
-                        color: OriginTokens.textPrimary(context),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '0.00',
-                        hintStyle: TextStyle(
-                          fontSize: 24.0,
-                          fontWeight: FontWeight.bold,
-                          color: OriginTokens.textTertiary(context),
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onChanged: (_) {
-                        if (_error != null) {
-                          setState(() => _error = null);
-                        }
-                      },
-                    ),
-                  ),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _controller,
-                    builder: (_, val, __) {
-                      if (val.text.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          _controller.clear();
-                          if (_error != null) {
-                            setState(() => _error = null);
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Icon(
-                            Icons.cancel_rounded,
-                            size: 18.0,
-                            color: OriginTokens.textTertiary(context),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+            // 金额输入槽 (OriginAmountField)
+            OriginAmountField(
+              controller: _controller,
+              currencySymbol: widget.currencySymbol,
+              autofocus: true,
+              clearable: true,
+              borderRadius: 16.0,
+              onChanged: (_) {
+                if (_error != null) {
+                  setState(() => _error = null);
+                }
+              },
             ),
 
             // 错误提示
@@ -804,7 +657,6 @@ class _EditCategoryBudgetDialogState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final viewInsets = MediaQuery.viewInsetsOf(context);
 
     return AnimatedPadding(
@@ -837,91 +689,18 @@ class _EditCategoryBudgetDialogState
                 ),
               ),
 
-            // 金额输入槽
-            Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 10.0,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    widget.currencySymbol,
-                    style: TextStyle(
-                      fontSize: 22.0,
-                      fontWeight: FontWeight.bold,
-                      color: OriginTokens.textPrimary(context),
-                    ),
-                  ),
-                  const SizedBox(width: 8.0),
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      autofocus: true,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}'),
-                        ),
-                      ],
-                      style: TextStyle(
-                        fontSize: 24.0,
-                        fontWeight: FontWeight.bold,
-                        color: OriginTokens.textPrimary(context),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '0.00',
-                        hintStyle: TextStyle(
-                          fontSize: 24.0,
-                          fontWeight: FontWeight.bold,
-                          color: OriginTokens.textTertiary(context),
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onChanged: (_) {
-                        if (_error != null) {
-                          setState(() => _error = null);
-                        }
-                      },
-                    ),
-                  ),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _controller,
-                    builder: (_, val, __) {
-                      if (val.text.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          _controller.clear();
-                          if (_error != null) {
-                            setState(() => _error = null);
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Icon(
-                            Icons.cancel_rounded,
-                            size: 18.0,
-                            color: OriginTokens.textTertiary(context),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+            // 金额输入槽 (OriginAmountField)
+            OriginAmountField(
+              controller: _controller,
+              currencySymbol: widget.currencySymbol,
+              autofocus: true,
+              clearable: true,
+              borderRadius: 16.0,
+              onChanged: (_) {
+                if (_error != null) {
+                  setState(() => _error = null);
+                }
+              },
             ),
 
             // 错误提示

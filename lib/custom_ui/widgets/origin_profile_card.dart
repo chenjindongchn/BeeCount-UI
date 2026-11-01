@@ -16,6 +16,7 @@ import 'origin_card.dart';
 import 'origin_divider.dart';
 import 'origin_dialog.dart';
 import 'origin_bottom_sheet.dart';
+import 'origin_text_field.dart';
 
 class _OriginEditDisplayNameDialog extends StatefulWidget {
   const _OriginEditDisplayNameDialog({required this.initial});
@@ -51,36 +52,34 @@ class _OriginEditDisplayNameDialogState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return BeeDialog(
-      title: Text(l10n.mineDisplayNameEditTitle),
-      content: BeeField(
-        label: l10n.mineDisplayNameHint,
-        focusNode: _focus,
-        controller: _controller,
-        maxLength: 20,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (v) {
-          if (v.trim().isNotEmpty) Navigator.pop(context, v);
-        },
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.commonCancel),
-        ),
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _controller,
-          builder: (context, value, _) {
-            final canSave = value.text.trim().isNotEmpty;
-            return TextButton(
-              onPressed: canSave
-                  ? () => Navigator.pop(context, _controller.text)
-                  : null,
-              child: Text(l10n.commonSave),
-            );
+    return OriginDialog(
+      alignment: Alignment.bottomCenter,
+      title: l10n.mineDisplayNameEditTitle,
+      textAlign: TextAlign.center,
+      stackActions: true,
+      confirmText: l10n.commonSave,
+      onConfirm: () {
+        final text = _controller.text.trim();
+        if (text.isNotEmpty) {
+          Navigator.pop(context, text);
+        }
+      },
+      cancelText: l10n.commonCancel,
+      onCancel: () => Navigator.pop(context),
+      content: Padding(
+        padding: const EdgeInsets.only(top: 12.0),
+        child: OriginTextField(
+          focusNode: _focus,
+          controller: _controller,
+          hintText: l10n.mineDisplayNameHint,
+          maxLength: 20,
+          clearable: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (v) {
+            if (v.trim().isNotEmpty) Navigator.pop(context, v.trim());
           },
         ),
-      ],
+      ),
     );
   }
 }

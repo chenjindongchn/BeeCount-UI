@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'package:beecount_business_ui/beecount_business_ui.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
@@ -17,6 +15,7 @@ import '../widgets/origin_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_segmented_control.dart';
+import '../widgets/origin_amount_field.dart';
 
 /// vivo OriginOS 风格预算编辑/添加页面 (CustomBudgetEditPage)
 class CustomBudgetEditPage extends ConsumerStatefulWidget {
@@ -386,55 +385,16 @@ class _CustomBudgetEditPageState extends ConsumerState<CustomBudgetEditPage> {
                             ),
                           ),
                           const SizedBox(height: 6.0),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                currencySymbol,
-                                style: TextStyle(
-                                  fontSize: 22.0,
-                                  fontWeight: FontWeight.bold,
-                                  color: OriginTokens.textPrimary(context),
-                                ),
-                              ),
-                              const SizedBox(width: 8.0),
-                              Expanded(
-                                child: TextField(
-                                  controller: _amountController,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                      RegExp(r'^\d*\.?\d{0,2}'),
-                                    ),
-                                  ],
-                                  style: TextStyle(
-                                    fontSize: 24.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: OriginTokens.textPrimary(context),
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: '0.00',
-                                    hintStyle: TextStyle(
-                                      fontSize: 24.0,
-                                      fontWeight: FontWeight.bold,
-                                      color:
-                                          OriginTokens.textTertiary(context),
-                                    ),
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  onChanged: (_) {
-                                    if (_amountError != null) {
-                                      setState(() => _amountError = null);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
+                          OriginAmountField(
+                            controller: _amountController,
+                            currencySymbol: currencySymbol,
+                            showBackground: false,
+                            clearable: true,
+                            onChanged: (_) {
+                              if (_amountError != null) {
+                                setState(() => _amountError = null);
+                              }
+                            },
                           ),
                           if (_amountError != null) ...[
                             const SizedBox(height: 6.0),

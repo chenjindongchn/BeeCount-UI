@@ -17,6 +17,7 @@ import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_menu.dart';
+import '../widgets/origin_text_field.dart';
 
 /// vivo OriginOS 风格自定义账本管理页面 (CustomLedgersPage)
 ///
@@ -360,88 +361,25 @@ class _OriginCreateLedgerDialogState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 12.0),
-            // 账本名称输入槽
-            Container(
-              decoration: BoxDecoration(
-                color: OriginTokens.cardSecondary(context),
-                borderRadius: BorderRadius.circular(14.0),
+            // 账本名称输入框 (OriginTextField)
+            OriginTextField(
+              controller: _nameController,
+              autofocus: true,
+              clearable: true,
+              prefixIcon: Icon(
+                Icons.book_outlined,
+                size: 20.0,
+                color: primaryColor,
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14.0,
-                vertical: 10.0,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.book_outlined,
-                    size: 20.0,
-                    color: primaryColor,
-                  ),
-                  const SizedBox(width: 10.0),
-                  Expanded(
-                    child: TextField(
-                      controller: _nameController,
-                      autofocus: true,
-                      style: TextStyle(
-                        fontSize: 15.0,
-                        color: OriginTokens.textPrimary(context),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '例如：日常开销、旅游账本',
-                        hintStyle: TextStyle(
-                          fontSize: 14.0,
-                          color: OriginTokens.textTertiary(context),
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onChanged: (_) {
-                        if (_error != null) {
-                          setState(() => _error = null);
-                        }
-                      },
-                    ),
-                  ),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _nameController,
-                    builder: (_, val, __) {
-                      if (val.text.isEmpty) return const SizedBox.shrink();
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          _nameController.clear();
-                          if (_error != null) {
-                            setState(() => _error = null);
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Icon(
-                            Icons.cancel_rounded,
-                            size: 18.0,
-                            color: OriginTokens.textTertiary(context),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              hintText: '例如：日常开销、旅游账本',
+              borderRadius: 14.0,
+              errorText: _error,
+              onChanged: (_) {
+                if (_error != null) {
+                  setState(() => _error = null);
+                }
+              },
             ),
-            if (_error != null) ...[
-              const SizedBox(height: 6.0),
-              Padding(
-                padding: const EdgeInsets.only(left: 4.0),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(
-                    fontSize: 12.0,
-                    color: OriginTokens.expenseRed,
-                  ),
-                ),
-              ),
-            ],
             const SizedBox(height: 12.0),
             // 结算币种选择行
             Container(
