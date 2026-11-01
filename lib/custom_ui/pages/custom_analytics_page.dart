@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import '../../l10n/app_localizations.dart';
@@ -300,9 +301,9 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
                 // 第一行：周报 / 月报 / 年报 / 自定义 Tab 切换
                 _buildTopTabBar(primaryColor),
 
-                // 第二行：时间切换（左） + 收支结余胶囊（右）
+                // 第二行：时间切换（左） + 独立收支结余胶囊按钮（右，与 vivo 钱包一致）
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14.0, 4.0, 14.0, 10.0),
+                  padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 10.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -310,9 +311,9 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
                       Flexible(
                         child: _buildPeriodSelector(navButtonBg, primaryColor, periodLabel),
                       ),
-                      const SizedBox(width: 8.0),
-                      // 右侧收支类型切换胶囊 (支出 / 收入 / 结余)
-                      _buildTypeSegmentedControl(navButtonBg, primaryColor),
+                      const SizedBox(width: 6.0),
+                      // 右侧收支类型独立胶囊按钮 (支出 / 收入 / 结余)
+                      _buildTypeSelector(navButtonBg, primaryColor),
                     ],
                   ),
                 ),
@@ -465,27 +466,31 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
           bgColor: navButtonBg,
           onTap: () => _movePeriod(-1),
         ),
-        const SizedBox(width: 4.0),
-        Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(8.0),
-          child: InkWell(
+        const SizedBox(width: 2.0),
+        Flexible(
+          child: Material(
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(8.0),
-            onTap: () => _openPeriodSheet(primaryColor),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
-              child: Text(
-                periodLabel,
-                style: TextStyle(
-                  fontSize: 14.0,
-                  fontWeight: FontWeight.w600,
-                  color: OriginTokens.textPrimary(context),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8.0),
+              onTap: () => _openPeriodSheet(primaryColor),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                child: Text(
+                  periodLabel,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: OriginTokens.textPrimary(context),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-        const SizedBox(width: 4.0),
+        const SizedBox(width: 2.0),
         _buildNavButton(
           icon: Icons.chevron_right_rounded,
           bgColor: navButtonBg,
@@ -519,53 +524,56 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
     );
   }
 
-  /// 顶部第二行右侧胶囊式切换器 (支出 / 收入 / 结余)
-  Widget _buildTypeSegmentedControl(Color bg, Color primaryColor) {
+  /// 顶部第二行右侧独立胶囊按钮组 (支出 / 收入 / 结余，对齐 vivo 钱包样式，独立按钮不合并)
+  Widget _buildTypeSelector(Color unselectedBg, Color primaryColor) {
     const types = [
       ('expense', '支出'),
       ('income', '收入'),
       ('balance', '结余'),
     ];
 
-    return Container(
-      height: 30.0,
-      padding: const EdgeInsets.all(2.0),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(15.0),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: types.map((item) {
-          final isSelected = _type == item.$1;
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _selectType(item.$1),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 7.5),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? primaryColor.withValues(alpha: 0.14)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(13.0),
-              ),
-              child: Text(
-                item.$2,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: types.map((item) {
+        final isSelected = _type == item.$1;
+        return Padding(
+          padding: const EdgeInsets.only(left: 4.5),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _selectType(item.$1);
+              },
+              borderRadius: BorderRadius.circular(14.0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                height: 28.0,
+                padding: const EdgeInsets.symmetric(horizontal: 8.5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
                   color: isSelected
-                      ? primaryColor
-                      : OriginTokens.textSecondary(context),
+                      ? primaryColor.withValues(alpha: 0.12)
+                      : unselectedBg,
+                  borderRadius: BorderRadius.circular(14.0),
+                ),
+                child: Text(
+                  item.$2,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected
+                        ? primaryColor
+                        : OriginTokens.textPrimary(context).withValues(alpha: 0.78),
+                  ),
                 ),
               ),
             ),
-          );
-        }).toList(),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
+
