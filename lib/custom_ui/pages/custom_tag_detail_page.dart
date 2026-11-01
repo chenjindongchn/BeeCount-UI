@@ -10,7 +10,7 @@ import '../../providers/budget_providers.dart';
 import '../../services/billing/post_processor.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/month_range.dart';
-import '../../pages/shared/pickers/wheel_date_picker.dart';
+import '../widgets/origin_date_picker.dart';
 import '../../pages/transaction/category_detail_page.dart';
 import '../../pages/transaction/transaction_editor_page.dart';
 import '../../pages/tag/tag_edit_page.dart';
@@ -54,12 +54,12 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
   }
 
   Future<void> _date(DateTime initial) async {
-    final date = await showWheelDatePicker(
+    final date = await showOriginDatePicker(
       context,
       initial: initial,
       mode: _period == TagDetailPeriod.month
-          ? WheelDatePickerMode.ym
-          : WheelDatePickerMode.y,
+          ? OriginDatePickerMode.ym
+          : OriginDatePickerMode.y,
       maxDate: DateTime.now(),
     );
     if (date != null && mounted) {

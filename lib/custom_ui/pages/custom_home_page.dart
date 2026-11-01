@@ -15,7 +15,7 @@ import '../../utils/currencies.dart';
 import '../widgets/origin_transaction_feed.dart';
 import 'custom_ledgers_page.dart';
 import '../widgets/origin_dialog.dart';
-import '../../pages/shared/pickers/wheel_date_picker.dart';
+import '../widgets/origin_date_picker.dart';
 import '../../pages/shared/widgets/feature_dot.dart';
 import '../../pages/transaction/search_page.dart';
 import '../../providers/budget_providers.dart';
@@ -137,10 +137,10 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
 
   Future<void> _handleDateSelection() async {
     final month = ref.read(selectedMonthProvider);
-    final res = await showWheelDatePicker(
+    final res = await showOriginDatePicker(
       context,
       initial: month,
-      mode: WheelDatePickerMode.ym,
+      mode: OriginDatePickerMode.ym,
       maxDate: DateTime.now(),
     );
     if (res != null && mounted) {

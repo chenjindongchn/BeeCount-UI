@@ -7,7 +7,7 @@ import '../../utils/month_range.dart';
 import '../../pages/ai/ai_chat_page.dart';
 import '../../pages/transaction/search_page.dart';
 import '../../pages/calendar/calendar_page.dart';
-import '../../pages/shared/pickers/wheel_date_picker.dart';
+import '../widgets/origin_date_picker.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_analytics_content.dart';
@@ -53,10 +53,10 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
   Future<void> _showPeriodPicker() async {
     final selected = ref.read(selectedMonthProvider);
     final latest = _latestPeriod;
-    final result = await showWheelDatePicker(
+    final result = await showOriginDatePicker(
       context,
       initial: selected,
-      mode: _scope == 'year' ? WheelDatePickerMode.y : WheelDatePickerMode.ym,
+      mode: _scope == 'year' ? OriginDatePickerMode.y : OriginDatePickerMode.ym,
       maxDate: latest,
     );
     if (result != null && mounted) {

@@ -14,6 +14,7 @@ import '../../pages/transaction/recording/bindings/recording_save.dart';
 import '../styles/origin_sheet_tokens.dart';
 import '../widgets/custom_account_grid_picker.dart';
 import '../widgets/origin_bottom_sheet.dart';
+import '../widgets/origin_date_time_picker.dart';
 import '../widgets/origin_keypad.dart';
 import '../widgets/origin_text_field.dart';
 
@@ -1071,28 +1072,16 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
   // --- 弹窗选择逻辑 ---
 
   Future<void> _pickDateTime() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+    final picked = await showOriginDateTimePicker(
+      context,
+      initial: _selectedDate,
+      minDate: DateTime(2000),
+      maxDate: DateTime(2100),
     );
-    if (pickedDate == null || !mounted) return;
-
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_selectedDate),
-    );
-    if (pickedTime == null || !mounted) return;
+    if (picked == null || !mounted) return;
 
     setState(() {
-      _selectedDate = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
+      _selectedDate = picked;
     });
   }
 

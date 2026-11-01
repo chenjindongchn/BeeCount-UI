@@ -11,7 +11,9 @@ import 'custom_category_manage_page.dart';
 import '../../pages/category/category_migration_page.dart';
 import '../../pages/shared/currency/bindings/detail_currency_notice.dart';
 import '../../pages/shared/resources/bindings/recording_category_icon.dart';
-import '../../pages/shared/resources/widgets/detail_period_controls.dart';
+import '../../pages/shared/resources/widgets/detail_period_controls.dart'
+    show detailRangeLabel;
+import '../widgets/origin_period_picker.dart';
 import '../../pages/shared/transactions/bindings/transaction_tile.dart';
 import '../../pages/transaction/category_detail/bindings/category_detail.dart';
 import '../../pages/transaction/category_detail_page.dart'
@@ -193,7 +195,7 @@ class _CustomCategoryDetailPageState
 
   Future<void> _date() async {
     final c = _data!;
-    final chosen = await showResourcePeriodPicker(
+    final chosen = await showOriginPeriodPicker(
       context,
       period: c.period.name,
       anchor: c.anchor,
