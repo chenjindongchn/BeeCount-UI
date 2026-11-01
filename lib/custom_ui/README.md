@@ -11,3 +11,10 @@
 1. **数据与逻辑**：直接通过 `ref.watch(xxxProvider)` 复用原作者在 `lib/providers/` 中定义好的 Riverpod 逻辑。
 2. **挂载方式**：在 `lib/app.dart` 或路由表中将原页面指向本目录对应页面，原项目代码改动控制在极简（1~2行 import 和替换）。
 3. **更新同步**：原作者代码更新时，在 `custom-ui` 分支执行 `git rebase main`，该目录文件永不冲突。
+
+## OriginUI 核心交互规划与范式
+1. **页面核心操作置底常驻（Bottom CTA）**：
+   - 页面级核心操作默认采用**页面置底大胶囊按钮**形式（挂载在 `OriginScaffold` 的 `bottomNavigationBar`），禁止混在滚动列表内部。
+   - 尺寸与几何真值统一：高度 46dp (`OriginTokens.buttonHeight`)，圆角 23dp (`OriginTokens.buttonRadius`)，外边距水平 20dp、垂直 12dp。
+2. **对话框规范**：
+   - 严禁使用原生 `AlertDialog`，统一使用 `OriginDialog`（贴底居中悬浮、30dp 大圆角、软键盘避让与竖排双胶囊）。

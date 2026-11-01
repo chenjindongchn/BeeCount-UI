@@ -77,6 +77,20 @@
 
 ---
 
+## 规则 6：OriginUI 交互与布局设计规划（统一范式）
+
+1. **核心操作置底常驻原则（Bottom CTA）**：
+   - 页面级的主要操作（如“创建账本”、“保存/确定”、“添加账户”等），**必须统一采用页面最底部常驻大按钮的形式**（挂载在 `OriginScaffold` 的 `bottomNavigationBar`）。
+   - **严禁**将此类页面核心主操作随滚动列表（`ListView`）上下滚动，以保证单手操作便利性与页面视觉稳定性。
+   - 统一尺寸与间距规格：高度 `OriginTokens.buttonHeight`（46dp），圆角 `OriginTokens.buttonRadius`（23dp），水平边距 `OriginTokens.cardMargin`（20dp），垂直边距 12dp，外层包裹 `SafeArea`。
+
+2. **对话框统一规范**：
+   - 必须使用 `OriginDialog` / `showOriginCustomDialog`，严禁使用原生 Material `AlertDialog`。
+   - 遵循贴底居中悬浮（`Alignment.bottomCenter`）、30dp 大圆角、滑升进场与 `AnimatedPadding` 软键盘避让；
+   - 对话框底部操作按钮必须为竖排双胶囊（高度 46dp，确认在上、取消在下）。
+
+---
+
 ## 附录：非 `custom_ui` 侵入性改动登记
 
 所有因平台配置需要（如桌面 App 名称、图标、路由单点挂载）而对原工程文件的必要修改，必须在 **[CUSTOM_MODIFICATIONS.md](file:///Users/chenjindong/陈进东/Ⅲ软件项目/记账/CUSTOM_MODIFICATIONS.md)** 中逐项记录 Diff 与冲突解决指引，以便在 Rebase 发生冲突时秒级排查与恢复。

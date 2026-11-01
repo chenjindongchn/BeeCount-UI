@@ -208,37 +208,40 @@ class _CustomLedgersPageState extends ConsumerState<CustomLedgersPage> {
                     ),
                   ),
                 ],
-                // 移动到最底部的创建账本按钮
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: OriginTokens.buttonHeight,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            OriginTokens.buttonRadius,
-                          ),
-                        ),
-                      ),
-                      onPressed: _showCreateDialog,
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                      label: Text(
-                        l.ledgersCreate,
-                        style: const TextStyle(
-                          fontSize: 15.0,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OriginTokens.cardMargin,
+            vertical: 12.0,
+          ),
+          child: SizedBox(
+            height: OriginTokens.buttonHeight,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    OriginTokens.buttonRadius,
+                  ),
+                ),
+              ),
+              onPressed: _showCreateDialog,
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
+                l.ledgersCreate,
+                style: const TextStyle(
+                  fontSize: 15.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
