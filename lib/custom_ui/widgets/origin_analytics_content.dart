@@ -185,7 +185,7 @@ class OriginAnalyticsContent extends ConsumerWidget {
       // 洞察数据总览大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
       OriginHeroCard(
         margin: EdgeInsets.zero,
-        title: '$period · $label',
+        title: period,
         unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
         mainAmount: formatMoneyCompact(data.total, trimZeros: false),
         hideAmounts: hide,
@@ -193,7 +193,7 @@ class OriginAnalyticsContent extends ConsumerWidget {
         action: null,
         metrics: [
           OriginHeroMetric(
-            label: '$averageLabel$label',
+            label: averageLabel,
             unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
             value: formatMoneyCompact(data.average, trimZeros: false),
             onTap: average,
