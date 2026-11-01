@@ -45,3 +45,47 @@ class ThousandSeparatorNotifier extends StateNotifier<bool> {
 
   Future<void> toggle() => setEnabled(!state);
 }
+
+/// 货币符号显示开关 Provider（默认 false：如 8888.00；开启为 true：如 ¥8888.00）
+final currencySymbolVisibleProvider =
+    StateNotifierProvider<CurrencySymbolVisibleNotifier, bool>((ref) {
+  return CurrencySymbolVisibleNotifier();
+});
+
+class CurrencySymbolVisibleNotifier extends StateNotifier<bool> {
+  CurrencySymbolVisibleNotifier() : super(false) {
+    globalShowCurrencySymbol = false;
+    _loadPreference();
+  }
+
+  static const String _prefKey = 'show_currency_symbol';
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getBool(_prefKey);
+      if (saved != null) {
+        state = saved;
+        globalShowCurrencySymbol = saved;
+      } else {
+        state = false;
+        globalShowCurrencySymbol = false;
+      }
+    } catch (_) {
+      state = false;
+      globalShowCurrencySymbol = false;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    if (state == enabled) return;
+    state = enabled;
+    globalShowCurrencySymbol = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefKey, enabled);
+    } catch (_) {}
+  }
+
+  Future<void> toggle() => setEnabled(!state);
+}

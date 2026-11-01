@@ -162,6 +162,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
 
     // 记账显示与偏好
     final compactAmount = ref.watch(compactAmountProvider);
+    final showCurrencySymbol = ref.watch(currencySymbolVisibleProvider);
     final thousandSeparator = ref.watch(thousandSeparatorProvider);
     final showTime = ref.watch(showTransactionTimeProvider);
     final noteMode = ref.watch(noteDisplayModeProvider);
@@ -483,6 +484,28 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                   ],
                   (v) => ref.read(compactAmountProvider.notifier).state = v,
                 ),
+              ),
+              OriginSettingItem(
+                title: '货币符号',
+                subtitle: showCurrencySymbol
+                    ? '开启：显示货币符号（如 ¥8888.00）'
+                    : '关闭：不显示货币符号（如 8888.00）',
+                leading: Icon(
+                  Icons.currency_yen_rounded,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                showArrow: false,
+                trailing: OriginSwitch(
+                  value: showCurrencySymbol,
+                  activeColor: primaryColor,
+                  onChanged: (v) => ref
+                      .read(currencySymbolVisibleProvider.notifier)
+                      .setEnabled(v),
+                ),
+                onTap: () => ref
+                    .read(currencySymbolVisibleProvider.notifier)
+                    .toggle(),
               ),
               OriginSettingItem(
                 title: '金额千分位',

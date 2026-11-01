@@ -20,6 +20,9 @@ class OriginTokens {
   /// 分组卡片圆角半径（系统设置与真机标准：12.0dp）
   static const double cardRadius = 12.0;
 
+  /// 页面顶级数据看板大卡片圆角半径（真机标准：19.0dp）
+  static const double heroCardRadius = 19.0;
+
   /// 分组卡片外侧横向边距（系统设置真机标准：20.0dp）
   static const double cardMargin = 20.0;
 

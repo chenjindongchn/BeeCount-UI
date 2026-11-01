@@ -646,7 +646,8 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final credit = account.type == 'credit_card';
     final liability = isLiabilityType(account.type);
-    final symbol = getDistinctCurrencySymbol(account.currency);
+    final showCurrency = ref.watch(currencySymbolVisibleProvider);
+    final symbol = showCurrency ? getDistinctCurrencySymbol(account.currency) : '';
     final base = ref.watch(baseCurrencyProvider);
     final rates = ref.watch(effectiveRatesProvider).valueOrNull;
 
@@ -682,8 +683,9 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
           rates: rates,
         );
         if (converted != null) {
+          final baseSymbol = showCurrency ? getDistinctCurrencySymbol(base) : '';
           conversionText =
-              '≈ ${getDistinctCurrencySymbol(base)}${formatMoneyCompact(converted, trimZeros: false)}';
+              '≈ $baseSymbol${formatMoneyCompact(converted, trimZeros: false)}';
         }
       }
     }
@@ -691,6 +693,7 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
     final due = daysUntilAccountPayment(account.paymentDueDay, DateTime.now());
 
     return OriginCard(
+      radius: OriginTokens.heroCardRadius,
       // margin 默认即为 horizontal: OriginTokens.cardMargin (20dp), vertical: 6.0
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       child: Row(

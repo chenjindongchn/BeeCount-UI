@@ -27,7 +27,7 @@ import '../../providers/home_startup_preview_provider.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../providers/amount_format_provider.dart';
-import '../widgets/origin_card.dart';
+import '../widgets/origin_hero_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_menu.dart';
 import 'custom_mine_page.dart';
@@ -218,10 +218,9 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
         ThemeData.estimateBrightnessForColor(primaryColor) == Brightness.light;
     final cardMainTextColor =
         isPrimaryLight ? const Color(0xFF1D1D1F) : Colors.white;
-    final cardSubTextColor = isPrimaryLight
-        ? const Color(0xFF1D1D1F).withValues(alpha: 0.65)
-        : Colors.white.withValues(alpha: 0.75);
     final cardUnitText = currency == 'CNY' ? '元' : currencySymbol;
+    final showCurrency = ref.watch(currencySymbolVisibleProvider);
+    final symbolPrefix = showCurrency ? '$currencySymbol ' : '';
 
     // 今日支出与预算数据
     final todayExpenseAsync = ref.watch(todayExpenseProvider(ledgerId));
@@ -333,166 +332,36 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
             child: OriginTransactionFeed(
               header: Column(
                 children: [
-                  // 1. 收支与预算看板卡片 (总底色和进度条采用软件主题色，月预算小条采用半透明高斯模糊白色)
-                  OriginCard(
-                    color: primaryColor,
-                    padding: EdgeInsets.zero,
-                    radius: 18.0,
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 上半部分主统计区域 (今日支出与月度收支，对齐用户提供的界面)
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _handleDateSelection,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 今日支出标题行与眼睛控制按钮 (标题与眼睛图标紧邻)
-                                Row(
-                                  children: [
-                                    Text(
-                                      l10n.todayExpense,
-                                      style: TextStyle(
-                                        fontSize: 13.0,
-                                        fontWeight: FontWeight.w500,
-                                        color: cardSubTextColor,
-                                      ),
-                                    ),
-                                    Text(
-                                      '($cardUnitText)',
-                                      style: TextStyle(
-                                        fontSize: 13.0,
-                                        fontWeight: FontWeight.w500,
-                                        color: cardSubTextColor,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6.0),
-                                    GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () {
-                                        ref.read(hideAmountsProvider.notifier).state =
-                                            !hideAmounts;
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(2.0),
-                                        child: Icon(
-                                          hideAmounts
-                                              ? Icons.visibility_off_outlined
-                                              : Icons.visibility_outlined,
-                                          size: 18.0,
-                                          color: cardSubTextColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6.0),
-                                Text(
-                                  hideAmounts
-                                      ? '****'
-                                      : formatMoneyCompact(todayExpense, trimZeros: false),
-                                  style: TextStyle(
-                                    fontSize: 32.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: cardMainTextColor,
-                                    letterSpacing: -0.5,
-                                    height: 1.15,
-                                  ),
-                                ),
-                                const SizedBox(height: 16.0),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                l10n.monthExpense,
-                                                style: TextStyle(
-                                                  fontSize: 12.0,
-                                                  color: cardSubTextColor,
-                                                ),
-                                              ),
-                                              Text(
-                                                '($cardUnitText)',
-                                                style: TextStyle(
-                                                  fontSize: 12.0,
-                                                  color: cardSubTextColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4.0),
-                                          Text(
-                                            hideAmounts
-                                                ? '****'
-                                                : formatMoneyCompact(expense, trimZeros: false),
-                                            style: TextStyle(
-                                              fontSize: 18.0,
-                                              fontWeight: FontWeight.bold,
-                                              color: cardMainTextColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                l10n.monthIncome,
-                                                style: TextStyle(
-                                                  fontSize: 12.0,
-                                                  color: cardSubTextColor,
-                                                ),
-                                              ),
-                                              Text(
-                                                '($cardUnitText)',
-                                                style: TextStyle(
-                                                  fontSize: 12.0,
-                                                  color: cardSubTextColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4.0),
-                                          Text(
-                                            hideAmounts
-                                                ? '****'
-                                                : formatMoneyCompact(income, trimZeros: false),
-                                            style: TextStyle(
-                                              fontSize: 18.0,
-                                              fontWeight: FontWeight.bold,
-                                              color: cardMainTextColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // 下半部分：月预算小条 (透明高斯模糊白色覆盖底色，进度条采用主题色)
-                        if (budgetUsage != null)
-                          ClipRRect(
+                  // 1. 收支与预算看板卡片 (采用统一 OriginHeroCard，统一 19.0dp 圆角)
+                  OriginHeroCard(
+                    title: l10n.todayExpense,
+                    unit: cardUnitText,
+                    mainAmount:
+                        '$symbolPrefix${formatMoneyCompact(todayExpense, trimZeros: false)}',
+                    hideAmounts: hideAmounts,
+                    onToggleHideAmounts: () {
+                      ref.read(hideAmountsProvider.notifier).state = !hideAmounts;
+                    },
+                    metrics: [
+                      OriginHeroMetric(
+                        label: l10n.monthExpense,
+                        unit: cardUnitText,
+                        value:
+                            '$symbolPrefix${formatMoneyCompact(expense, trimZeros: false)}',
+                      ),
+                      OriginHeroMetric(
+                        label: l10n.monthIncome,
+                        unit: cardUnitText,
+                        value:
+                            '$symbolPrefix${formatMoneyCompact(income, trimZeros: false)}',
+                      ),
+                    ],
+                    bottomChild: budgetUsage == null
+                        ? null
+                        : ClipRRect(
                             borderRadius: const BorderRadius.only(
-                              bottomLeft: Radius.circular(18.0),
-                              bottomRight: Radius.circular(18.0),
+                              bottomLeft: Radius.circular(OriginTokens.heroCardRadius),
+                              bottomRight: Radius.circular(OriginTokens.heroCardRadius),
                             ),
                             child: BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
@@ -524,7 +393,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                                             CrossAxisAlignment.center,
                                         children: [
                                           Text(
-                                            '月预算剩余 ${hideAmounts ? '****' : formatMoneyCompact(budgetUsage.remaining, trimZeros: false)}',
+                                            '月预算剩余 ${hideAmounts ? '****' : '$symbolPrefix${formatMoneyCompact(budgetUsage.remaining, trimZeros: false)}'}',
                                             style: TextStyle(
                                               fontSize: 12.0,
                                               fontWeight: FontWeight.w600,
@@ -565,8 +434,6 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                               ),
                             ),
                           ),
-                      ],
-                    ),
                   ),
 
                   // 预算卡片与明细列表之间的间距（隐藏提醒模块）

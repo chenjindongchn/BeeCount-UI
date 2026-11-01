@@ -7,12 +7,15 @@ import '../../l10n/app_localizations.dart';
 import '../pages/custom_category_manage_page.dart';
 import '../../providers.dart';
 import '../../utils/format_money.dart';
+import '../../utils/currencies.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
 import '../../pages/main/analytics/widgets/analytics_ranking.dart' show AnalyticsPie;
 import '../../pages/main/analytics/widgets/analytics_trend.dart';
 import '../styles/origin_tokens.dart';
+import '../providers/amount_format_provider.dart';
 import 'origin_analytics_ranking.dart';
 import 'origin_dialog.dart';
+import 'origin_hero_card.dart';
 
 /// vivo OriginOS 风格数据洞察统计内容视图 (OriginAnalyticsContent)
 ///
@@ -48,7 +51,6 @@ class OriginAnalyticsContent extends ConsumerWidget {
     final theme = Theme.of(context);
     final hide = ref.watch(hideAmountsProvider);
     final base = ref.watch(currentLedgerCurrencyProvider);
-    final ledger = ref.watch(currentLedgerProvider).valueOrNull;
     final unconverted =
         ref.watch(ledgerUnconvertedForeignTxCountProvider).valueOrNull ?? 0;
     final foreign = ref.watch(ledgerForeignTxCountProvider).valueOrNull ?? 0;
@@ -65,12 +67,13 @@ class OriginAnalyticsContent extends ConsumerWidget {
             ? l.homeIncome
             : l.homeBalance;
 
+    final showCurrency = ref.watch(currencySymbolVisibleProvider);
     String money(double v) => hide
         ? '****'
         : formatDisplayAmount(
             v,
             signed: false,
-            showCurrency: true,
+            showCurrency: showCurrency,
             currencyCode: base,
           );
 
@@ -176,28 +179,110 @@ class OriginAnalyticsContent extends ConsumerWidget {
             ],
           ),
         ),
-      BeeAnalyticsSummary(
-        period: period,
-        viewLabel: label,
-        onPeriod: onPeriod,
-        views: [
-          BeeSegment('expense', l.homeExpense),
-          BeeSegment('income', l.homeIncome),
-          BeeSegment('balance', l.homeBalance),
+      // 洞察数据总览大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
+      OriginHeroCard(
+        margin: EdgeInsets.zero,
+        title: '$period · $label',
+        unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
+        mainAmount: formatMoneyCompact(data.total, trimZeros: false),
+        hideAmounts: hide,
+        onToggleHideAmounts: () {
+          ref.read(hideAmountsProvider.notifier).state = !hide;
+        },
+        onTap: onPeriod,
+        action: Container(
+          padding: const EdgeInsets.all(2.0),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(14.0),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onTypeChanged('expense'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                  decoration: BoxDecoration(
+                    color: type == 'expense'
+                        ? Colors.white.withValues(alpha: 0.28)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: Text(
+                    l.homeExpense,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: type == 'expense' ? FontWeight.w600 : FontWeight.normal,
+                      color: type == 'expense'
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.72),
+                    ),
+                  ),
+                ),
+              ),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onTypeChanged('income'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                  decoration: BoxDecoration(
+                    color: type == 'income'
+                        ? Colors.white.withValues(alpha: 0.28)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: Text(
+                    l.homeIncome,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: type == 'income' ? FontWeight.w600 : FontWeight.normal,
+                      color: type == 'income'
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.72),
+                    ),
+                  ),
+                ),
+              ),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onTypeChanged('balance'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                  decoration: BoxDecoration(
+                    color: type == 'balance'
+                        ? Colors.white.withValues(alpha: 0.28)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: Text(
+                    l.homeBalance,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: type == 'balance' ? FontWeight.w600 : FontWeight.normal,
+                      color: type == 'balance'
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.72),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        metrics: [
+          OriginHeroMetric(
+            label: '$averageLabel$label',
+            unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
+            value: formatMoneyCompact(data.average, trimZeros: false),
+            onTap: average,
+          ),
+          OriginHeroMetric(
+            label: l.sharePosterRecordCount,
+            value: '${data.count} 笔',
+          ),
         ],
-        selectedView: type,
-        onViewChanged: onTypeChanged,
-        totalLabel: l
-            .analyticsTotal(label)
-            .trim()
-            .replaceAll(RegExp(r'[:：]\s*$'), ''),
-        ledgerLabel: ledger?.name,
-        total: money(data.total),
-        countLabel: l.sharePosterRecordCount,
-        count: '${data.count}',
-        averageLabel: '$averageLabel$label',
-        average: money(data.average),
-        onAverage: average,
       ),
       if (foreign > 0)
         Text(
@@ -328,9 +413,9 @@ class OriginAnalyticsContent extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, bounds) => SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
-          bounds.maxWidth < 350 ? 12 : 16,
-          1,
-          bounds.maxWidth < 350 ? 12 : 16,
+          OriginTokens.cardMargin,
+          4.0,
+          OriginTokens.cardMargin,
           84 + MediaQuery.paddingOf(context).bottom,
         ),
         child: Column(

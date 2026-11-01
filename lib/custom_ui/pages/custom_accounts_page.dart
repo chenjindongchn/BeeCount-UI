@@ -17,6 +17,7 @@ import '../../services/billing/post_processor.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
+import '../widgets/origin_hero_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_menu.dart';
@@ -319,7 +320,9 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
           final visibleAccounts = accounts.where((a) => !a.hidden).toList();
           final hiddenAccounts = accounts.where((a) => a.hidden).toList();
 
-          final currencySymbol = getCurrencySymbol(baseCurrency);
+          final showCurrency = ref.watch(currencySymbolVisibleProvider);
+          final currencySymbol =
+              showCurrency ? getCurrencySymbol(baseCurrency) : '';
 
           // 按账户类型分组
           final Map<String, List<db.Account>> grouped = {};
@@ -348,119 +351,28 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
             controller: _scrollController,
             padding: const EdgeInsets.only(top: 0.0, bottom: 120.0),
             children: [
-              // 1. 资产总览大卡片 (vivo 纯色 12dp 卡片，遵循 OriginUI 顶部间距规范)
-              OriginCard(
-                margin: const EdgeInsets.fromLTRB(
-                  OriginTokens.cardMargin,
-                  4.0,
-                  OriginTokens.cardMargin,
-                  6.0,
-                ),
-                padding: const EdgeInsets.fromLTRB(16.0, 14.0, 16.0, 14.0),
+              // 1. 资产总览大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感)
+              OriginHeroCard(
+                title: l10n.netWorthTrendLineNet,
+                unit: baseCurrency == 'CNY' ? '元' : currencySymbol,
+                mainAmount: formatMoneyCompact(netAssets),
+                hideAmounts: hideAmounts,
+                onToggleHideAmounts: () {
+                  ref.read(hideAmountsProvider.notifier).state = !hideAmounts;
+                },
                 onTap: () => _openNetWorthTrend(context),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          l10n.netWorthTrendLineNet,
-                          style: TextStyle(
-                            fontSize: 13.0,
-                            color: OriginTokens.textSecondary(context),
-                          ),
-                        ),
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            ref.read(hideAmountsProvider.notifier).state = !hideAmounts;
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2.0),
-                            child: Icon(
-                              hideAmounts
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              size: 18.0,
-                              color: OriginTokens.textTertiary(context),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4.0),
-                    Text(
-                      hideAmounts
-                          ? '****'
-                          : '$currencySymbol ${formatMoneyCompact(netAssets)}',
-                      style: TextStyle(
-                        fontSize: 26.0,
-                        fontWeight: FontWeight.bold,
-                        color: OriginTokens.textPrimary(context),
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 12.0),
-                    const OriginDivider(startIndent: 0),
-                    const SizedBox(height: 10.0),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.netWorthTrendLineAssets,
-                                style: TextStyle(
-                                  fontSize: 12.0,
-                                  color: OriginTokens.textSecondary(context),
-                                ),
-                              ),
-                              const SizedBox(height: 3.0),
-                              Text(
-                                hideAmounts
-                                    ? '****'
-                                    : '$currencySymbol ${formatMoneyCompact(totalAssets)}',
-                                style: const TextStyle(
-                                  fontSize: 15.0,
-                                  fontWeight: FontWeight.w600,
-                                  color: OriginTokens.incomeGreen,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.netWorthTrendLineLiabilities,
-                                style: TextStyle(
-                                  fontSize: 12.0,
-                                  color: OriginTokens.textSecondary(context),
-                                ),
-                              ),
-                              const SizedBox(height: 3.0),
-                              Text(
-                                hideAmounts
-                                    ? '****'
-                                    : '$currencySymbol ${formatMoneyCompact(totalLiabilities)}',
-                                style: const TextStyle(
-                                  fontSize: 15.0,
-                                  fontWeight: FontWeight.w600,
-                                  color: OriginTokens.expenseRed,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                metrics: [
+                  OriginHeroMetric(
+                    label: l10n.netWorthTrendLineAssets,
+                    unit: baseCurrency == 'CNY' ? '元' : currencySymbol,
+                    value: formatMoneyCompact(totalAssets),
+                  ),
+                  OriginHeroMetric(
+                    label: l10n.netWorthTrendLineLiabilities,
+                    unit: baseCurrency == 'CNY' ? '元' : currencySymbol,
+                    value: formatMoneyCompact(totalLiabilities),
+                  ),
+                ],
               ),
 
               // 2. 空隐藏账户提示
@@ -497,7 +409,7 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
                             trailing: Text(
                               hideAmounts
                                   ? '****'
-                                  : '$currencySymbol ${formatMoneyCompact(groupTotal)}',
+                                  : '${currencySymbol.isNotEmpty ? "$currencySymbol " : ""}${formatMoneyCompact(groupTotal)}',
                               style: TextStyle(
                                 fontSize: 12.0,
                                 fontWeight: FontWeight.w500,
@@ -706,7 +618,9 @@ class _OriginAccountRow extends StatelessWidget {
               ),
             ),
             Text(
-              hideAmounts ? '****' : '$currencySymbol ${formatMoneyCompact(balance)}',
+              hideAmounts
+                  ? '****'
+                  : '${currencySymbol.isNotEmpty ? "$currencySymbol " : ""}${formatMoneyCompact(balance)}',
               style: TextStyle(
                 fontSize: 15.0,
                 fontWeight: FontWeight.w600,

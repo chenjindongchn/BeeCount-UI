@@ -10,6 +10,7 @@ import '../../utils/currencies.dart';
 import '../../utils/format_money.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_card.dart';
+import '../widgets/origin_hero_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_switch.dart';
@@ -25,12 +26,6 @@ import '../providers/amount_format_provider.dart';
 class CustomBudgetPage extends ConsumerWidget {
   const CustomBudgetPage({super.key});
 
-  Color _progressColor(BudgetUsage usage, Color primaryColor) {
-    if (usage.rate >= 1.0) return OriginTokens.expenseRed;
-    if (usage.rate >= 0.8) return Colors.orange;
-    return primaryColor;
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(thousandSeparatorProvider);
@@ -38,7 +33,9 @@ class CustomBudgetPage extends ConsumerWidget {
     final primaryColor = ref.watch(primaryColorProvider);
     final overviewAsync = ref.watch(budgetOverviewProvider);
     final ledger = ref.watch(currentLedgerProvider).asData?.value;
-    final currencySymbol = getCurrencySymbol(ledger?.currency ?? 'CNY');
+    final showCurrency = ref.watch(currencySymbolVisibleProvider);
+    final actualSymbol = getCurrencySymbol(ledger?.currency ?? 'CNY');
+    final currencySymbol = showCurrency ? actualSymbol : '';
     final canEdit =
         ledger == null || !ledger.isShared || ledger.myRole == 'owner';
     final showOnHome = ref.watch(homeBudgetCardEnabledProvider);
@@ -144,191 +141,104 @@ class CustomBudgetPage extends ConsumerWidget {
                     bottom: 24.0,
                   ),
                   children: [
-                    // A. 月度总预算大卡片
-                    OriginCard(
-                      child: Column(
+                    // A. 月度总预算大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
+                    OriginHeroCard(
+                      title: l10n.budgetMonthlyBudget,
+                      unit: ledger?.currency == 'CNY' ? '元' : currencySymbol,
+                      mainAmount: formatMoneyCompact(totalBudget.budget, trimZeros: false),
+                      action: canEdit
+                          ? GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () async {
+                                final total =
+                                    await ref.read(totalBudgetProvider.future);
+                                if (context.mounted && total != null) {
+                                  showOriginTotalBudgetDialog(
+                                    context: context,
+                                    ref: ref,
+                                    budget: total,
+                                    currencySymbol: currencySymbol,
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10.0,
+                                  vertical: 3.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: Text(
+                                  l10n.commonEdit,
+                                  style: const TextStyle(
+                                    fontSize: 12.0,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : null,
+                      middleChild: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                l10n.budgetMonthlyBudget,
+                                '${l10n.budgetUsed} ${(totalBudget.rate * 100).clamp(0, 999).toStringAsFixed(0)}% · 剩余 ${data.daysRemaining} 天',
                                 style: TextStyle(
-                                  fontSize: 15.0,
-                                  fontWeight: FontWeight.w600,
-                                  color: OriginTokens.textPrimary(context),
+                                  fontSize: 12.0,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.82),
                                 ),
                               ),
-                              if (canEdit)
-                                GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () async {
-                                    final total = await ref
-                                        .read(totalBudgetProvider.future);
-                                    if (context.mounted && total != null) {
-                                      showOriginTotalBudgetDialog(
-                                        context: context,
-                                        ref: ref,
-                                        budget: total,
-                                        currencySymbol: currencySymbol,
-                                      );
-                                    }
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 2.0,
-                                      horizontal: 4.0,
-                                    ),
-                                    child: Text(
-                                      l10n.commonEdit,
-                                      style: TextStyle(
-                                        fontSize: 13.0,
-                                        fontWeight: FontWeight.w500,
-                                        color: primaryColor,
-                                      ),
-                                    ),
-                                  ),
+                              Text(
+                                '日均可用 $currencySymbol${formatMoneyCompact(data.dailyAvailable, trimZeros: false)}',
+                                style: TextStyle(
+                                  fontSize: 12.0,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.82),
                                 ),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 10.0),
-                          Text(
-                            '$currencySymbol ${formatMoneyCompact(totalBudget.budget, trimZeros: false)}',
-                            style: TextStyle(
-                              fontSize: 26.0,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                              color: OriginTokens.textPrimary(context),
-                            ),
-                          ),
-                          const SizedBox(height: 12.0),
-
-                          // 进度条
+                          const SizedBox(height: 7.0),
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(4.0),
-                            child: LinearProgressIndicator(
-                              value: totalBudget.rate.clamp(0.0, 1.0),
-                              minHeight: 8.0,
-                              backgroundColor: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white.withValues(alpha: 0.12)
-                                  : Colors.black.withValues(alpha: 0.06),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                _progressColor(totalBudget, primaryColor),
+                            borderRadius: BorderRadius.circular(3.0),
+                            child: SizedBox(
+                              height: 6.0,
+                              child: LinearProgressIndicator(
+                                value: totalBudget.rate.clamp(0.0, 1.0),
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.25),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  totalBudget.rate >= 1.0
+                                      ? const Color(0xFFFF5252)
+                                      : Colors.white,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 14.0),
-
-                          // 指标四宫格行
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n.budgetUsed,
-                                      style: TextStyle(
-                                        fontSize: 12.0,
-                                        color:
-                                            OriginTokens.textSecondary(context),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3.0),
-                                    Text(
-                                      '$currencySymbol ${formatMoneyCompact(totalBudget.used, trimZeros: false)}',
-                                      style: TextStyle(
-                                        fontSize: 14.0,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            OriginTokens.textPrimary(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n.budgetRemaining,
-                                      style: TextStyle(
-                                        fontSize: 12.0,
-                                        color:
-                                            OriginTokens.textSecondary(context),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3.0),
-                                    Text(
-                                      '$currencySymbol ${formatMoneyCompact(totalBudget.remaining, trimZeros: false)}',
-                                      style: TextStyle(
-                                        fontSize: 14.0,
-                                        fontWeight: FontWeight.w600,
-                                        color: totalBudget.remaining < 0
-                                            ? OriginTokens.expenseRed
-                                            : OriginTokens.textPrimary(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '剩余天数',
-                                      style: TextStyle(
-                                        fontSize: 12.0,
-                                        color:
-                                            OriginTokens.textSecondary(context),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3.0),
-                                    Text(
-                                      '${data.daysRemaining} 天',
-                                      style: TextStyle(
-                                        fontSize: 14.0,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            OriginTokens.textPrimary(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '日均可用',
-                                      style: TextStyle(
-                                        fontSize: 12.0,
-                                        color:
-                                            OriginTokens.textSecondary(context),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3.0),
-                                    Text(
-                                      '$currencySymbol ${formatMoneyCompact(data.dailyAvailable, trimZeros: false)}',
-                                      style: TextStyle(
-                                        fontSize: 14.0,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            OriginTokens.textPrimary(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),
+                      metrics: [
+                        OriginHeroMetric(
+                          label: l10n.budgetUsed,
+                          unit: ledger?.currency == 'CNY' ? '元' : currencySymbol,
+                          value: formatMoneyCompact(totalBudget.used, trimZeros: false),
+                        ),
+                        OriginHeroMetric(
+                          label: l10n.budgetRemaining,
+                          unit: ledger?.currency == 'CNY' ? '元' : currencySymbol,
+                          value: formatMoneyCompact(totalBudget.remaining, trimZeros: false),
+                          valueColor: totalBudget.remaining < 0
+                              ? const Color(0xFFFF5252)
+                              : null,
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12.0),
 
@@ -355,7 +265,7 @@ class CustomBudgetPage extends ConsumerWidget {
                                     showOriginAddCategoryBudgetDialog(
                                       context: context,
                                       ref: ref,
-                                      currencySymbol: currencySymbol,
+                                      currencySymbol: actualSymbol,
                                     );
                                   },
                                   child: Padding(
@@ -411,7 +321,7 @@ class CustomBudgetPage extends ConsumerWidget {
                                       showOriginAddCategoryBudgetDialog(
                                         context: context,
                                         ref: ref,
-                                        currencySymbol: currencySymbol,
+                                        currencySymbol: actualSymbol,
                                       );
                                     }
                                   : null,
@@ -492,7 +402,7 @@ class CustomBudgetPage extends ConsumerWidget {
                             context: context,
                             ref: ref,
                             budget: null,
-                            currencySymbol: currencySymbol,
+                            currencySymbol: actualSymbol,
                           );
                         },
                         child: Row(

@@ -6,13 +6,15 @@ library;
 import 'package:flutter/material.dart';
 import 'currencies.dart';
 import '../l10n/app_localizations.dart';
-import 'format_money.dart' show globalUseThousandSeparator;
+import 'format_money.dart'
+    show globalUseThousandSeparator, globalShowCurrencySymbol;
 
 /// 格式化余额显示，支持多语言单位和多币种
 ///
 /// [balance] 金额
 /// [currencyCode] 币种代码 (如 'CNY', 'USD')
 /// [isChineseLocale] 是否为中文环境，中文显示万单位，其他语言显示k/M单位
+/// [showCurrency] 是否显示货币符号，为 null 时使用全局开关 globalShowCurrencySymbol
 ///
 /// 智能精度规则：
 /// - 小于1万：完整显示，不压缩
@@ -20,10 +22,13 @@ import 'format_money.dart' show globalUseThousandSeparator;
 /// - 10万以上：保留1-2位小数（智能判断）
 /// - 如果小数部分为.0或.00，则不显示小数
 String formatBalance(double balance, String currencyCode,
-    {bool isChineseLocale = true}) {
+    {bool isChineseLocale = true, bool? showCurrency}) {
   final absBalance = balance.abs();
-  final currencySymbol = getCurrencySymbol(currencyCode);
-  final sign = balance >= 0 ? currencySymbol : '-$currencySymbol';
+  final displayCurrency = showCurrency ?? globalShowCurrencySymbol;
+  final currencySymbol = displayCurrency ? getCurrencySymbol(currencyCode) : '';
+  final sign = balance >= 0
+      ? currencySymbol
+      : (displayCurrency ? '-$currencySymbol' : '-');
 
   if (isChineseLocale) {
     // 中文环境：使用万作为单位
@@ -114,12 +119,15 @@ String formatBalance(double balance, String currencyCode,
 /// [balance] 金额
 /// [currencyCode] 币种代码 (如 'CNY', 'USD')
 ///
-/// 始终显示完整金额，根据开关决定是否使用千分号分隔
+/// 始终显示完整金额，根据开关决定是否使用千分号分隔，以及是否展示货币符号
 String formatBalanceFull(double balance, String currencyCode,
-    {bool? useThousandSeparator}) {
+    {bool? useThousandSeparator, bool? showCurrency}) {
   final absBalance = balance.abs();
-  final currencySymbol = getCurrencySymbol(currencyCode);
-  final sign = balance >= 0 ? currencySymbol : '-$currencySymbol';
+  final displayCurrency = showCurrency ?? globalShowCurrencySymbol;
+  final currencySymbol = displayCurrency ? getCurrencySymbol(currencyCode) : '';
+  final sign = balance >= 0
+      ? currencySymbol
+      : (displayCurrency ? '-$currencySymbol' : '-');
   final useSeparator = useThousandSeparator ?? globalUseThousandSeparator;
 
   // 格式化为字符串

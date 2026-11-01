@@ -4,22 +4,26 @@ import 'format_utils.dart';
 /// 全局金额千分位开关（纯函数默认 true 与上游一致；App 启动时由 thousandSeparatorProvider 默认关闭）
 bool globalUseThousandSeparator = true;
 
+/// 全局货币符号显示开关（默认 false：不显示 ¥ / $ 等货币符号；开启为 true：显示货币符号）
+bool globalShowCurrencySymbol = false;
+
 /// Shared by App bindings and AmountText. Currency selection, locale and
 /// compact preference are resolved by the host; presentation packages only
 /// receive the final display text.
 String formatDisplayAmount(double value,
     {String? currencyCode,
-    bool showCurrency = false,
+    bool? showCurrency,
     bool useCompactFormat = false,
     bool isChineseLocale = true,
     bool signed = true,
     int decimals = 2,
     bool? useThousandSeparator}) {
-  if ((showCurrency || useCompactFormat) && currencyCode != null) {
+  final shouldShowCurrency = showCurrency ?? globalShowCurrencySymbol;
+  if ((shouldShowCurrency || useCompactFormat) && currencyCode != null) {
     var formatted =
-        formatBalance(value, currencyCode, isChineseLocale: isChineseLocale);
+        formatBalance(value, currencyCode, isChineseLocale: isChineseLocale, showCurrency: shouldShowCurrency);
     final symbol = getCurrencySymbol(currencyCode.toUpperCase());
-    if (!showCurrency && symbol.isNotEmpty) {
+    if (!shouldShowCurrency && symbol.isNotEmpty) {
       // Negative compact values start with the sign before the currency.
       formatted = formatted.replaceFirst(symbol, '').trimLeft();
     }
@@ -28,7 +32,7 @@ String formatDisplayAmount(double value,
         maxDecimals: decimals,
         signed: signed,
         useThousandSeparator: useThousandSeparator);
-    return showCurrency ? '$symbol$plain' : plain;
+    return shouldShowCurrency ? '$symbol$plain' : plain;
   }
   return formatMoneyCompact(value,
       maxDecimals: decimals,

@@ -30,6 +30,7 @@ import '../providers/category_display_preferences_provider.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_menu.dart';
 import '../widgets/origin_scaffold.dart';
+import '../widgets/origin_hero_card.dart';
 import 'custom_transaction_sheet.dart';
 
 /// vivo OriginOS 风格分类详情页面 (CustomCategoryDetailPage)
@@ -567,12 +568,6 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
       CategoryDetailPeriod.custom => periodLabel ?? l.v4DetailCustom,
     };
 
-    final kind = category.kind == 'income'
-        ? l.exportTypeIncome
-        : category.kind == 'transfer'
-            ? l.transferTitle
-            : l.exportTypeExpense;
-
     final metricLabel = currency;
     final rows = showAll ? c.rows : c.rows.take(4).toList();
 
@@ -590,31 +585,45 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
     final header = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        BeeResourceHero(
-          beforeIdentity: c.parent == null
-              ? null
-              : BeeResourceParentLink(
-                  label: l.v4ResourceParent,
-                  name: name(c.parent!),
-                  onPressed: () => onChild(c.parent!),
-                ),
-          title: name(category),
-          caption:
-              '${c.parent == null ? l.v4DetailCategoryChildren(c.children.length) : l.categorySubCategoryTitle} · $scope',
-          icon: RecordingCategoryIcon(category: category, size: 22),
-          amountLabel: l.v4DetailAmountLabel(period, kind),
-          prefix: hide || !complete ? '' : symbol,
-          amount: number(c.amount),
+        // 分类详情大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
+        OriginHeroCard(
+          margin: EdgeInsets.zero,
+          title: '${name(category)} · $scope · $period',
+          unit: hide || !complete ? '' : symbol,
+          mainAmount: number(c.amount),
+          hideAmounts: hide,
+          action: c.parent != null
+              ? GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onChild(c.parent!),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    child: Text(
+                      '${l.v4ResourceParent}: ${name(c.parent!)}',
+                      style: const TextStyle(
+                        fontSize: 11.0,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                )
+              : null,
           metrics: [
-            BeeResourceMetric(
+            OriginHeroMetric(
               label: l.categoryDetailTotalCount,
               value: l.tagTransactionCount(c.count),
             ),
-            BeeResourceMetric(
+            OriginHeroMetric(
               label: l.categoryDetailAverageAmount,
-              value: money(c.average),
+              unit: hide || !complete ? '' : symbol,
+              value: formatMoneyCompact(c.average, trimZeros: false),
             ),
-            BeeResourceMetric(
+            OriginHeroMetric(
               label: l.v4DetailShare,
               value: hide
                   ? '••••'

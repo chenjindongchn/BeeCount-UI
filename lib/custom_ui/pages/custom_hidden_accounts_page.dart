@@ -9,6 +9,7 @@ import '../../utils/account_type_utils.dart';
 import '../../utils/currencies.dart';
 import '../../services/billing/post_processor.dart';
 import '../styles/origin_tokens.dart';
+import '../providers/amount_format_provider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
 import '../widgets/origin_divider.dart';
@@ -55,7 +56,9 @@ class _CustomHiddenAccountsPageState extends ConsumerState<CustomHiddenAccountsP
     final allStatsAsync = ref.watch(allAccountStatsProvider);
     final hideAmounts = ref.watch(hideAmountsProvider);
     final baseCurrency = ref.watch(baseCurrencyProvider);
-    final currencySymbol = getCurrencySymbol(baseCurrency);
+    final showCurrency = ref.watch(currencySymbolVisibleProvider);
+    final currencySymbol =
+        showCurrency ? getCurrencySymbol(baseCurrency) : '';
 
     return OriginScaffold(
       appBar: OriginLargeTopAppBar(
@@ -182,7 +185,7 @@ class _CustomHiddenAccountsPageState extends ConsumerState<CustomHiddenAccountsP
                             Text(
                               hideAmounts
                                   ? '****'
-                                  : '$currencySymbol ${formatMoneyCompact(hiddenTotal)}',
+                                  : '${currencySymbol.isNotEmpty ? "$currencySymbol " : ""}${formatMoneyCompact(hiddenTotal)}',
                               style: TextStyle(
                                 fontSize: 18.0,
                                 fontWeight: FontWeight.w600,
@@ -339,7 +342,9 @@ class _HiddenAccountRow extends StatelessWidget {
               ),
             ),
             Text(
-              hideAmounts ? '****' : '$currencySymbol ${formatMoneyCompact(balance)}',
+              hideAmounts
+                  ? '****'
+                  : '${currencySymbol.isNotEmpty ? "$currencySymbol " : ""}${formatMoneyCompact(balance)}',
               style: TextStyle(
                 fontSize: 14.0,
                 fontWeight: FontWeight.w500,
