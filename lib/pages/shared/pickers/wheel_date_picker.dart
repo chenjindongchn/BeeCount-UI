@@ -1,75 +1,50 @@
-import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../custom_ui/widgets/origin_date_picker.dart';
-import '../../../custom_ui/widgets/origin_date_time_picker.dart';
+import '../../../custom_ui/widgets/origin_time_picker.dart';
 
 enum WheelDatePickerMode { y, ym, ymd }
 
-/// App adapter: localized labels and result/cancellation stay here; wheels live in beecount_ui.
-class WheelDatePicker extends StatefulWidget {
-  const WheelDatePicker(
-      {super.key,
-      required this.initial,
-      this.mode = WheelDatePickerMode.ymd,
-      this.minDate,
-      this.maxDate,
-      this.confirmLabel});
+/// 兼容上游 Bridge: 桥接至 vivo OriginOS 原厂日期选择器
+class WheelDatePicker extends StatelessWidget {
+  const WheelDatePicker({
+    super.key,
+    required this.initial,
+    this.mode = WheelDatePickerMode.ymd,
+    this.minDate,
+    this.maxDate,
+    this.confirmLabel,
+  });
+
   final DateTime initial;
   final WheelDatePickerMode mode;
   final DateTime? minDate, maxDate;
   final String? confirmLabel;
-  @override
-  State<WheelDatePicker> createState() => _WheelDatePickerState();
-}
 
-class _WheelDatePickerState extends State<WheelDatePicker> {
-  late DateTime date = _clamp(widget.initial);
-  DateTime _clamp(DateTime value) {
-    final lo = widget.minDate ?? DateTime(2000);
-    final hi = widget.maxDate ?? DateTime(2100, 12, 31);
-    return value.isBefore(lo)
-        ? lo
-        : value.isAfter(hi)
-            ? hi
-            : value;
+  @override
+  Widget build(BuildContext context) {
+    return OriginDatePickerDialog(
+      initialDate: initial,
+      mode: switch (mode) {
+        WheelDatePickerMode.y => OriginDatePickerMode.y,
+        WheelDatePickerMode.ym => OriginDatePickerMode.ym,
+        WheelDatePickerMode.ymd => OriginDatePickerMode.ymd,
+      },
+      minDate: minDate,
+      maxDate: maxDate,
+      confirmLabel: confirmLabel,
+    );
   }
-
-  DateTime get result => _clamp(switch (widget.mode) {
-        WheelDatePickerMode.y => DateTime(date.year),
-        WheelDatePickerMode.ym => DateTime(date.year, date.month),
-        WheelDatePickerMode.ymd => DateTime(date.year, date.month, date.day)
-      });
-  @override
-  Widget build(BuildContext context) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            OriginDatePicker(
-              initialDate: date,
-              mode: switch (widget.mode) {
-                WheelDatePickerMode.y => OriginDatePickerMode.y,
-                WheelDatePickerMode.ym => OriginDatePickerMode.ym,
-                WheelDatePickerMode.ymd => OriginDatePickerMode.ymd,
-              },
-              minDate: widget.minDate,
-              maxDate: widget.maxDate,
-              onChanged: (v) => setState(() => date = v),
-            ),
-            const SizedBox(height: 16),
-            BeeButton(
-                label: widget.confirmLabel ??
-                    AppLocalizations.of(context).commonConfirm,
-                onPressed: () => Navigator.pop(context, result)),
-          ]);
 }
 
-Future<DateTime?> showWheelDatePicker(BuildContext context,
-        {required DateTime initial,
-        WheelDatePickerMode mode = WheelDatePickerMode.ymd,
-        DateTime? minDate,
-        DateTime? maxDate,
-        String? confirmLabel}) =>
+Future<DateTime?> showWheelDatePicker(
+  BuildContext context, {
+  required DateTime initial,
+  WheelDatePickerMode mode = WheelDatePickerMode.ymd,
+  DateTime? minDate,
+  DateTime? maxDate,
+  String? confirmLabel,
+}) =>
     showOriginDatePicker(
       context,
       initial: initial,
@@ -83,11 +58,33 @@ Future<DateTime?> showWheelDatePicker(BuildContext context,
       confirmLabel: confirmLabel,
     );
 
-/// 使用 OriginOS 一体化记账时间抽屉替换原版两步弹窗
-Future<DateTime?> showWheelDateTimePicker(BuildContext context,
-    {required DateTime initial, DateTime? maxDate}) =>
-    showOriginDateTimePicker(
-      context,
-      initial: initial,
-      maxDate: maxDate,
-    );
+/// 遵循原版两步流程（选日期 -> 选时间），全部采用 OriginOS 原厂悬浮弹窗标准
+Future<DateTime?> showWheelDateTimePicker(
+  BuildContext context, {
+  required DateTime initial,
+  DateTime? maxDate,
+}) async {
+  final l = AppLocalizations.of(context);
+  final date = await showOriginDatePicker(
+    context,
+    initial: initial,
+    maxDate: maxDate,
+    confirmLabel: l.commonNext,
+  );
+  if (date == null || !context.mounted) return null;
+
+  final time = await showOriginTimePicker(
+    context,
+    initial: TimeOfDay.fromDateTime(initial),
+  );
+  if (time == null) return null;
+
+  return DateTime(
+    date.year,
+    date.month,
+    date.day,
+    time.hour,
+    time.minute,
+    initial.second,
+  );
+}

@@ -379,23 +379,40 @@ git rebase main
 
 ---
 
-## 八、全软件日期与时间选择组件（OriginUI 统一桥接与深度改造）
+## 八、全软件日期与时间选择组件（vivo OriginOS 原厂规范 100% 对齐与深度改造）
 
 - **改造日期**：2026-11-01
-- **第一性原理与设计初衷**：
-  原作者在全工程中（包括记账全屏页 `AmountEditorSheet`、日历打卡页 `CalendarPage`、账单搜索过滤 `TransactionSearchFilter` 等）均通过 `wheel_date_picker.dart`、`wheel_time_picker.dart` 和 `detail_period_controls.dart` 统一分发弹窗。
-  为了在不破坏上游任何业务逻辑的前提下，彻底消除原版黄色粗糙滚轮及 Flutter 原生 Material 表盘时钟，让全软件**所有新老记账与统计入口 100% 统一为 vivo OriginOS 风格**：
-  1. 在 `lib/custom_ui/widgets/` 建立自研套件（`OriginWheelPicker`、`OriginDatePicker`、`OriginTimePicker`、`OriginDateTimePicker`、`OriginPeriodPicker`）；
-  2. 将 3 个上游基础适配器函数极简桥接至 OriginUI，保持入参出参 100% 一致。
+- **第一性原理与设计依据**：
+  直接对标连接设备从 vivo 官方钱包应用（`com.vivo.wallet`）反编译提取的原厂规范文档（`OriginUI/docs/25-date-and-time-picker.md`）及配套截图真值（`wallet_datepicker_popup.png`、`wallet_datepicker_year_select.png`、`wallet_timepicker_popup.png`、`wallet_bill_edit.png`）：
+  1. **记账面板胶囊入口（wallet_bill_edit）**：
+     记账抽屉中将原本杂交的一体化时间拆为独立的【日期胶囊】（如 `今天` / `11-01`）与【时间胶囊】（如 `17:11`），点击分别呼出真正的原厂日历弹窗和原厂时间滚轮弹窗。
+  2. **日期选择器弹窗（wallet_datepicker_popup & wallet_datepicker_year_select）**：
+     - 居中 20sp Bold 大标题（`2026年11月1日 周日`）；
+     - 年月导航栏：左侧带下拉倒三角的 `2026年11月 ▾`（点击平滑展开/收起年月双滚轮），右侧 `<` 和 `>` 切月按钮；
+     - 星期表头（`日 一 二 三 四 五 六`）与 7 列日历表格，选中态为直径 36dp 实心强调色高亮圆盘；
+     - 原厂核心交互“浏览态与选定态解耦”：切月不改选定日期，点击具体单元格才更新；
+     - 底部竖排双胶囊：主操作【确定】在上方（主题色实底白字），次操作【取消】在下方（浅灰底深字）。
+  3. **时间选择器弹窗（wallet_timepicker_popup）**：
+     - 居中 22sp Bold 大标题实时显示选定时间（如 `17:11`）；
+     - 双列滚轮高 200dp、单项高 40dp、选中项 22sp~24sp Bold；
+     - 原厂核心细节“单位固定，纯数字翻滚”：选中行右侧固定静态“时”、“分”单位，仅纯数字翻滚；
+     - 底部竖排双胶囊按钮与 28dp 圆角卡片。
+  4. **桥接与零上游冲突**：
+     - `showWheelDatePicker`、`showWheelDateTimePicker`、`showWheelTimePicker` 全面桥接至 OriginUI，保持调用方零业务修改。
 
 ### 1. 修改文件清单与冲突排查指引
 
 | 序号 | 所在源码位置 | 修改内容 | 冲突排查指引 |
 | :--- | :--- | :--- | :--- |
-| **01** | `lib/pages/shared/pickers/wheel_date_picker.dart` | `showWheelDatePicker` 转发至 `showOriginDatePicker`；`showWheelDateTimePicker` 转发至一体化 `showOriginDateTimePicker` | 若上游更新该文件，保留对 `showOriginDatePicker` 和 `showOriginDateTimePicker` 的极简调用即可 |
+| **01** | `lib/pages/shared/pickers/wheel_date_picker.dart` | `showWheelDatePicker` 转发至 `showOriginDatePicker`；`showWheelDateTimePicker` 按原厂两步转发 | 若上游更新该文件，保留极简桥接即可 |
 | **02** | `lib/pages/shared/pickers/wheel_time_picker.dart` | `showWheelTimePicker` 转发至 `showOriginTimePicker` | 保留转发调用即可 |
 | **03** | `lib/pages/shared/resources/widgets/detail_period_controls.dart` | `showResourcePeriodPicker` 转发至 `showOriginPeriodPicker` | 保留转发调用即可 |
 | **04** | `lib/pages/transaction/recurring/bindings/recurring_editor_pickers.dart` | `showRecurringEditorDatePicker` 转发至 `showOriginDatePicker` | 保留转发调用即可 |
 | **05** | `lib/pages/settings/reminder_settings_page.dart` | `_time()` 时间设置调用 `showOriginTimePicker` | 保留调用即可 |
+| **06** | `lib/custom_ui/pages/custom_transaction_sheet.dart` | 拆分为独立日期与时间胶囊，分别呼出原厂日历与时间弹窗 | 定制目录纯增量代码 |
+| **07** | `lib/custom_ui/widgets/origin_date_picker.dart` | 原厂日历网格、展开双滚轮、纯滚轮模式与标准 OriginDialog 弹窗 | 定制目录纯增量代码 |
+| **08** | `lib/custom_ui/widgets/origin_time_picker.dart` | 原厂 22sp 大标题、纯数字滚轮+固定单位与标准 OriginDialog 弹窗 | 定制目录纯增量代码 |
+| **09** | `lib/custom_ui/widgets/origin_wheel_picker.dart` | 单位固定右侧静止、阻尼震动反馈与平滑渐隐滚轮 | 定制目录纯增量代码 |
+
 
 

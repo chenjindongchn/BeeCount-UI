@@ -14,9 +14,10 @@ import '../../pages/transaction/recording/bindings/recording_save.dart';
 import '../styles/origin_sheet_tokens.dart';
 import '../widgets/custom_account_grid_picker.dart';
 import '../widgets/origin_bottom_sheet.dart';
-import '../widgets/origin_date_time_picker.dart';
+import '../widgets/origin_date_picker.dart';
 import '../widgets/origin_keypad.dart';
 import '../widgets/origin_text_field.dart';
+import '../widgets/origin_time_picker.dart';
 
 /// 弹出 OriginOS 规范的定制记账底部抽屉
 Future<bool?> showCustomTransactionSheet(
@@ -972,9 +973,8 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     final isToday = _selectedDate.year == now.year &&
         _selectedDate.month == now.month &&
         _selectedDate.day == now.day;
-    final timeStr = isToday
-        ? '今天 ${DateFormat('HH:mm').format(_selectedDate)}'
-        : DateFormat('MM-dd HH:mm').format(_selectedDate);
+    final dateStr = isToday ? '今天' : DateFormat('MM-dd').format(_selectedDate);
+    final timeStr = DateFormat('HH:mm').format(_selectedDate);
 
     final tagTitle = _selectedTagIds.isEmpty
         ? '标签'
@@ -999,12 +999,21 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
             const SizedBox(width: 6),
           ],
 
-          // 时间选择
+          // 原厂规范日期胶囊
           _buildMetaChip(
             context,
             icon: Icons.calendar_today_outlined,
+            title: dateStr,
+            onTap: _pickDate,
+          ),
+          const SizedBox(width: 6),
+
+          // 原厂规范时间胶囊
+          _buildMetaChip(
+            context,
+            icon: Icons.access_time_rounded,
             title: timeStr,
-            onTap: _pickDateTime,
+            onTap: _pickTime,
           ),
           const SizedBox(width: 6),
 
@@ -1071,17 +1080,46 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
 
   // --- 弹窗选择逻辑 ---
 
-  Future<void> _pickDateTime() async {
-    final picked = await showOriginDateTimePicker(
+  Future<void> _pickDate() async {
+    final picked = await showOriginDatePicker(
       context,
       initial: _selectedDate,
-      minDate: DateTime(2000),
-      maxDate: DateTime(2100),
+      minDate: DateTime(2000, 1, 1),
+      maxDate: DateTime(2100, 12, 31),
     );
     if (picked == null || !mounted) return;
 
     setState(() {
-      _selectedDate = picked;
+      _selectedDate = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        _selectedDate.hour,
+        _selectedDate.minute,
+        _selectedDate.second,
+      );
+    });
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showOriginTimePicker(
+      context,
+      initial: TimeOfDay(
+        hour: _selectedDate.hour,
+        minute: _selectedDate.minute,
+      ),
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      _selectedDate = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        picked.hour,
+        picked.minute,
+        _selectedDate.second,
+      );
     });
   }
 

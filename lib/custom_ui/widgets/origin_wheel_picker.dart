@@ -4,12 +4,12 @@ import '../styles/origin_tokens.dart';
 
 /// vivo OriginOS 风格单列阻尼滚轮组件 (OriginWheelPicker)
 ///
-/// 遵循 OriginOS 细节体验：
-/// 1. 阻尼手感与细腻物理滚动；
-/// 2. 居中选中胶囊（圆角 10dp，微透明底色，不遮挡阅读）；
-/// 3. 上下平滑渐隐遮罩（ShaderMask 36dp 渐隐，消除突兀截断）；
-/// 4. 触感段落震动反馈（HapticFeedback.selectionClick）；
-/// 5. 选中项 17sp SemiBold / 未选中项 15sp Regular 阶梯字重。
+/// 遵循 vivo OriginOS 官方规范（参考 25-date-and-time-picker.md）：
+/// 1. 高度 200dp，单项高度 40dp，可见行数 5 行；
+/// 2. 选中项 22~24sp Bold，未选中项淡出（overAndUnderCenterOpacity: 0.35）；
+/// 3. 单位固定于选中行右侧（若指定 unit），滚轮纯数字翻滚，单位对称几何占位严格静止，杜绝重叠；
+/// 4. 上下平滑渐隐遮罩（ShaderMask）；
+/// 5. 触感段落震动反馈（HapticFeedback.selectionClick）。
 class OriginWheelPicker<T> extends StatefulWidget {
   final List<T> items;
   final int selectedIndex;
@@ -18,6 +18,8 @@ class OriginWheelPicker<T> extends StatefulWidget {
   final String? unit;
   final double itemExtent;
   final double height;
+  final double selectedFontSize;
+  final double unselectedFontSize;
 
   const OriginWheelPicker({
     super.key,
@@ -26,8 +28,10 @@ class OriginWheelPicker<T> extends StatefulWidget {
     required this.onChanged,
     required this.labelBuilder,
     this.unit,
-    this.itemExtent = 44.0,
-    this.height = 216.0,
+    this.itemExtent = 40.0,
+    this.height = 200.0,
+    this.selectedFontSize = 22.0,
+    this.unselectedFontSize = 16.0,
   });
 
   @override
@@ -75,13 +79,34 @@ class _OriginWheelPickerState<T> extends State<OriginWheelPicker<T>> {
     if (widget.items.isEmpty) return const SizedBox.shrink();
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = OriginTokens.textPrimary(context);
+    final secondaryTextColor = isDark ? const Color(0xFF888888) : const Color(0xFF999999);
+
+    // 第一性原理：精确计算数字与固定单位的对称几何占位，确保无论是 4 位年份还是 2 位月日时分，绝不重叠
+    final sampleText = widget.labelBuilder(widget.items.first);
+    final isWideText = sampleText.length >= 4; // 4 位年份等
+    final numberWidth = isWideText ? 64.0 : 34.0;
+    const unitGap = 4.0;
+    const unitWidth = 20.0;
 
     return SizedBox(
       height: widget.height,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 滚轮本体（带上下渐隐遮罩）
+          // 居中选中行背景微高亮指示条（极简通透）
+          IgnorePointer(
+            child: Container(
+              height: widget.itemExtent,
+              margin: const EdgeInsets.symmetric(horizontal: 4.0),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0x14FFFFFF) : const Color(0x0A000000),
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+            ),
+          ),
+
+          // 滚轮本体（带上下平滑渐隐 ShaderMask）
           ShaderMask(
             shaderCallback: (Rect rect) {
               return const LinearGradient(
@@ -103,7 +128,7 @@ class _OriginWheelPickerState<T> extends State<OriginWheelPicker<T>> {
               physics: const FixedExtentScrollPhysics(),
               perspective: 0.003,
               diameterRatio: 1.5,
-              overAndUnderCenterOpacity: 0.45,
+              overAndUnderCenterOpacity: 0.35,
               onSelectedItemChanged: (index) {
                 if (_isSyncing) return;
                 HapticFeedback.selectionClick();
@@ -116,42 +141,28 @@ class _OriginWheelPickerState<T> extends State<OriginWheelPicker<T>> {
                   final text = widget.labelBuilder(widget.items[index]);
 
                   return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: numberWidth,
+                          child: Text(
                             text,
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: isSelected ? 17.0 : 15.0,
+                              fontSize: isSelected
+                                  ? widget.selectedFontSize
+                                  : widget.unselectedFontSize,
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                              color: isSelected
-                                  ? OriginTokens.textPrimary(context)
-                                  : (isDark
-                                      ? const Color(0xFF888888)
-                                      : const Color(0xFF999999)),
+                              color: isSelected ? primaryTextColor : secondaryTextColor,
                               fontFeatures: const [FontFeature.tabularFigures()],
                             ),
                           ),
-                          if (widget.unit != null) ...[
-                            const SizedBox(width: 2.0),
-                            Text(
-                              widget.unit!,
-                              style: TextStyle(
-                                fontSize: isSelected ? 13.0 : 12.0,
-                                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                                color: isSelected
-                                    ? OriginTokens.textPrimary(context)
-                                    : (isDark
-                                        ? const Color(0xFF777777)
-                                        : const Color(0xFFAAAAAA)),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                        ),
+                        if (widget.unit != null)
+                          const SizedBox(width: unitGap + unitWidth),
+                      ],
                     ),
                   );
                 },
@@ -159,17 +170,32 @@ class _OriginWheelPickerState<T> extends State<OriginWheelPicker<T>> {
             ),
           ),
 
-          // 居中指示胶囊框（忽略指针点击）
-          IgnorePointer(
-            child: Container(
-              height: widget.itemExtent - 4.0,
-              margin: const EdgeInsets.symmetric(horizontal: 6.0),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0x14FFFFFF) : const Color(0x0A000000),
-                borderRadius: BorderRadius.circular(10.0),
+          // 原厂关键细节：单位固定在居中行右侧，纯数字上下翻滚，单位完全静止
+          if (widget.unit != null)
+            IgnorePointer(
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(width: numberWidth),
+                    const SizedBox(width: unitGap),
+                    SizedBox(
+                      width: unitWidth,
+                      child: Text(
+                        widget.unit!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14.0,
+                          fontWeight: FontWeight.w600,
+                          color: primaryTextColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
