@@ -11,8 +11,8 @@ import '../../pages/tag/widgets/tag_selector.dart';
 import '../../pages/transaction/recording/bindings/amount_editor_sheet.dart';
 import '../../pages/transaction/recording/bindings/recording_category_section.dart';
 import '../../pages/transaction/recording/bindings/recording_save.dart';
-import '../../utils/account_type_utils.dart';
 import '../styles/origin_sheet_tokens.dart';
+import '../widgets/custom_account_grid_picker.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_keypad.dart';
 
@@ -1123,113 +1123,19 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     List<Account> accounts,
     bool isSourceAccount,
   ) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = ref.read(primaryColorProvider);
     final currentId = isSourceAccount ? _selectedAccountId : _transferToAccountId;
 
-    final selectedId = await showModalBottomSheet<int>(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  isSourceAccount ? '选择账户' : '选择转入账户',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-              const Divider(height: 1, thickness: 0.5),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  children: [
-                    if (_selectedType != 2 && isSourceAccount)
-                      ListTile(
-                        leading: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.not_interested_rounded,
-                            size: 18,
-                            color: isDark ? Colors.white54 : Colors.black45,
-                          ),
-                        ),
-                        title: Text(
-                          '不选择账户',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: currentId == null ? FontWeight.w600 : FontWeight.normal,
-                            color: currentId == null
-                                ? primaryColor
-                                : (isDark ? Colors.white : Colors.black87),
-                          ),
-                        ),
-                        trailing: currentId == null
-                            ? Icon(Icons.check_rounded, color: primaryColor)
-                            : null,
-                        onTap: () => Navigator.pop(ctx, -1),
-                      ),
-                    for (final acc in accounts)
-                      ListTile(
-                        leading: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            getIconForAccountType(acc.type),
-                            size: 18,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        title: Text(
-                          acc.name,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: currentId == acc.id ? FontWeight.w600 : FontWeight.normal,
-                            color: currentId == acc.id
-                                ? primaryColor
-                                : (isDark ? Colors.white : Colors.black87),
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${acc.currency} · ${getAccountTypeLabel(context, acc.type)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.white54 : Colors.black45,
-                          ),
-                        ),
-                        trailing: currentId == acc.id
-                            ? Icon(Icons.check_rounded, color: primaryColor)
-                            : null,
-                        onTap: () => Navigator.pop(ctx, acc.id),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    final selectedId = await CustomAccountGridPicker.show(
+      context,
+      accounts: accounts,
+      currentAccountId: currentId,
+      showNoAccountOption: _selectedType != 2 && isSourceAccount,
+      title: isSourceAccount ? '选择账户' : '选择转入账户',
     );
 
     if (selectedId != null && mounted) {
       setState(() {
-        final newId = selectedId == -1 ? null : selectedId;
+        final newId = selectedId == CustomAccountGridPicker.noAccountId ? null : selectedId;
         if (isSourceAccount) {
           _selectedAccountId = newId;
         } else {

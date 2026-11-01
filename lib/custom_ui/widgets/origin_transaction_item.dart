@@ -9,12 +9,11 @@ import '../styles/origin_tokens.dart';
 
 /// vivo OriginOS 风格交易流水条目组件
 ///
-/// 严格依据设计规范及 UI 参考还原：
-/// 1. 左侧通透彩色分类图标（无死板深色底块）；
-/// 2. 第一行：加粗分类名称（15.5sp SemiBold）+ 圆角浅灰细框标签（10.5sp 账户/标签）；
-/// 3. 第二行：时间与备注优雅混排（09:56 | 淘宝闪购，12.5sp 次级灰色）；
-/// 4. 右侧金额：支出黑色加粗（-22.54），收入橙色加粗（+0.01）；
-/// 5. 长按条目触发删除确认操作。
+/// 遵循明细展示设计规范：
+/// 1. 左侧：通透彩色分类图标（无死板深色底块）；
+/// 2. 中间：分类名称（15.5sp SemiBold）+ 自定义标签（若有）+ 备注（若有，不显示时间）；
+/// 3. 右侧：垂直排列，上方加粗金额（支出黑色，收入橙色），下方展示账户信息（支出/收入账户，转账则展示“从A-B”）；
+/// 4. 交互：长按条目触发删除确认操作。
 class OriginTransactionItem extends ConsumerWidget {
   final Transaction transaction;
   final Category? category;
@@ -81,7 +80,7 @@ class OriginTransactionItem extends ConsumerWidget {
     // 1. 分类显示名称
     String displayName;
     if (isTransfer) {
-      displayName = isIncome ? '收转账' : '转账';
+      displayName = '转账';
     } else {
       displayName = CategoryUtils.getDisplayName(category?.name, context);
       if (displayName.isEmpty) {
@@ -91,28 +90,38 @@ class OriginTransactionItem extends ConsumerWidget {
       }
     }
 
-    // 2. 标签文本（优先使用自定义标签，如支付宝自动记账/微信自动记账；无标签时使用账户名）
+    // 2. 自定义标签（若用户为交易打标签则展示，不再 fallback 到账户名）
     String? tagLabel;
     if (tags != null && tags!.isNotEmpty) {
       tagLabel = tags!.first.name;
-    } else if (account?.name != null && account!.name.isNotEmpty) {
-      tagLabel = account!.name;
     }
 
-    // 3. 时间与备注文本 (09:56 | 淘宝闪购)
-    final dt = transaction.happenedAt.toLocal();
-    final timeStr =
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    final note = transaction.note?.trim() ?? '';
+    // 3. 备注文本（完全删除时间显示，仅在有明确备注且非分类名自身时展示）
+    final rawNote = transaction.note?.trim() ?? '';
+    final String? noteText =
+        (rawNote.isNotEmpty && rawNote != displayName) ? rawNote : null;
 
-    String subtitleText;
-    if (note.isNotEmpty) {
-      subtitleText = '$timeStr | $note';
+    // 4. 账户展示文本（显示在金额下方；转账展示从A-B）
+    String accountText = '';
+    if (isTransfer) {
+      final fromName = account?.name;
+      final toName = toAccount?.name;
+      if (fromName != null &&
+          fromName.isNotEmpty &&
+          toName != null &&
+          toName.isNotEmpty) {
+        accountText = '从$fromName-$toName';
+      } else if (fromName != null && fromName.isNotEmpty) {
+        accountText = '从$fromName';
+      } else if (toName != null && toName.isNotEmpty) {
+        accountText = '到$toName';
+      }
     } else {
-      subtitleText = timeStr;
+      // 支出或收入账户
+      accountText = account?.name ?? '';
     }
 
-    // 4. 金额计算与显示
+    // 5. 金额计算与显示
     final amount = transaction.nativeAmount ?? transaction.amount;
     String amountStr;
     Color amountColor;
@@ -178,13 +187,13 @@ class OriginTransactionItem extends ConsumerWidget {
               ),
               const SizedBox(width: 12.0),
 
-              // 2. 中间信息区 (两行结构)
+              // 2. 中间信息区 (分类名字 + 自定义标签 + 备注)
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 第一行：分类名称 + 圆角标签
+                    // 第一行：分类名称 + 自定义标签（若有）
                     Row(
                       children: [
                         Flexible(
@@ -229,34 +238,62 @@ class OriginTransactionItem extends ConsumerWidget {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 4.0),
-
-                    // 第二行：时间与备注 (09:56 | 淘宝闪购)
-                    Text(
-                      subtitleText,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: OriginTokens.textTertiary(context),
-                        height: 1.2,
+                    // 第二行：纯备注（已删除时间，仅在有备注时展示）
+                    if (noteText != null) ...[
+                      const SizedBox(height: 3.0),
+                      Text(
+                        noteText,
+                        style: TextStyle(
+                          fontSize: 12.0,
+                          color: OriginTokens.textTertiary(context),
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    ],
                   ],
                 ),
               ),
 
               const SizedBox(width: 12.0),
 
-              // 3. 右侧金额 (加粗等宽，清晰直观)
-              Text(
-                amountStr,
-                style: TextStyle(
-                  fontSize: 16.5,
-                  fontWeight: FontWeight.w600,
-                  color: amountColor,
-                  letterSpacing: -0.3,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              // 3. 右侧信息区：金额（上）+ 账户（下）
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.sizeOf(context).width * 0.45,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // 上层：加粗金额
+                    Text(
+                      amountStr,
+                      style: TextStyle(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w600,
+                        color: amountColor,
+                        letterSpacing: -0.3,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    // 下层：支出/收入账户或转账从A-B
+                    if (accountText.isNotEmpty) ...[
+                      const SizedBox(height: 3.0),
+                      Text(
+                        accountText,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: OriginTokens.textTertiary(context),
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
