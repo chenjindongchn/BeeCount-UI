@@ -45,9 +45,23 @@ class _OriginDatePickerState extends State<OriginDatePicker> {
   DateTime get _maxDate => widget.maxDate ?? DateTime(2100, 12, 31);
 
   DateTime _clampDate(DateTime date) {
-    if (date.isBefore(_minDate)) return _minDate;
-    if (date.isAfter(_maxDate)) return _maxDate;
-    return date;
+    switch (widget.mode) {
+      case OriginDatePickerMode.y:
+        if (date.year < _minDate.year) return DateTime(_minDate.year);
+        if (date.year > _maxDate.year) return DateTime(_maxDate.year);
+        return date;
+      case OriginDatePickerMode.ym:
+        final dateYm = date.year * 100 + date.month;
+        final minYm = _minDate.year * 100 + _minDate.month;
+        final maxYm = _maxDate.year * 100 + _maxDate.month;
+        if (dateYm < minYm) return DateTime(_minDate.year, _minDate.month);
+        if (dateYm > maxYm) return DateTime(_maxDate.year, _maxDate.month);
+        return date;
+      case OriginDatePickerMode.ymd:
+        if (date.isBefore(_minDate)) return _minDate;
+        if (date.isAfter(_maxDate)) return _maxDate;
+        return date;
+    }
   }
 
   @override
@@ -114,11 +128,16 @@ class _OriginDatePickerState extends State<OriginDatePicker> {
         Expanded(
           flex: 4,
           child: OriginWheelPicker<int>(
+            key: ValueKey('year_${years.length}_$minYear'),
             items: years,
             selectedIndex: selectedYearIndex < 0 ? 0 : selectedYearIndex,
             unit: '年',
             labelBuilder: (y) => '$y',
-            onChanged: (idx) => _onYearChanged(years[idx]),
+            onChanged: (idx) {
+              if (idx >= 0 && idx < years.length) {
+                _onYearChanged(years[idx]);
+              }
+            },
           ),
         ),
 
@@ -127,11 +146,16 @@ class _OriginDatePickerState extends State<OriginDatePicker> {
           Expanded(
             flex: 3,
             child: OriginWheelPicker<int>(
+              key: ValueKey('month_${_currentDate.year}_${months.length}_$firstMonth'),
               items: months,
               selectedIndex: selectedMonthIndex < 0 ? 0 : selectedMonthIndex,
               unit: '月',
               labelBuilder: (m) => m.toString().padLeft(2, '0'),
-              onChanged: (idx) => _onMonthChanged(months[idx]),
+              onChanged: (idx) {
+                if (idx >= 0 && idx < months.length) {
+                  _onMonthChanged(months[idx]);
+                }
+              },
             ),
           ),
 
@@ -140,11 +164,16 @@ class _OriginDatePickerState extends State<OriginDatePicker> {
           Expanded(
             flex: 3,
             child: OriginWheelPicker<int>(
+              key: ValueKey('day_${_currentDate.year}_${_currentDate.month}_${days.length}_$firstDay'),
               items: days,
               selectedIndex: selectedDayIndex < 0 ? 0 : selectedDayIndex,
               unit: '日',
               labelBuilder: (d) => d.toString().padLeft(2, '0'),
-              onChanged: (idx) => _onDayChanged(days[idx]),
+              onChanged: (idx) {
+                if (idx >= 0 && idx < days.length) {
+                  _onDayChanged(days[idx]);
+                }
+              },
             ),
           ),
       ],
@@ -218,9 +247,9 @@ Future<DateTime?> showOriginDatePicker(
                     onPressed: () {
                       DateTime result = selected;
                       if (mode == OriginDatePickerMode.y) {
-                        result = DateTime(selected.year);
+                        result = DateTime(selected.year, 1, 1);
                       } else if (mode == OriginDatePickerMode.ym) {
-                        result = DateTime(selected.year, selected.month);
+                        result = DateTime(selected.year, selected.month, 1);
                       } else {
                         result = DateTime(selected.year, selected.month, selected.day);
                       }

@@ -1,7 +1,7 @@
-import 'package:beecount_business_ui/recurring_editor.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../custom_ui/widgets/origin_date_picker.dart';
 
 /// Same draft-until-confirm contract as the old wheel, with a wrapping heading.
 Future<T?> showRecurringEditorWheel<T>(
@@ -40,34 +40,10 @@ Future<DateTime?> showRecurringEditorDatePicker(
   required DateTime initial,
   required DateTime minDate,
   required DateTime maxDate,
-}) {
-  DateTime clamp(DateTime value) => value.isBefore(minDate)
-      ? minDate
-      : value.isAfter(maxDate)
-          ? maxDate
-          : value;
-  var selected = clamp(initial);
-  final l = AppLocalizations.of(context);
-  return showBeeSheet<DateTime>(context,
-      title: l.homeSelectDate,
-      child: BeeRecurringEditorDateWheels(
-          value: selected,
-          minDate: minDate,
-          maxDate: maxDate,
-          onChanged: (value) => selected = value),
-      footer: Row(children: [
-        Expanded(
-            child: BeeButton(
-                label: l.commonCancel,
-                kind: BeeButtonKind.secondary,
-                onPressed: () => Navigator.pop(context))),
-        const SizedBox(width: 8),
-        Expanded(
-            child: BeeButton(
-                label: l.commonOk,
-                onPressed: () => Navigator.pop(
-                    context,
-                    clamp(DateTime(
-                        selected.year, selected.month, selected.day))))),
-      ]));
-}
+}) =>
+    showOriginDatePicker(
+      context,
+      initial: initial,
+      minDate: minDate,
+      maxDate: maxDate,
+    );

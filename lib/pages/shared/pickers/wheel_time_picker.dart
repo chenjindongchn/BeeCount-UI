@@ -1,6 +1,7 @@
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../custom_ui/widgets/origin_time_picker.dart';
 
 class WheelTimePicker extends StatefulWidget {
   const WheelTimePicker({super.key, required this.initial});
@@ -16,8 +17,10 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            BeeTimeWheels(
-                value: value, onChanged: (v) => setState(() => value = v)),
+            OriginTimePicker(
+              initialTime: value,
+              onChanged: (v) => setState(() => value = v),
+            ),
             const SizedBox(height: 16),
             BeeButton(
                 label: AppLocalizations.of(context).commonConfirm,
@@ -27,6 +30,4 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
 
 Future<TimeOfDay?> showWheelTimePicker(BuildContext context,
         {required TimeOfDay initial}) =>
-    showBeeSheet<TimeOfDay>(context,
-        title: AppLocalizations.of(context).commonSelectTime,
-        child: WheelTimePicker(initial: initial));
+    showOriginTimePicker(context, initial: initial);

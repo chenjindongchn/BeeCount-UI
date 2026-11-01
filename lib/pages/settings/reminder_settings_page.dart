@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/reminder_providers.dart';
 import '../shared/scaffold/widgets/page_scaffold.dart';
 import 'reminders/bindings/reminder_diagnostics.dart';
+import '../../custom_ui/widgets/origin_time_picker.dart';
 
 class ReminderSettingsPage extends ConsumerStatefulWidget {
   const ReminderSettingsPage({super.key});
@@ -39,26 +40,9 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
   }
 
   Future<void> _time() async {
-    final l = AppLocalizations.of(context),
-        settings = ref.read(reminderSettingsProvider);
-    var draft = TimeOfDay(hour: settings.hour, minute: settings.minute);
-    final value = await showBeeSheet<TimeOfDay>(context,
-        title: l.commonSelectTime,
-        child: StatefulBuilder(
-            builder: (context, setDraft) => BeeTimeWheels(
-                value: draft, onChanged: (v) => setDraft(() => draft = v))),
-        footer: Row(children: [
-          Expanded(
-              child: BeeButton(
-                  label: l.commonCancel,
-                  kind: BeeButtonKind.secondary,
-                  onPressed: () => Navigator.pop(context))),
-          const SizedBox(width: 12),
-          Expanded(
-              child: BeeButton(
-                  label: l.commonOk,
-                  onPressed: () => Navigator.pop(context, draft))),
-        ]));
+    final settings = ref.read(reminderSettingsProvider);
+    final draft = TimeOfDay(hour: settings.hour, minute: settings.minute);
+    final value = await showOriginTimePicker(context, initial: draft);
     if (mounted && value != null) {
       await ref
           .read(reminderSettingsProvider.notifier)

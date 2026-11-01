@@ -1,6 +1,8 @@
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../custom_ui/widgets/origin_date_picker.dart';
+import '../../../custom_ui/widgets/origin_date_time_picker.dart';
 
 enum WheelDatePickerMode { y, ym, ymd }
 
@@ -43,15 +45,17 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            BeeDateWheels(
-                value: date,
-                minYear: 2000,
-                maxYear: 2100,
-                minimum: widget.minDate,
-                maximum: widget.maxDate,
-                showMonth: widget.mode != WheelDatePickerMode.y,
-                showDay: widget.mode == WheelDatePickerMode.ymd,
-                onChanged: (v) => setState(() => date = v)),
+            OriginDatePicker(
+              initialDate: date,
+              mode: switch (widget.mode) {
+                WheelDatePickerMode.y => OriginDatePickerMode.y,
+                WheelDatePickerMode.ym => OriginDatePickerMode.ym,
+                WheelDatePickerMode.ymd => OriginDatePickerMode.ymd,
+              },
+              minDate: widget.minDate,
+              maxDate: widget.maxDate,
+              onChanged: (v) => setState(() => date = v),
+            ),
             const SizedBox(height: 16),
             BeeButton(
                 label: widget.confirmLabel ??
@@ -66,44 +70,24 @@ Future<DateTime?> showWheelDatePicker(BuildContext context,
         DateTime? minDate,
         DateTime? maxDate,
         String? confirmLabel}) =>
-    showBeeSheet<DateTime>(context,
-        title: AppLocalizations.of(context).homeSelectDate,
-        child: WheelDatePicker(
-            initial: initial,
-            mode: mode,
-            minDate: minDate,
-            maxDate: maxDate,
-            confirmLabel: confirmLabel));
+    showOriginDatePicker(
+      context,
+      initial: initial,
+      mode: switch (mode) {
+        WheelDatePickerMode.y => OriginDatePickerMode.y,
+        WheelDatePickerMode.ym => OriginDatePickerMode.ym,
+        WheelDatePickerMode.ymd => OriginDatePickerMode.ymd,
+      },
+      minDate: minDate,
+      maxDate: maxDate,
+      confirmLabel: confirmLabel,
+    );
 
-/// Preserve the original two-step, second-precision workflow and cancel semantics.
+/// 使用 OriginOS 一体化记账时间抽屉替换原版两步弹窗
 Future<DateTime?> showWheelDateTimePicker(BuildContext context,
-    {required DateTime initial, DateTime? maxDate}) async {
-  final date = await showWheelDatePicker(context,
+    {required DateTime initial, DateTime? maxDate}) =>
+    showOriginDateTimePicker(
+      context,
       initial: initial,
       maxDate: maxDate,
-      confirmLabel: AppLocalizations.of(context).commonNext);
-  if (date == null || !context.mounted) return null;
-  var time = TimeOfDay.fromDateTime(initial);
-  var second = initial.second;
-  final clock = await showBeeSheet<DateTime>(context,
-      title: AppLocalizations.of(context).commonSelectTime,
-      child: StatefulBuilder(
-          builder: (ctx, update) => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    BeeTimeWheels(
-                        value: time,
-                        second: second,
-                        onChanged: (v) => update(() => time = v),
-                        onSecondChanged: (v) => update(() => second = v)),
-                    const SizedBox(height: 16),
-                    BeeButton(
-                        label: AppLocalizations.of(ctx).commonConfirm,
-                        onPressed: () => Navigator.pop(
-                            ctx,
-                            DateTime(date.year, date.month, date.day, time.hour,
-                                time.minute, second))),
-                  ])));
-  return clock;
-}
+    );

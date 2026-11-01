@@ -377,3 +377,25 @@ git rebase main
 - 所有原生 `AlertDialog` 均由全局 `applyOriginTheme` 注入贴底悬浮和 30dp 圆角；
 - 0 处直接修改 `lib/pages/` 业务代码，随时可安全执行 `git pull upstream main` 和 `git rebase`。
 
+---
+
+## 八、全软件日期与时间选择组件（OriginUI 统一桥接与深度改造）
+
+- **改造日期**：2026-11-01
+- **第一性原理与设计初衷**：
+  原作者在全工程中（包括记账全屏页 `AmountEditorSheet`、日历打卡页 `CalendarPage`、账单搜索过滤 `TransactionSearchFilter` 等）均通过 `wheel_date_picker.dart`、`wheel_time_picker.dart` 和 `detail_period_controls.dart` 统一分发弹窗。
+  为了在不破坏上游任何业务逻辑的前提下，彻底消除原版黄色粗糙滚轮及 Flutter 原生 Material 表盘时钟，让全软件**所有新老记账与统计入口 100% 统一为 vivo OriginOS 风格**：
+  1. 在 `lib/custom_ui/widgets/` 建立自研套件（`OriginWheelPicker`、`OriginDatePicker`、`OriginTimePicker`、`OriginDateTimePicker`、`OriginPeriodPicker`）；
+  2. 将 3 个上游基础适配器函数极简桥接至 OriginUI，保持入参出参 100% 一致。
+
+### 1. 修改文件清单与冲突排查指引
+
+| 序号 | 所在源码位置 | 修改内容 | 冲突排查指引 |
+| :--- | :--- | :--- | :--- |
+| **01** | `lib/pages/shared/pickers/wheel_date_picker.dart` | `showWheelDatePicker` 转发至 `showOriginDatePicker`；`showWheelDateTimePicker` 转发至一体化 `showOriginDateTimePicker` | 若上游更新该文件，保留对 `showOriginDatePicker` 和 `showOriginDateTimePicker` 的极简调用即可 |
+| **02** | `lib/pages/shared/pickers/wheel_time_picker.dart` | `showWheelTimePicker` 转发至 `showOriginTimePicker` | 保留转发调用即可 |
+| **03** | `lib/pages/shared/resources/widgets/detail_period_controls.dart` | `showResourcePeriodPicker` 转发至 `showOriginPeriodPicker` | 保留转发调用即可 |
+| **04** | `lib/pages/transaction/recurring/bindings/recurring_editor_pickers.dart` | `showRecurringEditorDatePicker` 转发至 `showOriginDatePicker` | 保留转发调用即可 |
+| **05** | `lib/pages/settings/reminder_settings_page.dart` | `_time()` 时间设置调用 `showOriginTimePicker` | 保留调用即可 |
+
+
