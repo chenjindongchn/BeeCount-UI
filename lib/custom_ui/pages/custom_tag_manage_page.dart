@@ -17,6 +17,8 @@ import '../../services/system/logger_service.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_menu.dart';
+import '../widgets/origin_dialog.dart';
+import '../widgets/origin_divider.dart';
 import 'custom_tag_detail_page.dart';
 
 /// vivo OriginOS 风格自定义标签管理页面 (CustomTagManagePage)
@@ -166,32 +168,38 @@ class _CustomTagManagePageState extends ConsumerState<CustomTagManagePage> {
         return;
       }
       setState(() => _working = false);
-      final overwrite = await showBeeDialog<bool>(
+      final overwrite = await showOriginCustomDialog<bool>(
         context,
-        title: l.tagImportModeTitle,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BeeMenuRow(
-              title: l.tagImportModeMerge,
-              subtitle: l.tagImportModeMergeDesc,
-              leading: const BeeLineIcon('GitMerge'),
-              onTap: () => Navigator.pop(context, false),
+        child: OriginDialog(
+          title: l.tagImportModeTitle,
+          textAlign: TextAlign.center,
+          content: Container(
+            decoration: BoxDecoration(
+              color: OriginTokens.cardSecondary(context),
+              borderRadius: BorderRadius.circular(14.0),
             ),
-            BeeMenuRow(
-              title: l.tagImportModeOverwrite,
-              subtitle: l.tagImportModeOverwriteDesc,
-              leading: const BeeLineIcon('RefreshCw'),
-              onTap: () => Navigator.pop(context, true),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BeeMenuRow(
+                  title: l.tagImportModeMerge,
+                  subtitle: l.tagImportModeMergeDesc,
+                  leading: const BeeLineIcon('GitMerge'),
+                  onTap: () => Navigator.pop(context, false),
+                ),
+                const OriginDivider(startIndent: 44.0, endIndent: 12.0),
+                BeeMenuRow(
+                  title: l.tagImportModeOverwrite,
+                  subtitle: l.tagImportModeOverwriteDesc,
+                  leading: const BeeLineIcon('RefreshCw'),
+                  onTap: () => Navigator.pop(context, true),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l.commonCancel),
           ),
-        ],
+          cancelText: l.commonCancel,
+          onCancel: () => Navigator.pop(context),
+        ),
       );
       if (overwrite == null || !mounted) return;
       setState(() => _working = true);

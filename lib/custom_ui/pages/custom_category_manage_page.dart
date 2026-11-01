@@ -22,6 +22,8 @@ import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_menu.dart';
 import '../widgets/origin_segmented_control.dart';
+import '../widgets/origin_dialog.dart';
+import '../widgets/origin_divider.dart';
 
 /// vivo OriginOS 风格自定义分类管理页面 (CustomCategoryManagePage)
 ///
@@ -80,34 +82,37 @@ class _CustomCategoryManagePageState
   /// 分享分类
   Future<void> _shareCategories() async {
     final l10n = AppLocalizations.of(context);
-    final scope = await showDialog<String>(
-      context: context,
-      builder: (context) => BeeDialog(
-        title: Text(l10n.categoryShareScopeTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BeeMenuRow(
-              leading: const BeeLineIcon('ListFilter'),
-              title: _tabController.index == 0
-                  ? l10n.categoryShareScopeExpense
-                  : l10n.categoryShareScopeIncome,
-              onTap: () => Navigator.pop(context, 'current'),
-            ),
-            BeeMenuRow(
-              leading: const BeeLineIcon('Layers'),
-              title: l10n.categoryShareScopeAll,
-              onTap: () => Navigator.pop(context, 'all'),
-            ),
-          ],
-        ),
-        actions: [
-          BeeButton(
-            label: l10n.commonCancel,
-            kind: BeeButtonKind.secondary,
-            onPressed: () => Navigator.pop(context),
+    final scope = await showOriginCustomDialog<String>(
+      context,
+      child: OriginDialog(
+        title: l10n.categoryShareScopeTitle,
+        textAlign: TextAlign.center,
+        content: Container(
+          decoration: BoxDecoration(
+            color: OriginTokens.cardSecondary(context),
+            borderRadius: BorderRadius.circular(14.0),
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BeeMenuRow(
+                leading: const BeeLineIcon('ListFilter'),
+                title: _tabController.index == 0
+                    ? l10n.categoryShareScopeExpense
+                    : l10n.categoryShareScopeIncome,
+                onTap: () => Navigator.pop(context, 'current'),
+              ),
+              const OriginDivider(startIndent: 44.0, endIndent: 12.0),
+              BeeMenuRow(
+                leading: const BeeLineIcon('Layers'),
+                title: l10n.categoryShareScopeAll,
+                onTap: () => Navigator.pop(context, 'all'),
+              ),
+            ],
+          ),
+        ),
+        cancelText: l10n.commonCancel,
+        onCancel: () => Navigator.pop(context),
       ),
     );
 
@@ -356,40 +361,50 @@ class _CustomCategoryManagePageState
       toDeleteList.add(categoryName);
     }
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => BeeDialog(
-        title: Text(l10n.categoryClearUnusedTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.categoryClearUnusedMessage(unusedCategories.length)),
-            const SizedBox(height: 16),
-            Text(
-              l10n.categoryClearUnusedListTitle,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+    final confirm = await showOriginConfirmDialog(
+      context,
+      title: l10n.categoryClearUnusedTitle,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.categoryClearUnusedMessage(unusedCategories.length),
+            style: TextStyle(
+              fontSize: 14.0,
+              color: OriginTokens.textSecondary(context),
             ),
-            const SizedBox(height: 8),
-            Text(
-              toDeleteList.join('\n'),
-              style: const TextStyle(fontSize: 13),
-            ),
-          ],
-        ),
-        actions: [
-          BeeButton(
-            label: l10n.commonCancel,
-            kind: BeeButtonKind.secondary,
-            onPressed: () => Navigator.pop(context, false),
           ),
-          BeeButton(
-            label: l10n.commonDelete,
-            kind: BeeButtonKind.danger,
-            onPressed: () => Navigator.pop(context, true),
+          const SizedBox(height: 14.0),
+          Text(
+            l10n.categoryClearUnusedListTitle,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: OriginTokens.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: OriginTokens.cardSecondary(context),
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            child: Text(
+              toDeleteList.join('\n'),
+              style: TextStyle(
+                fontSize: 13.0,
+                color: OriginTokens.textSecondary(context),
+                height: 1.4,
+              ),
+            ),
           ),
         ],
       ),
+      confirmText: l10n.commonDelete,
+      cancelText: l10n.commonCancel,
+      isDanger: true,
     );
 
     if (confirm != true || !mounted) return;

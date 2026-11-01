@@ -149,11 +149,13 @@ class _OriginSheetHostState<T> extends State<_OriginSheetHost<T>>
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final insetBottom = mq.viewInsets.bottom;
+    final isLandscape = mq.orientation == Orientation.landscape;
     final maxH = mq.size.height - mq.padding.top - insetBottom - 8.0;
 
     Widget cardContent = widget.route.builder(context);
     if (widget.route.heightFactor != null) {
-      final h = (mq.size.height * widget.route.heightFactor!).clamp(0.0, maxH);
+      final factor = isLandscape ? 0.95 : widget.route.heightFactor!;
+      final h = (mq.size.height * factor).clamp(0.0, maxH);
       cardContent = SizedBox(height: h, width: double.infinity, child: cardContent);
     } else {
       cardContent = ConstrainedBox(

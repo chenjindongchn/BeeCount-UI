@@ -127,7 +127,11 @@ class _CustomTransactionPageState extends ConsumerState<CustomTransactionPage>
                         behavior: HitTestBehavior.opaque,
                         onTap: () {}, // 阻止向背景遮罩穿透
                         child: SizedBox(
-                          height: MediaQuery.sizeOf(context).height * 0.72,
+                          height: MediaQuery.sizeOf(context).height *
+                              (MediaQuery.orientationOf(context) ==
+                                      Orientation.landscape
+                                  ? 0.95
+                                  : 0.72),
                           child: ClipRRect(
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(OriginSheetTokens.cornerRadius),

@@ -12,10 +12,12 @@ import '../../pages/transaction/recording/bindings/amount_editor_sheet.dart';
 import '../../pages/transaction/recording/bindings/recording_category_section.dart';
 import '../../pages/transaction/recording/bindings/recording_save.dart';
 import '../styles/origin_sheet_tokens.dart';
+import '../styles/origin_tokens.dart';
 import '../widgets/custom_account_grid_picker.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_date_picker.dart';
 import '../widgets/origin_keypad.dart';
+import '../widgets/origin_segmented_control.dart';
 import '../widgets/origin_text_field.dart';
 import '../widgets/origin_time_picker.dart';
 
@@ -35,9 +37,10 @@ Future<bool?> showCustomTransactionSheet(
   bool excludeFromStats = false,
   bool excludeFromBudget = false,
 }) {
+  final isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape;
   return showOriginBottomSheet<bool>(
     context,
-    heightFactor: 0.72, // 参照参考图，约占屏幕 72%，顶部露出背景卡片
+    heightFactor: isLandscape ? 0.95 : 0.72, // 竖屏约占屏幕 72%，横屏扩展至 95% 留出舒适空间
     builder: (_) => CustomTransactionSheet(
       initialKind: initialKind,
       initialCategoryId: initialCategoryId,
@@ -107,6 +110,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     with SingleTickerProviderStateMixin {
   // 0=支出, 1=收入, 2=转账
   late int _selectedType;
+  int? _animatingToPage;
   late int _ledgerId;
   late final PageController _pageController;
   late final AnimationController _cursorController;
@@ -198,6 +202,43 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         setState(() => _selectedAccountId = acc);
       }
     } catch (_) {}
+  }
+
+  void _onTypeSelected(int index) {
+    if (_selectedType == index) return;
+    HapticFeedback.selectionClick();
+    _animatingToPage = index;
+    setState(() {
+      _selectedType = index;
+      _selectedCategory = null;
+    });
+    _updateDefaultAccountForKind(index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 250),
+      curve: OriginTokens.fastOutSlowIn,
+    ).then((_) {
+      if (mounted) {
+        _animatingToPage = null;
+      }
+    });
+  }
+
+  void _onPageChanged(int index) {
+    if (_animatingToPage != null) {
+      if (index == _animatingToPage) {
+        _animatingToPage = null;
+      }
+      return;
+    }
+    if (_selectedType != index) {
+      HapticFeedback.selectionClick();
+      setState(() {
+        _selectedType = index;
+        _selectedCategory = null;
+      });
+      _updateDefaultAccountForKind(index);
+    }
   }
 
   // --- 键盘计算器逻辑 ---
@@ -416,6 +457,130 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     final cardBg = OriginSheetTokens.cardColor(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+
+    if (isLandscape) {
+      return Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(OriginSheetTokens.cornerRadius),
+          ),
+        ),
+        child: Column(
+          children: [
+            // 顶部微型拉手条（横屏模式留出轻微拖拽热区）
+            if (widget.showDragHandle)
+              OriginSheetDragRegion(
+                child: SizedBox(
+                  height: 12,
+                  child: widget.dragHandleBarVisible
+                      ? Center(
+                          child: Container(
+                            width: 32,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white24 : Colors.black12,
+                              borderRadius: BorderRadius.circular(1.5),
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+
+            // 横屏下采用双栏并排结构（彻底解决竖向空间被挤压导致溢出）
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 左栏：分类切换与分类网格/转账视图
+                  Expanded(
+                    flex: 11,
+                    child: Column(
+                      children: [
+                        _buildTopHeader(context),
+                        const SizedBox(height: 4),
+                        Expanded(
+                          child: PageView.builder(
+                            controller: _pageController,
+                            itemCount: 3,
+                            onPageChanged: _onPageChanged,
+                            itemBuilder: (context, index) {
+                              switch (index) {
+                                case 0:
+                                  return _buildCategoryGrid(context,
+                                      kind: 'expense', crossAxisCount: 4);
+                                case 1:
+                                  return _buildCategoryGrid(context,
+                                      kind: 'income', crossAxisCount: 4);
+                                case 2:
+                                  return _buildTransferAccounts(context);
+                                default:
+                                  return const SizedBox.shrink();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 纵向精致分割线
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 0.6,
+                    indent: 4,
+                    endIndent: 4,
+                    color: isDark ? Colors.white12 : const Color(0xFFE5E7EB),
+                  ),
+
+                  // 右栏：金额展示、备注输入、日期账户胶囊、紧凑数字键盘
+                  Expanded(
+                    flex: 12,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: MediaQuery.of(context).padding.right > 0
+                            ? MediaQuery.of(context).padding.right
+                            : 6.0,
+                        bottom: bottomInset > 0 ? bottomInset * 0.35 : 2.0,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildAmountDisplay(context, compact: true),
+                              const SizedBox(height: 2),
+                              _buildNoteInput(context),
+                              const SizedBox(height: 3),
+                              _buildMetaSelectorRow(context),
+                            ],
+                          ),
+                          OriginKeypad(
+                            keyHeight: 36, // 横屏按键高度调为紧凑 36dp，布局完美无任何溢出
+                            onDigit: _onDigit,
+                            onOperator: _onOperator,
+                            onBackspace: _onBackspace,
+                            onClear: _onClear,
+                            onDecimal: _onDecimal,
+                            onSave: () => _submit(continueAdding: false),
+                            onSaveAndContinue: () =>
+                                _submit(continueAdding: true),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -458,16 +623,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
             child: PageView.builder(
               controller: _pageController,
               itemCount: 3,
-              onPageChanged: (index) {
-                if (_selectedType != index) {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    _selectedType = index;
-                    _selectedCategory = null;
-                  });
-                  _updateDefaultAccountForKind(index);
-                }
-              },
+              onPageChanged: _onPageChanged,
               itemBuilder: (context, index) {
                 switch (index) {
                   case 0:
@@ -553,94 +709,39 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     );
   }
 
-  /// 居中 Segmented 切换胶囊（高 30dp，轻盈小巧）
+  /// 居中 Segmented 切换胶囊（高 32dp，使用统一现成的 OriginSegmentedControl）
   Widget _buildTypeSegmented(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final segmentBg = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFECEEF2);
-
     return Center(
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.all(2.5),
-        decoration: BoxDecoration(
-          color: segmentBg,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSegmentItem(context, title: '支出', index: 0),
-            _buildSegmentItem(context, title: '收入', index: 1),
-            _buildSegmentItem(context, title: '转账', index: 2),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSegmentItem(
-    BuildContext context, {
-    required String title,
-    required int index,
-  }) {
-    final isSelected = _selectedType == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return GestureDetector(
-      onTap: () {
-        if (_selectedType != index) {
-          HapticFeedback.selectionClick();
-          setState(() {
-            _selectedType = index;
-            _selectedCategory = null;
-          });
-          _pageController.animateToPage(
-            index,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutCubic,
-          );
-          _updateDefaultAccountForKind(index);
-        }
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? const Color(0xFF3E3E42) : Colors.white)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  )
-                ]
-              : null,
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            color: isSelected
-                ? (isDark ? Colors.white : const Color(0xFF1D1D1F))
-                : (isDark ? Colors.white54 : const Color(0xFF8E8E93)),
-          ),
+      child: SizedBox(
+        width: 216,
+        child: OriginSegmentedControl<int>(
+          items: const [0, 1, 2],
+          selectedItem: _selectedType,
+          height: 32,
+          onSelected: _onTypeSelected,
+          labelBuilder: (index) {
+            switch (index) {
+              case 0:
+                return '支出';
+              case 1:
+                return '收入';
+              case 2:
+                return '转账';
+              default:
+                return '';
+            }
+          },
         ),
       ),
     );
   }
 
   /// 金额输入展示区（位于备注正上方，字号 25sp，轻巧自然，末端带主题色闪烁光标）
-  Widget _buildAmountDisplay(BuildContext context) {
+  Widget _buildAmountDisplay(BuildContext context, {bool compact = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
+      padding: EdgeInsets.fromLTRB(20, compact ? 4 : 10, 20, compact ? 1 : 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -651,7 +752,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
               Text(
                 '¥',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: compact ? 17 : 20,
                   fontWeight: FontWeight.bold,
                   color: isDark ? Colors.white70 : const Color(0xFF2C2C2E),
                 ),
@@ -666,7 +767,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                       Text(
                         _amountExpression,
                         style: TextStyle(
-                          fontSize: 26,
+                          fontSize: compact ? 22 : 26,
                           fontWeight: FontWeight.w500,
                           letterSpacing: -0.3,
                           color: isDark ? Colors.white : const Color(0xFF1D1D1F),
@@ -676,7 +777,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                         opacity: _cursorController,
                         child: Container(
                           width: 1.8,
-                          height: 26,
+                          height: compact ? 22 : 26,
                           margin: const EdgeInsets.only(left: 2.5),
                           decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.primary,
@@ -690,7 +791,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
               ),
             ],
           ),
-          const SizedBox(height: 3),
+          SizedBox(height: compact ? 2 : 3),
           Divider(
             height: 1,
             thickness: 0.6,
@@ -701,15 +802,15 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     );
   }
 
-  /// 5 列精致分类图标网格（紧凑尺寸，直径 38dp）
-  Widget _buildCategoryGrid(BuildContext context, {required String kind}) {
+  /// 5 列（横屏 4 列）精致分类图标网格（紧凑尺寸，直径 38dp）
+  Widget _buildCategoryGrid(BuildContext context, {required String kind, int crossAxisCount = 5}) {
     final categoriesAsync = ref.watch(
       recordingCategoriesProvider((ledgerId: _ledgerId, kind: kind)),
     );
 
     return categoriesAsync.when(
       // 骨架屏与真实网格同布局同尺寸，数据到达时切换近似无缝，避免上升动画中视觉跳变
-      loading: () => _buildCategoryGridSkeleton(context),
+      loading: () => _buildCategoryGridSkeleton(context, crossAxisCount: crossAxisCount),
       error: (_, __) => const Center(child: Text('分类加载失败')),
       data: (categories) {
         if (categories.isEmpty) {
@@ -732,8 +833,8 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
           child: GridView.builder(
             physics: const BouncingScrollPhysics(),
             scrollDirection: Axis.vertical,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
               mainAxisSpacing: 6,
               crossAxisSpacing: 6,
               childAspectRatio: 0.92,
@@ -808,7 +909,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
   }
 
   /// 分类网格骨架屏：复用未选中分类的底色与尺寸，保证 loading→data 无视觉跳变
-  Widget _buildCategoryGridSkeleton(BuildContext context) {
+  Widget _buildCategoryGridSkeleton(BuildContext context, {int crossAxisCount = 5}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final circleColor = isDark ? const Color(0xFF28282C) : const Color(0xFFF4F5F7);
     final labelColor = isDark ? Colors.white12 : const Color(0xFFE5E7EB);
@@ -817,8 +918,8 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 5,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
           mainAxisSpacing: 6,
           crossAxisSpacing: 6,
           childAspectRatio: 0.92,

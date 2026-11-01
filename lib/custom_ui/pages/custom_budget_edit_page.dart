@@ -16,6 +16,7 @@ import '../widgets/origin_divider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_segmented_control.dart';
 import '../widgets/origin_amount_field.dart';
+import '../widgets/origin_dialog.dart';
 
 /// vivo OriginOS 风格预算编辑/添加页面 (CustomBudgetEditPage)
 class CustomBudgetEditPage extends ConsumerStatefulWidget {
@@ -199,22 +200,13 @@ class _CustomBudgetEditPageState extends ConsumerState<CustomBudgetEditPage> {
   Future<void> _delete() async {
     if (_saving || _loading || widget.budget == null) return;
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showBeeDialog<bool>(
+    final confirmed = await showOriginConfirmDialog(
       context,
       title: l10n.commonDelete,
-      child: Text(l10n.budgetDeleteConfirm),
-      actions: [
-        BeeButton(
-          label: l10n.commonCancel,
-          kind: BeeButtonKind.secondary,
-          onPressed: () => Navigator.pop(context, false),
-        ),
-        BeeButton(
-          label: l10n.commonDelete,
-          kind: BeeButtonKind.danger,
-          onPressed: () => Navigator.pop(context, true),
-        ),
-      ],
+      message: l10n.budgetDeleteConfirm,
+      confirmText: l10n.commonDelete,
+      cancelText: l10n.commonCancel,
+      isDanger: true,
     );
     if (confirmed != true || !mounted || _saving) return;
     setState(() => _saving = true);

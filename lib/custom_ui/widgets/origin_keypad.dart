@@ -22,6 +22,7 @@ class OriginKeypad extends StatelessWidget {
     required this.onSaveAndContinue,
     this.saveLabel = '保存',
     this.continueLabel = '再记一笔',
+    this.keyHeight = 44.0,
   });
 
   final ValueChanged<String> onDigit;
@@ -33,6 +34,7 @@ class OriginKeypad extends StatelessWidget {
   final VoidCallback onSaveAndContinue;
   final String saveLabel;
   final String continueLabel;
+  final double keyHeight;
 
   Widget _buildKey({
     required BuildContext context,
@@ -70,7 +72,7 @@ class OriginKeypad extends StatelessWidget {
                   }
                 : null,
             child: SizedBox(
-              height: 44,
+              height: keyHeight,
               child: Center(child: child),
             ),
           ),

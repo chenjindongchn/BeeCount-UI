@@ -158,9 +158,9 @@ class _OriginProfileCardState extends ConsumerState<OriginProfileCard> {
 
   Future<void> _showEditDisplayName() async {
     final current = ref.read(displayNameProvider);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => _OriginEditDisplayNameDialog(initial: current),
+    final result = await showOriginCustomDialog<String>(
+      context,
+      child: _OriginEditDisplayNameDialog(initial: current),
     );
 
     if (result == null || !mounted) return;

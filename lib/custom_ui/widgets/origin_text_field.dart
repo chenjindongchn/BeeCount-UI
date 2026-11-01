@@ -313,6 +313,7 @@ class _OriginTextFieldState extends State<OriginTextField> {
         filled: true,
         fillColor: fillBg,
         labelText: widget.label,
+        floatingLabelBehavior: FloatingLabelBehavior.never,
         labelStyle: TextStyle(
           fontSize: 13.0,
           color: OriginTokens.textSecondary(context),
