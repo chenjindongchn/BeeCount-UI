@@ -8,8 +8,8 @@ import 'package:beecount_business_ui/beecount_business_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/ledger_display_item.dart';
-import '../../pages/budget/budget_page.dart';
 import '../../pages/cloud/join_shared_ledger_page.dart';
+import 'custom_budget_page.dart';
 import '../../pages/main/ledgers/widgets/ledger_card.dart';
 import '../../pages/shared/selectors/currency_picker_sheet.dart';
 import '../../providers.dart';
@@ -57,6 +57,21 @@ class _CustomLedgersPageState extends ConsumerState<CustomLedgersPage> {
       context,
       l.ledgersSwitched(translateLedgerName(context, ledger.name)),
       tone: BeeTone.success,
+    );
+  }
+
+  Future<void> _handleBudget(LedgerDisplayItem ledger) async {
+    if (ref.read(currentLedgerIdProvider) != ledger.id) {
+      ref.read(currentLedgerIdProvider.notifier).state = ledger.id;
+      ref.invalidate(currentLedgerProvider);
+      ref.invalidate(cachedTransactionsWithCategoryProvider);
+    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CustomBudgetPage(),
+      ),
     );
   }
 
@@ -231,12 +246,7 @@ class _CustomLedgersPageState extends ConsumerState<CustomLedgersPage> {
                         ledger: ledger,
                         selected: ledger.id == currentId,
                         onTap: () => _handleTap(ledger),
-                        onBudget: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const BudgetPage(),
-                          ),
-                        ),
+                        onBudget: () => _handleBudget(ledger),
                       ),
                     ),
                   ),

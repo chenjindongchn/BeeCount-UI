@@ -30,6 +30,7 @@ class OriginAnalyticsContent extends ConsumerWidget {
     required this.month,
     required this.onTypeChanged,
     required this.onRecalculate,
+    this.periodLabel,
     this.onPeriod,
     this.onPrevious,
     this.onNext,
@@ -39,6 +40,7 @@ class OriginAnalyticsContent extends ConsumerWidget {
   final String scope;
   final String type;
   final DateTime month;
+  final String? periodLabel;
   final ValueChanged<String> onTypeChanged;
   final ValueChanged<int> onRecalculate;
   final VoidCallback? onPeriod;
@@ -55,11 +57,12 @@ class OriginAnalyticsContent extends ConsumerWidget {
         ref.watch(ledgerUnconvertedForeignTxCountProvider).valueOrNull ?? 0;
     final foreign = ref.watch(ledgerForeignTxCountProvider).valueOrNull ?? 0;
 
-    final period = scope == 'all'
-        ? l.analyticsAllYears
-        : scope == 'year'
-            ? l.homeYear(month.year)
-            : DateFormat.yMMM(l.localeName).format(month);
+    final period = periodLabel ??
+        (scope == 'all'
+            ? l.analyticsAllYears
+            : scope == 'year'
+                ? l.homeYear(month.year)
+                : DateFormat.yMMM(l.localeName).format(month));
 
     final label = type == 'expense'
         ? l.homeExpense
@@ -187,87 +190,7 @@ class OriginAnalyticsContent extends ConsumerWidget {
         mainAmount: formatMoneyCompact(data.total, trimZeros: false),
         hideAmounts: hide,
         onTap: onPeriod,
-        action: Container(
-          padding: const EdgeInsets.all(2.0),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(14.0),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onTypeChanged('expense'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-                  decoration: BoxDecoration(
-                    color: type == 'expense'
-                        ? Colors.white.withValues(alpha: 0.28)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: Text(
-                    l.homeExpense,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: type == 'expense' ? FontWeight.w600 : FontWeight.normal,
-                      color: type == 'expense'
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.72),
-                    ),
-                  ),
-                ),
-              ),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onTypeChanged('income'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-                  decoration: BoxDecoration(
-                    color: type == 'income'
-                        ? Colors.white.withValues(alpha: 0.28)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: Text(
-                    l.homeIncome,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: type == 'income' ? FontWeight.w600 : FontWeight.normal,
-                      color: type == 'income'
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.72),
-                    ),
-                  ),
-                ),
-              ),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onTypeChanged('balance'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-                  decoration: BoxDecoration(
-                    color: type == 'balance'
-                        ? Colors.white.withValues(alpha: 0.28)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: Text(
-                    l.homeBalance,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: type == 'balance' ? FontWeight.w600 : FontWeight.normal,
-                      color: type == 'balance'
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.72),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        action: null,
         metrics: [
           OriginHeroMetric(
             label: '$averageLabel$label',
@@ -286,109 +209,86 @@ class OriginAnalyticsContent extends ConsumerWidget {
           l.statsConvertedFootnote(base),
           style: TextStyle(fontSize: 10, color: theme.hintColor),
         ),
-      if (data.empty)
-        BeeSurface(
-          child: BeeEmptyState(
-            title: l.commonEmpty,
-            message: l.v4InsightsNoData,
-            action: BeeButton(
-              label: l.analyticsSwitchTo(
-                type == 'expense'
-                    ? l.homeIncome
-                    : type == 'income'
-                        ? l.homeBalance
-                        : l.homeExpense,
+      AnalyticsTrend(
+        key: ValueKey((scope, month, type, data.total, data.count)),
+        data: data,
+        scope: scope,
+        title: l.v4InsightsTrendTitle(label),
+        unit: l.v4InsightsAmountUnit(base),
+        averageLabel: '$averageLabel ${money(data.average)}',
+        formatValue: money,
+        onAverage: average,
+        onPrevious: onPrevious,
+        onNext: onNext,
+      ),
+      if (type == 'balance')
+        card(
+          l.v4InsightsBalanceComposition,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BeeAnalyticsComposition(
+                incomeLabel: l.homeIncome,
+                expenseLabel: l.homeExpense,
+                income: money(data.incomeTotal),
+                expense: money(data.expenseTotal),
+                onIncome: () => onTypeChanged('income'),
+                onExpense: () => onTypeChanged('expense'),
               ),
-              onPressed: () => onTypeChanged(
-                type == 'expense'
-                    ? 'income'
-                    : type == 'income'
-                        ? 'balance'
-                        : 'expense',
+              const SizedBox(height: 11),
+              Text(
+                l.v4InsightsBalanceEquation,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10, color: theme.hintColor),
               ),
-            ),
+            ],
           ),
         )
       else ...[
-        AnalyticsTrend(
-          key: ValueKey((scope, month, type, data)),
-          data: data,
-          scope: scope,
-          title: l.v4InsightsTrendTitle(label),
-          unit: l.v4InsightsAmountUnit(base),
-          averageLabel: '$averageLabel ${money(data.average)}',
-          formatValue: money,
-          onAverage: average,
-          onPrevious: onPrevious,
-          onNext: onNext,
-        ),
-        if (type == 'balance')
+        if (data.total > 0)
           card(
-            l.v4InsightsBalanceComposition,
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                BeeAnalyticsComposition(
-                  incomeLabel: l.homeIncome,
-                  expenseLabel: l.homeExpense,
-                  income: money(data.incomeTotal),
-                  expense: money(data.expenseTotal),
-                  onIncome: () => onTypeChanged('income'),
-                  onExpense: () => onTypeChanged('expense'),
-                ),
-                const SizedBox(height: 11),
-                Text(
-                  l.v4InsightsBalanceEquation,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 10, color: theme.hintColor),
-                ),
-              ],
+            l.v4InsightsCategoryShare,
+            AnalyticsPie(
+              key: ValueKey((scope, month, type, data.total)),
+              data: data,
             ),
-          )
-        else ...[
-          if (data.total > 0)
-            card(
-              l.v4InsightsCategoryShare,
-              AnalyticsPie(
-                key: ValueKey((scope, month, type, data)),
-                data: data,
+            action: TextButton(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 24),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: theme.hintColor,
               ),
-              action: TextButton(
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 24),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: theme.hintColor,
-                ),
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => CustomCategoryManagePage(
-                        initialTabIndex: type == 'income' ? 1 : 0,
-                      ),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => CustomCategoryManagePage(
+                      initialTabIndex: type == 'income' ? 1 : 0,
                     ),
-                  );
-                  if (context.mounted) {
-                    ref.read(statsRefreshProvider.notifier).state++;
-                  }
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        l.categoryTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10),
-                      ),
+                  ),
+                );
+                if (context.mounted) {
+                  ref.read(statsRefreshProvider.notifier).state++;
+                }
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      l.categoryTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 10),
                     ),
-                    const BeeLineIcon('ChevronRight', size: 12),
-                  ],
-                ),
+                  ),
+                  const BeeLineIcon('ChevronRight', size: 12),
+                ],
               ),
             ),
+          ),
+        if (data.total > 0)
           card(
             l.analyticsCategoryRanking,
             OriginAnalyticsRanking(
@@ -402,7 +302,6 @@ class OriginAnalyticsContent extends ConsumerWidget {
               style: TextStyle(fontSize: 10, color: theme.hintColor),
             ),
           ),
-        ],
       ],
       // 注：此处根据定制需求已移除底部的“年度账单”和“生成分享海报”卡片
     ];
