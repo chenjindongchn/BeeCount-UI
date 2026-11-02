@@ -7,14 +7,15 @@ import 'package:record/record.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/voice_billing_providers.dart';
 import 'gemini_glow_arc.dart';
-import 'gemini_voice_island.dart';
-import 'gemini_voice_ribbons.dart';
 import 'origin_voice_session.dart';
 
-/// Gemini 风格语音记账唤醒层（挂载入口）
+/// Gemini 风格纯净底部光弧语音记账唤醒层
 ///
-/// 只负责：进退场动画、手势分发、提示展示；
-/// 录音 / 识别逻辑全部委托给 [OriginVoiceSession]。
+/// 视觉特性：
+/// 1. 彻底去除悬浮胶囊微岛与内部线条，消除容器突兀感；
+/// 2. 底部保留 Gemini 经典四色流动柔和半圆光弧与星尘粒子；
+/// 3. 光弧中心上方浮空纯净大字号识别文本，空气感极佳；
+/// 4. 录音/识别/后处理全部委托给 [OriginVoiceSession]。
 class OriginVoiceOverlay extends ConsumerStatefulWidget {
   final String audioPath;
   final AudioRecorder recorder;
@@ -47,8 +48,8 @@ class _OriginVoiceOverlayState extends ConsumerState<OriginVoiceOverlay>
     super.initState();
     _revealController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 520),
-      reverseDuration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 460),
+      reverseDuration: const Duration(milliseconds: 240),
     );
     _reveal = CurvedAnimation(
       parent: _revealController,
@@ -92,8 +93,8 @@ class _OriginVoiceOverlayState extends ConsumerState<OriginVoiceOverlay>
   }
 
   Future<void> _onSessionEnd(OriginVoiceEnd end) async {
-    // 成功：等 ✓ 画完、光弧亮闪；失败：等光弧褪灰
-    await Future.delayed(Duration(milliseconds: end.success ? 650 : 700));
+    // 成功后停留让用户看到识别结果，失败后停留展示提示
+    await Future.delayed(Duration(milliseconds: end.success ? 800 : 700));
     await _exit(toast: end.message);
   }
 
@@ -102,7 +103,6 @@ class _OriginVoiceOverlayState extends ConsumerState<OriginVoiceOverlay>
     _exiting = true;
     await _revealController.reverse();
     if (!mounted) return;
-    // 提示挂在 Navigator 的 Overlay 上，路由关闭后仍会显示
     if (toast != null) showBeeToast(context, toast);
     Navigator.of(context).pop();
   }
@@ -137,7 +137,7 @@ class _OriginVoiceOverlayState extends ConsumerState<OriginVoiceOverlay>
       case OriginVoicePhase.processing:
         return s.recognizedText ?? l10n.voiceRecordingProcessing;
       case OriginVoicePhase.success:
-        return s.recognizedText;
+        return l10n.voiceRecordingSuccess;
       case OriginVoicePhase.failure:
         return s.failureMessage;
     }
@@ -170,7 +170,7 @@ class _OriginVoiceOverlayState extends ConsumerState<OriginVoiceOverlay>
   }
 }
 
-/// 纯展示层（无逻辑，便于测试）
+/// 纯展示层（无逻辑，便于测试与预览）
 class OriginVoiceOverlayView extends StatelessWidget {
   final double reveal;
   final OriginVoicePhase phase;
@@ -208,13 +208,6 @@ class OriginVoiceOverlayView extends StatelessWidget {
         _ => GeminiArcMode.listening,
       };
 
-  GeminiRibbonMode get _ribbonMode => switch (phase) {
-        OriginVoicePhase.processing => GeminiRibbonMode.processing,
-        OriginVoicePhase.success => GeminiRibbonMode.success,
-        OriginVoicePhase.failure => GeminiRibbonMode.failure,
-        _ => GeminiRibbonMode.listening,
-      };
-
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -223,16 +216,15 @@ class OriginVoiceOverlayView extends StatelessWidget {
     final reduceMotion = media.disableAnimations;
     final r = reveal.clamp(0.0, 1.0);
 
-    // 微岛晚 15% 进场，从 0.9 倍放大淡入
-    final islandT = ((r - 0.15) / 0.85).clamp(0.0, 1.0);
-    final islandBottom = bottomInset + h * 0.14;
+    // 文字位置位于底部光弧核心黄金区域
+    final textBottom = bottomInset + h * 0.16;
 
     return Material(
       type: MaterialType.transparency,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. 底部 → 顶部渐变压暗（最高 35%），点击空白处取消
+          // 1. 底部 → 顶部柔和环境光渐变压暗，点击空白处取消
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onCancel,
@@ -242,7 +234,7 @@ class OriginVoiceOverlayView extends StatelessWidget {
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.35 * r),
+                    Colors.black.withValues(alpha: 0.32 * r),
                     Colors.black.withValues(alpha: 0.0),
                   ],
                   stops: const [0.0, 0.75],
@@ -251,7 +243,7 @@ class OriginVoiceOverlayView extends StatelessWidget {
             ),
           ),
 
-          // 2. 底部光弧（独立重绘层，不拖累页面）
+          // 2. 底部流体半圆光弧（核心发光组件）
           Positioned(
             left: 0,
             right: 0,
@@ -269,44 +261,36 @@ class OriginVoiceOverlayView extends StatelessWidget {
             ),
           ),
 
-          // 3. 识别文字 / 状态
+          // 3. 浮空识别文本与状态排版（纯净无胶囊遮挡）
+          // 3. 浮空识别文本与状态排版（纯净单排文本，无冗余第二排）
           Positioned(
             left: 32,
             right: 32,
-            bottom: islandBottom + GeminiVoiceIsland.height + 18,
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: islandT,
-                child: _Caption(
-                  text: caption,
-                  typewriter: typewriter && !reduceMotion,
-                ),
-              ),
-            ),
-          ),
-
-          // 4. 悬浮微岛
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: islandBottom,
-            child: Center(
-              child: Opacity(
-                opacity: islandT,
-                child: Transform.scale(
-                  scale: 0.9 + 0.1 * islandT,
-                  child: GeminiVoiceIsland(
-                    amplitude: amplitude,
-                    mode: _ribbonMode,
-                    showHoldHint:
-                        isHoldToTalk && phase == OriginVoicePhase.waitingHold,
-                    holdHintLabel: holdHintLabel,
-                    pressed: isHolding,
-                    reduceMotion: reduceMotion,
-                    onTap: onIslandTap,
-                    onHoldStart: onHoldStart,
-                    onHoldEnd: onHoldEnd,
-                  ),
+            bottom: textBottom,
+            child: Opacity(
+              opacity: r,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: phase == OriginVoicePhase.listening && !isHoldToTalk
+                    ? onIslandTap
+                    : null,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _Caption(
+                      text: caption,
+                      typewriter: typewriter && !reduceMotion,
+                    ),
+                    if (isHoldToTalk) ...[
+                      const SizedBox(height: 16),
+                      _HoldGestureButton(
+                        isHolding: isHolding,
+                        label: holdHintLabel,
+                        onHoldStart: onHoldStart,
+                        onHoldEnd: onHoldEnd,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -317,27 +301,37 @@ class OriginVoiceOverlayView extends StatelessWidget {
   }
 }
 
-/// 状态文字：切换时淡入上移；识别结果逐字出现
+/// 纯净浮空环境文本
 class _Caption extends StatelessWidget {
   final String? text;
   final bool typewriter;
 
-  const _Caption({required this.text, required this.typewriter});
-
-  static const _style = TextStyle(
-    fontSize: 15,
-    height: 1.4,
-    fontWeight: FontWeight.w500,
-    color: Colors.white,
-    shadows: [Shadow(color: Color(0x66000000), blurRadius: 8)],
-  );
+  const _Caption({
+    required this.text,
+    required this.typewriter,
+  });
 
   @override
   Widget build(BuildContext context) {
     final t = text;
+    const style = TextStyle(
+      fontSize: 18,
+      height: 1.4,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.3,
+      color: Colors.white,
+      shadows: [
+        Shadow(
+          color: Color(0x88000000),
+          blurRadius: 10,
+          offset: Offset(0, 2),
+        ),
+      ],
+    );
+
     Widget child;
     if (t == null || t.isEmpty) {
-      child = const SizedBox(key: ValueKey('empty'), height: 21);
+      child = const SizedBox(key: ValueKey('empty'), height: 25);
     } else if (typewriter) {
       final ms = (t.characters.length * 28).clamp(200, 1200);
       child = TweenAnimationBuilder<double>(
@@ -349,9 +343,9 @@ class _Caption extends StatelessWidget {
           return Text(
             t.characters.take(n).toString(),
             textAlign: TextAlign.center,
-            maxLines: 2,
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: _style,
+            style: style,
           );
         },
       );
@@ -360,23 +354,93 @@ class _Caption extends StatelessWidget {
         t,
         key: ValueKey(t),
         textAlign: TextAlign.center,
-        maxLines: 2,
+        maxLines: 3,
         overflow: TextOverflow.ellipsis,
-        style: _style,
+        style: style,
       );
     }
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 240),
       transitionBuilder: (child, anim) => FadeTransition(
         opacity: anim,
         child: SlideTransition(
-          position: Tween(begin: const Offset(0, 0.25), end: Offset.zero)
+          position: Tween(begin: const Offset(0, 0.2), end: Offset.zero)
               .animate(anim),
           child: child,
         ),
       ),
       child: child,
+    );
+  }
+}
+
+/// 按住说话轻量透明手势触控条
+class _HoldGestureButton extends StatelessWidget {
+  final bool isHolding;
+  final String label;
+  final VoidCallback? onHoldStart;
+  final VoidCallback? onHoldEnd;
+
+  const _HoldGestureButton({
+    required this.isHolding,
+    required this.label,
+    this.onHoldStart,
+    this.onHoldEnd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) {
+        HapticFeedback.lightImpact();
+        onHoldStart?.call();
+      },
+      onPointerUp: (_) {
+        HapticFeedback.mediumImpact();
+        onHoldEnd?.call();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: isHolding
+              ? Colors.white.withValues(alpha: 0.28)
+              : Colors.white.withValues(alpha: 0.12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: isHolding ? 0.6 : 0.25),
+            width: 1.0,
+          ),
+          boxShadow: isHolding
+              ? [
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    blurRadius: 16,
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.mic_rounded,
+              size: 16,
+              color: isHolding ? Colors.white : Colors.white70,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              isHolding ? '松开 结束录音' : label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: isHolding ? Colors.white : Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -483,10 +483,10 @@ git rebase main
 
 ---
 
-## 十一、语音记账唤醒层：Gemini 底部光弧 + 悬浮流光微岛
+## 十一、语音记账唤醒层：Gemini 纯净底部光弧 + 浮空环境文字
 
 - **改造日期**：2026-11-02
-- **设计**：去掉原生居中 `AlertDialog`。底部升起 Gemini 四色（#4285F4 / #9B72CB / #D96570 / #F4B400）流动光弧，光弧随说话振幅升高；光弧上方悬浮 48dp 毛玻璃微岛，微岛内的四色丝带随声音起伏。识别中丝带汇成平线并扫光，成功时收拢成 ✓，失败时光弧褪灰。按住说话模式按住微岛录音；自动检测模式点击微岛结束录音；点击空白处取消。系统开启"减弱动态效果"时关闭星尘和流动效果。
+- **设计**：彻底去除生硬的悬浮胶囊微岛与内部线条。底部升起纯净的 Gemini 四色（#4285F4 / #9B72CB / #D96570 / #F4B400）流动半圆光弧，光弧随说话振幅升高并伴随浮游星尘粒子；光弧核心黄金区域浮空呈现大字号状态与识别文字（未说话时提示“请开始说话...”，说话后逐字打字机浮现转写文本，成功转为清爽翡翠绿）。按住说话模式支持轻量触控手势，自动检测模式说完自动记账，点击空白处取消。
 - **提示与文案**：全部复用上游 `showBeeToast` 与 l10n 文案，不新增任何硬编码字符串。
 
 ### 1. 修改文件清单与冲突排查指引
@@ -494,12 +494,10 @@ git rebase main
 | 序号 | 所在源码位置 | 修改内容 | 冲突排查指引 |
 | :--- | :--- | :--- | :--- |
 | **01** | `lib/custom_ui/widgets/voice/origin_voice_session.dart` | 语音会话纯逻辑控制器（与上游私有录音状态机对齐的副本） | 定制目录纯增量代码，**见下方同步说明** |
-| **02** | `lib/custom_ui/widgets/voice/gemini_glow_arc.dart` | 底部光弧 + 星尘 | 定制目录纯增量代码 |
-| **03** | `lib/custom_ui/widgets/voice/gemini_voice_ribbons.dart` | 四色丝带 / 扫光 / ✓ | 定制目录纯增量代码 |
-| **04** | `lib/custom_ui/widgets/voice/gemini_voice_island.dart` | 毛玻璃微岛与手势 | 定制目录纯增量代码 |
-| **05** | `lib/custom_ui/widgets/voice/origin_voice_overlay.dart` | 唤醒层组合与进退场动画 | 定制目录纯增量代码 |
-| **06** | `test/custom_ui/voice_overlay_test.dart` | 唤醒层组件测试 | 定制目录纯增量代码 |
-| **07** | `lib/utils/voice_billing_helper.dart` | ① 新增 1 行 import；② `showDialog` 改为 `showGeneralDialog`；③ 用 `pageBuilder` 挂载 `OriginVoiceOverlay`。上游 `_VoiceRecordingDialog` 类保持原样未改动 | 冲突时保留上游其余改动，仅重新套用这 3 处 |
+| **02** | `lib/custom_ui/widgets/voice/gemini_glow_arc.dart` | 底部流动半圆光弧 + 星尘粒子 | 定制目录纯增量代码 |
+| **03** | `lib/custom_ui/widgets/voice/origin_voice_overlay.dart` | 纯净光弧唤醒层装配、浮空文本排版与进退场动画 | 定制目录纯增量代码 |
+| **04** | `test/custom_ui/voice_overlay_test.dart` | 唤醒层纯净底部光弧组件测试 | 定制目录纯增量代码 |
+| **05** | `lib/utils/voice_billing_helper.dart` | ① 新增 1 行 import；② `showDialog` 改为 `showGeneralDialog`；③ 用 `pageBuilder` 挂载 `OriginVoiceOverlay`。上游 `_VoiceRecordingDialog` 类保持原样未改动 | 冲突时保留上游其余改动，仅重新套用这 3 处 |
 
 ### 2. Diff 备查（`lib/utils/voice_billing_helper.dart`）
 ```dart

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beecount/custom_ui/widgets/voice/gemini_glow_arc.dart';
-import 'package:beecount/custom_ui/widgets/voice/gemini_voice_island.dart';
-import 'package:beecount/custom_ui/widgets/voice/gemini_voice_ribbons.dart';
 import 'package:beecount/custom_ui/widgets/voice/origin_voice_overlay.dart';
 import 'package:beecount/custom_ui/widgets/voice/origin_voice_session.dart';
 
@@ -47,7 +45,7 @@ OriginVoiceOverlayView _view({
 }
 
 void main() {
-  group('Gemini 语音唤醒层', () {
+  group('Gemini 纯净底部光弧唤醒层', () {
     testWidgets('聆听 → 说话 → 识别中 → 成功 → 失败 各状态渲染无异常', (tester) async {
       final states = <(OriginVoicePhase, double, String?)>[
         (OriginVoicePhase.listening, 0.0, '我在听…'),
@@ -62,7 +60,6 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400));
         expect(tester.takeException(), isNull, reason: '$phase');
         expect(find.byType(GeminiGlowArc), findsOneWidget);
-        expect(find.byType(GeminiVoiceRibbons), findsOneWidget);
         expect(find.text(caption!), findsOneWidget);
       }
     });
@@ -77,10 +74,9 @@ void main() {
       )));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('按住说话'), findsOneWidget);
-      expect(find.byType(GeminiVoiceRibbons), findsNothing);
 
       final gesture =
-          await tester.startGesture(tester.getCenter(find.byType(GeminiVoiceIsland)));
+          await tester.startGesture(tester.getCenter(find.text('按住说话')));
       await tester.pump(const Duration(milliseconds: 100));
       await gesture.up();
       await tester.pump();
@@ -88,16 +84,17 @@ void main() {
       expect(ended, 1);
     });
 
-    testWidgets('自动模式：点微岛结束、点空白处取消', (tester) async {
+    testWidgets('自动模式：点击完成结束、点空白处取消', (tester) async {
       var finished = 0, cancelled = 0;
       await tester.pumpWidget(_host(_view(
         phase: OriginVoicePhase.listening,
+        caption: '请开始说话...',
         onIslandTap: () => finished++,
         onCancel: () => cancelled++,
       )));
       await tester.pump(const Duration(milliseconds: 300));
 
-      await tester.tap(find.byType(GeminiVoiceIsland));
+      await tester.tap(find.text('请开始说话...'));
       await tester.pump();
       expect(finished, 1);
 
