@@ -9,10 +9,10 @@ import '../../data/db.dart' as db;
 import '../../utils/format_money.dart';
 import '../../utils/account_type_utils.dart';
 import '../../utils/currencies.dart';
-import '../../pages/account/account_edit_page.dart';
+import 'custom_account_edit_page.dart';
 import 'custom_account_detail_page.dart';
 import 'custom_hidden_accounts_page.dart';
-import '../../pages/account/net_worth_trend_page.dart';
+import 'custom_net_worth_trend_page.dart';
 import '../../services/billing/post_processor.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
@@ -59,7 +59,7 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
   void _openAddAccount(BuildContext context, int ledgerId) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => AccountEditPage(ledgerId: ledgerId),
+        builder: (_) => CustomAccountEditPage(ledgerId: ledgerId),
       ),
     );
   }
@@ -67,7 +67,7 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
   void _openNetWorthTrend(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const NetWorthTrendPage(),
+        builder: (_) => const CustomNetWorthTrendPage(),
       ),
     );
   }

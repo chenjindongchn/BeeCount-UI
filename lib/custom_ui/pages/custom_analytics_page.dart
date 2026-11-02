@@ -5,8 +5,8 @@ import 'package:beecount_ui/beecount_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import 'custom_ai_chat_page.dart';
+import 'custom_calendar_page.dart';
 import 'custom_search_page.dart';
-import '../../pages/calendar/calendar_page.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
 import '../data/custom_analytics_loader.dart';
 import '../styles/origin_tokens.dart';
@@ -186,7 +186,7 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
   void _openCalendar() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const CalendarPage()),
+      MaterialPageRoute(builder: (_) => const CustomCalendarPage()),
     );
   }
 

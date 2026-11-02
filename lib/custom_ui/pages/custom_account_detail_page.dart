@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
-import '../../pages/account/account_edit_page.dart';
+import 'custom_account_edit_page.dart';
 import '../../pages/account/detail/bindings/account_detail.dart';
 import '../../pages/account/detail/controllers/account_detail_controller.dart';
 import '../../pages/account/detail/widgets/account_detail_sections.dart';
@@ -121,7 +121,7 @@ class _CustomAccountDetailPageState
       MaterialPageRoute(
         allowSnapshotting: false,
         builder: (_) =>
-            AccountEditPage(account: c.account, ledgerId: ledgerRow.id),
+            CustomAccountEditPage(account: c.account, ledgerId: ledgerRow.id),
       ),
     );
     if (changed == true && mounted) _refresh();

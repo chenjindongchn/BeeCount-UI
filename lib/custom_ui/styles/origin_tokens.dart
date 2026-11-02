@@ -49,6 +49,11 @@ class OriginTokens {
   static const double searchBarHeight = 32.0;
   static const double searchBarRadius = 16.0;
 
+  /// 胶囊标签高度与圆角（高度 30dp, 圆角 15dp 对齐 OriginDimens.ChipHeight / ChipCornerRadius）
+  static const double chipHeight = 30.0;
+  static const double chipRadius = 15.0;
+  static const double chipHorizontalPadding = 12.0;
+
   /// 发丝分割线厚度（1 物理像素，真机标定 0.5dp）
   static const double hairline = 0.5;
 
@@ -186,6 +191,30 @@ class OriginTokens {
       Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF2A2A2A)
           : const Color(0xFFF8F9FA);
+
+  /// 搜索栏背景色（日间 #EAEAEA / 夜间 #303030 依据 OriginColors.searchBarBackground）
+  static Color searchBarBackground(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF303030)
+          : const Color(0xFFEAEAEA);
+
+  /// 搜索栏 Hint 与图标颜色（日间 #7C7C7C / 夜间 #80FFFFFF 依据 OriginColors.searchBarHint）
+  static Color searchBarHint(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0x80FFFFFF)
+          : const Color(0xFF7C7C7C);
+
+  /// 胶囊标签未选中背景（日间 #F1F1F1 / 夜间 #2A2A2A 依据 OriginColors.chipBackground）
+  static Color chipBackground(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF2A2A2A)
+          : const Color(0xFFF1F1F1);
+
+  /// 胶囊标签选中背景（日间 #DEEAFF / 夜间 #1A3060 依据 OriginColors.chipSelectedBackground）
+  static Color chipSelectedBackground(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF1A3060)
+          : const Color(0xFFDEEAFF);
 
   /// 一级主文字色（浅色 #1A1A1A / 深色 #E9E9E9）
   static Color textPrimary(BuildContext context) =>

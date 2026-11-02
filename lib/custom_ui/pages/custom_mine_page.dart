@@ -17,7 +17,6 @@ import '../../pages/settings/help_center_page.dart';
 import '../../pages/settings/data_management_page.dart';
 import '../../pages/settings/smart_billing_page.dart';
 import '../../pages/settings/automation_page.dart';
-import '../../pages/settings/appearance_settings_page.dart';
 import '../../pages/settings/about_page.dart';
 import '../../pages/settings/appearance/bindings/appearance_dialogs.dart';
 import '../../pages/settings/app_lock_settings_page.dart';
@@ -44,7 +43,6 @@ import '../widgets/origin_card.dart';
 import '../widgets/origin_setting_card.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_bottom_sheet.dart';
-import '../widgets/origin_menu.dart';
 import '../providers/amount_format_provider.dart';
 import '../providers/plus_button_enhancement_provider.dart';
 
@@ -226,32 +224,6 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
       appBar: OriginLargeTopAppBar(
         title: l.mineTitle,
         leading: canPop ? const BackButton() : null,
-        actions: [
-          OriginMoreButton(
-            items: [
-              OriginMenuItem(
-                title: l.appearanceSettings,
-                icon: const Icon(Icons.palette_outlined, size: 20),
-                onTap: () => _open(const AppearanceSettingsPage()),
-              ),
-              OriginMenuItem(
-                title: l.dataManagement,
-                icon: const Icon(Icons.storage_outlined, size: 20),
-                onTap: () => _open(const DataManagementPage()),
-              ),
-              OriginMenuItem(
-                title: l.automation,
-                icon: const Icon(Icons.schedule_outlined, size: 20),
-                onTap: () => _open(const AutomationPage()),
-              ),
-              OriginMenuItem(
-                title: l.about,
-                icon: const Icon(Icons.info_outline_rounded, size: 20),
-                onTap: () => _open(const AboutPage()),
-              ),
-            ],
-          ),
-        ],
       ),
       body: ListView(
         padding: EdgeInsets.only(

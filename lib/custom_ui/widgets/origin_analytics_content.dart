@@ -55,7 +55,6 @@ class OriginAnalyticsContent extends ConsumerWidget {
     final base = ref.watch(currentLedgerCurrencyProvider);
     final unconverted =
         ref.watch(ledgerUnconvertedForeignTxCountProvider).valueOrNull ?? 0;
-    final foreign = ref.watch(ledgerForeignTxCountProvider).valueOrNull ?? 0;
 
     final period = periodLabel ??
         (scope == 'all'
@@ -202,11 +201,6 @@ class OriginAnalyticsContent extends ConsumerWidget {
           ),
         ],
       ),
-      if (foreign > 0)
-        Text(
-          l.statsConvertedFootnote(base),
-          style: TextStyle(fontSize: 10, color: theme.hintColor),
-        ),
       AnalyticsTrend(
         key: ValueKey((scope, month, type, data.total, data.count)),
         data: data,
