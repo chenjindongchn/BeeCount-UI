@@ -37,28 +37,28 @@ class OriginQuickAddFan extends StatelessWidget {
     this.progress = 1.0,
   });
 
-  /// 紧凑版扇形展开偏移量（收紧展开半径至 64dp 左右）
+  /// 扇形展开偏移量（展开半径约 90~94dp，两两中心间距 56~59dp，确保互不重叠覆盖）
   static List<Offset> getOffsets(Offset buttonCenter, Size viewport) {
     if (buttonCenter.dx > viewport.width * 0.5) {
-      // 按钮在屏幕右侧：向左上方紧凑展开
+      // 按钮在屏幕右侧：向左上方扇形舒展展开，弧度与位置拉开
       return const [
-        Offset(-64, -14), // 拍照（偏左）
-        Offset(-46, -46), // 相册（正左上方 45°）
-        Offset(-14, -64), // 语音（偏上方）
+        Offset(-92, -18), // 拍照（偏左上方）
+        Offset(-62, -66), // 相册（左上方 47°）
+        Offset(-8, -90), // 语音（正上方偏左）
       ];
     } else if (buttonCenter.dx < viewport.width * 0.3) {
-      // 按钮在屏幕左侧：向右上方紧凑展开
+      // 按钮在屏幕左侧：向右上方扇形舒展展开
       return const [
-        Offset(14, -64),
-        Offset(46, -46),
-        Offset(64, -14),
+        Offset(8, -90),
+        Offset(62, -66),
+        Offset(92, -18),
       ];
     } else {
-      // 居中按钮：向上方三向紧凑展开
+      // 居中按钮：向上方三向舒展展开
       return const [
-        Offset(-68, -40),
-        Offset(0, -78),
-        Offset(68, -40),
+        Offset(-92, -52),
+        Offset(0, -96),
+        Offset(92, -52),
       ];
     }
   }

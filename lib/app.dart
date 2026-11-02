@@ -699,7 +699,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
     for (var i = 0; i < 3; i++) {
       final target =
           OriginQuickAddFan.centerFor(buttonCenter, i, viewport);
-      if ((globalPosition - target).distance <= 25) {
+      if ((globalPosition - target).distance <= 28) {
         newHoveredIndex = i;
         break;
       }

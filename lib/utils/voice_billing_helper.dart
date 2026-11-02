@@ -18,6 +18,7 @@ import '../services/data/tag_seed_service.dart';
 import '../pages/shared/dialogs/app_dialogs.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import '../styles/tokens.dart';
+import '../custom_ui/widgets/voice/origin_voice_assistant_sheet.dart';
 
 /// 语音记账帮助类
 class VoiceBillingHelper {
@@ -121,10 +122,12 @@ class VoiceBillingHelper {
       // 4. 显示录音对话框（按用户配置的触发方式：自动检测 / 按住说话）
       if (!context.mounted) return;
       final settings = ref.read(voiceBillingSettingsProvider);
-      showDialog(
+      showGeneralDialog(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) => _VoiceRecordingDialog(
+        barrierColor: Colors.transparent,
+        barrierLabel: 'OriginVoiceAssistant',
+        pageBuilder: (dialogContext, _, __) => OriginVoiceAssistantSheet(
           audioPath: audioPath,
           recorder: recorder,
           triggerMode: settings.triggerMode,

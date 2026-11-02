@@ -480,3 +480,32 @@ git rebase main
 | **04** | `lib/custom_ui/pages/custom_mine_page.dart` | 「我的」页面在货币符号上方新增「加号增强」设置项 | 定制目录纯增量代码 |
 | **05** | `lib/app.dart` | 主入口加号手势事件挂载与 SpeedDialOverlay 适配 | 极小侵入式挂载 |
 | **06** | `test/custom_ui/plus_button_enhancement_test.dart` | 加号增强与扇形菜单专项验收测试套件 | 定制目录纯增量代码 |
+
+---
+
+## 十一、AI 语音助手全域极光唤醒与动态流体声浪特效重构
+
+- **改造日期**：2026-11-02
+- **第一性原理与设计依据**：
+  1. **摒弃生硬的原生居中对话框**：
+     - 原版采用 Material 原生居中方块 `AlertDialog`，视觉单调、遮挡视线、缺乏智能体呼出的沉浸氛围；
+     - 融合 **蓝心小V (vivo OriginOS)**、**iOS 18 Siri (Apple Intelligence)** 与 **Google Gemini** 设计语言。
+  2. **全屏边缘流光氛围（Screen Edge Aura Glow）**：
+     - 唤醒时在屏幕边缘渲染顺畅流动的多彩渐变霓虹光晕（蓝青、极光紫、灵动粉、暖琥珀），随音量振幅律动呼吸；
+     - 背景附带动态暗化与轻量毛玻璃，营造整个系统被唤醒的未来感包围氛围。
+  3. **底部晶透超椭圆悬浮舱（Origin Floating Capsule）**：
+     - 32dp 超椭圆大圆角、`BackdropFilter` 双层毛玻璃、微光渐变描边；
+     - 遵循 OriginOS 弹簧物理曲线（`Cubic(0.25, 0.95, 0.32, 1.0)`）从底部优雅升起。
+  4. **动态流体极光声浪（Fluid Aurora Waveform）**：
+     - 3 层相位交错的平滑正弦/贝塞尔波浪叠加，波峰实时响应麦克风音量振幅（`amplitude`），中心配以高斯脉冲呼吸光斑；
+     - 进入思考识别阶段时，声浪平滑收束转为极光旋转光环（Aurora Shimmer Ring），并在识别成功时提供涟漪与触感震动反馈。
+
+### 1. 修改文件清单与冲突排查指引
+
+| 序号 | 所在源码位置 | 修改内容 | 冲突排查指引 |
+| :--- | :--- | :--- | :--- |
+| **01** | `lib/custom_ui/widgets/voice/origin_voice_edge_glow.dart` | 全屏边缘极光流动动画渲染器 | 定制目录纯增量代码 |
+| **02** | `lib/custom_ui/widgets/voice/origin_voice_wave_visualizer.dart` | 动态多层贝塞尔流体声浪与极光光环组件 | 定制目录纯增量代码 |
+| **03** | `lib/custom_ui/widgets/voice/origin_voice_assistant_sheet.dart` | 底部晶透超椭圆交互舱与完整状态机管理 | 定制目录纯增量代码 |
+| **04** | `lib/utils/voice_billing_helper.dart` | 将原版原生 `showDialog` 替换为 `showGeneralDialog` 挂载 `OriginVoiceAssistantSheet` | 仅改动 2~3 行挂载点代码 |
+
