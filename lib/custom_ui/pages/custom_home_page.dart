@@ -20,7 +20,7 @@ import '../../pages/shared/widgets/feature_dot.dart';
 import '../../pages/transaction/search_page.dart';
 import '../../providers/budget_providers.dart';
 import 'custom_budget_page.dart';
-import '../../pages/ai/ai_chat_page.dart';
+import 'custom_ai_chat_page.dart';
 
 import '../../providers/shared_ledger_providers.dart';
 import '../../providers/home_startup_preview_provider.dart';
@@ -104,7 +104,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
   void _openAIChat() {
     _transactionListKey.currentState?.switchToStreamMode();
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AIChatPage()),
+      MaterialPageRoute(builder: (_) => const CustomAIChatPage()),
     );
   }
 

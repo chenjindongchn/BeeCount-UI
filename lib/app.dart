@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/account/accounts_page.dart';
-import 'pages/budget/budget_page.dart';
 import 'custom_ui/pages/custom_transaction_sheet.dart';
 import 'custom_ui/pages/custom_home_page.dart';
 import 'custom_ui/pages/custom_analytics_page.dart';
@@ -18,6 +17,8 @@ import 'custom_ui/pages/custom_accounts_page.dart';
 import 'custom_ui/pages/custom_mine_page.dart';
 import 'custom_ui/pages/custom_budget_page.dart';
 import 'custom_ui/widgets/origin_bottom_nav_bar.dart';
+import 'custom_ui/widgets/origin_quick_add_fan.dart';
+import 'custom_ui/providers/plus_button_enhancement_provider.dart';
 import 'providers.dart';
 import 'l10n/app_localizations.dart';
 import 'widget/widget_manager.dart';
@@ -30,7 +31,7 @@ import 'cloud/sync/sync_engine.dart';
 import 'providers/sync_providers.dart' as sp;
 import 'utils/voice_billing_helper.dart';
 import 'utils/image_billing_helper.dart';
-import 'pages/ai/ai_chat_page.dart';
+import 'custom_ui/pages/custom_ai_chat_page.dart';
 import 'services/platform/app_link_service.dart';
 import 'services/platform/quick_actions_service.dart';
 import 'services/system/logger_service.dart';
@@ -543,7 +544,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
         ImageBillingHelper.openCameraForBilling(context, ref);
         break;
       case AppLinkAction.aiChat:
-        nav.push(MaterialPageRoute(builder: (_) => const AIChatPage()));
+        nav.push(MaterialPageRoute(builder: (_) => const CustomAIChatPage()));
         break;
       case AppLinkAction.newTransaction:
         // 小组件「快速记账」与桌面快捷方式统一调出 Origin 记账抽屉
@@ -693,18 +694,21 @@ class _BeeAppState extends ConsumerState<BeeApp>
       buttonPosition.dy + buttonSize.height / 2,
     );
 
-    final origin =
-        BeeQuickAddFan.safeOrigin(buttonCenter, MediaQuery.sizeOf(context));
+    final viewport = MediaQuery.sizeOf(context);
     int? newHoveredIndex;
     for (var i = 0; i < 3; i++) {
-      if ((globalPosition - BeeQuickAddFan.centerFor(origin, i)).distance <=
-          27) {
+      final target =
+          OriginQuickAddFan.centerFor(buttonCenter, i, viewport);
+      if ((globalPosition - target).distance <= 25) {
         newHoveredIndex = i;
         break;
       }
     }
 
     if (newHoveredIndex != _hoveredIndex) {
+      if (newHoveredIndex != null) {
+        HapticFeedback.selectionClick();
+      }
       setState(() {
         _hoveredIndex = newHoveredIndex;
       });
@@ -792,6 +796,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
     final avatarPath = ref.watch(avatarPathProvider).asData?.value;
     // 头部皮肤可附带悬浮 tab 装饰层(如一周年皮肤),随皮肤选择联动。
     final headerSkin = headerSkinById(ref.watch(headerSkinProvider));
+    final isPlusEnhanced = ref.watch(plusButtonEnhancedProvider);
 
     return PopScope(
       canPop: false,
@@ -856,9 +861,21 @@ class _BeeAppState extends ConsumerState<BeeApp>
                 }
               },
               onCenterTap: () => showCustomTransactionSheet(context),
-              onCenterLongPressStart: _onLongPressStart,
-              onCenterLongPressMoveUpdate: _onLongPressMoveUpdate,
-              onCenterLongPressEnd: _onLongPressEnd,
+              onCenterDoubleTap: isPlusEnhanced
+                  ? () {
+                      HapticFeedback.lightImpact();
+                      ImageBillingHelper.openCameraForBilling(context, ref);
+                    }
+                  : null,
+              onCenterLongPressStart: isPlusEnhanced
+                  ? (_) {
+                      HapticFeedback.mediumImpact();
+                      VoiceBillingHelper.startVoiceBilling(context, ref);
+                    }
+                  : _onLongPressStart,
+              onCenterLongPressMoveUpdate:
+                  isPlusEnhanced ? null : _onLongPressMoveUpdate,
+              onCenterLongPressEnd: isPlusEnhanced ? null : _onLongPressEnd,
             ),
           ),
           // 开发模式下的主题切换按钮
@@ -1155,53 +1172,58 @@ class _BeeBottomBar extends StatelessWidget {
   }
 }
 
-/// Adapts original platform actions/animation to the shared controlled fan.
+/// Adapts original platform actions/animation to OriginQuickAddFan.
 class _SpeedDialOverlay extends StatelessWidget {
-  const _SpeedDialOverlay(
-      {required this.buttonPosition,
-      required this.buttonSize,
-      required this.actions,
-      required this.animation,
-      required this.hoveredIndex,
-      this.onDismiss});
+  const _SpeedDialOverlay({
+    required this.buttonPosition,
+    required this.buttonSize,
+    required this.actions,
+    required this.animation,
+    required this.hoveredIndex,
+    this.onDismiss,
+  });
   final Offset buttonPosition;
   final Size buttonSize;
   final List<SpeedDialAction> actions;
   final Animation<double> animation;
   final int? hoveredIndex;
   final VoidCallback? onDismiss;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final origin = BeeQuickAddFan.safeOrigin(
-        buttonPosition + Offset(buttonSize.width / 2, buttonSize.height / 2),
-        MediaQuery.sizeOf(context));
+    final buttonCenter =
+        buttonPosition + Offset(buttonSize.width / 2, buttonSize.height / 2);
     return AnimatedBuilder(
-        animation: animation,
-        builder: (context, _) => BeeQuickAddFan(
-            origin: origin,
-            progress: animation.value,
-            hoveredIndex: hoveredIndex,
-            title: l.widgetQuickEntryTitle,
-            hint: l.v4QuickAddSlideHint,
-            cancelLabel: l.commonClose,
-            actions: [
-              for (var i = 0; i < actions.length && i < 3; i++)
-                BeeAction(
-                    id: '$i',
-                    label: actions[i].label,
-                    icon: BeeLineIcon(['Camera', 'Images', 'Mic'][i], size: 24))
-            ],
-            disabled: {
-              for (var i = 0; i < actions.length; i++)
-                if (!actions[i].enabled) '$i'
-            },
-            onDismiss: () => onDismiss?.call(),
-            onSelected: (id) {
-              final action = actions[int.parse(id)];
-              onDismiss?.call();
-              if (action.enabled) action.onTap?.call();
-            }));
+      animation: animation,
+      builder: (context, _) => OriginQuickAddFan(
+        buttonCenter: buttonCenter,
+        buttonSize: buttonSize,
+        progress: animation.value,
+        hoveredIndex: hoveredIndex,
+        title: l.widgetQuickEntryTitle,
+        hint: l.v4QuickAddSlideHint,
+        cancelLabel: l.commonClose,
+        actions: [
+          for (var i = 0; i < actions.length && i < 3; i++)
+            BeeAction(
+              id: '$i',
+              label: actions[i].label,
+              icon: BeeLineIcon(['Camera', 'Images', 'Mic'][i], size: 24),
+            ),
+        ],
+        disabled: {
+          for (var i = 0; i < actions.length; i++)
+            if (!actions[i].enabled) '$i',
+        },
+        onDismiss: () => onDismiss?.call(),
+        onSelected: (id) {
+          final action = actions[int.parse(id)];
+          onDismiss?.call();
+          if (action.enabled) action.onTap?.call();
+        },
+      ),
+    );
   }
 }
 

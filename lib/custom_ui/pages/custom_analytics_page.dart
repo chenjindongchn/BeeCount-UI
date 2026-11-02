@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
-import '../../pages/ai/ai_chat_page.dart';
+import 'custom_ai_chat_page.dart';
 import '../../pages/transaction/search_page.dart';
 import '../../pages/calendar/calendar_page.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
@@ -172,7 +172,7 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
   void _openAI() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const AIChatPage()),
+      MaterialPageRoute(builder: (_) => const CustomAIChatPage()),
     );
   }
 

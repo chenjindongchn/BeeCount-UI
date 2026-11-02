@@ -46,6 +46,7 @@ import '../widgets/origin_dialog.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_menu.dart';
 import '../providers/amount_format_provider.dart';
+import '../providers/plus_button_enhancement_provider.dart';
 
 /// vivo OriginOS 风格“我的”与设置页面 (CustomMinePage)
 ///
@@ -161,6 +162,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
     final skinAnimation = ref.watch(skinAnimationEnabledProvider);
 
     // 记账显示与偏好
+    final plusButtonEnhanced = ref.watch(plusButtonEnhancedProvider);
     final compactAmount = ref.watch(compactAmountProvider);
     final showCurrencySymbol = ref.watch(currencySymbolVisibleProvider);
     final thousandSeparator = ref.watch(thousandSeparatorProvider);
@@ -484,6 +486,28 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                   ],
                   (v) => ref.read(compactAmountProvider.notifier).state = v,
                 ),
+              ),
+              OriginSettingItem(
+                title: '加号增强',
+                subtitle: plusButtonEnhanced
+                    ? '开启：长按语音，双击拍照'
+                    : '关闭：长按展开快捷菜单',
+                leading: Icon(
+                  Icons.add_circle_outline_rounded,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                showArrow: false,
+                trailing: OriginSwitch(
+                  value: plusButtonEnhanced,
+                  activeColor: primaryColor,
+                  onChanged: (v) => ref
+                      .read(plusButtonEnhancedProvider.notifier)
+                      .setEnabled(v),
+                ),
+                onTap: () => ref
+                    .read(plusButtonEnhancedProvider.notifier)
+                    .toggle(),
               ),
               OriginSettingItem(
                 title: '货币符号',

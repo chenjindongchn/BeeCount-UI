@@ -1,3 +1,4 @@
+import 'dart:async' show Timer;
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../../pages/shared/appearance/skin_animation_scope.dart';
@@ -31,6 +32,7 @@ class OriginBottomNavBar extends StatefulWidget {
   final ValueChanged<int> onTabSelected;
   final List<OriginBottomNavItem> items;
   final VoidCallback onCenterTap;
+  final VoidCallback? onCenterDoubleTap;
   final GestureLongPressStartCallback? onCenterLongPressStart;
   final GestureLongPressMoveUpdateCallback? onCenterLongPressMoveUpdate;
   final GestureLongPressEndCallback? onCenterLongPressEnd;
@@ -44,6 +46,7 @@ class OriginBottomNavBar extends StatefulWidget {
     required this.onTabSelected,
     required this.items,
     required this.onCenterTap,
+    this.onCenterDoubleTap,
     this.onCenterLongPressStart,
     this.onCenterLongPressMoveUpdate,
     this.onCenterLongPressEnd,
@@ -323,6 +326,7 @@ class _OriginBottomNavBarState extends State<OriginBottomNavBar> {
             _OriginStandaloneAddButton(
               key: widget.centerButtonKey,
               onTap: widget.onCenterTap,
+              onDoubleTap: widget.onCenterDoubleTap,
               onLongPressStart: widget.onCenterLongPressStart,
               onLongPressMoveUpdate: widget.onCenterLongPressMoveUpdate,
               onLongPressEnd: widget.onCenterLongPressEnd,
@@ -417,6 +421,7 @@ class _OriginFloatingNavItem extends StatelessWidget {
 /// 右侧独立悬浮正圆记账按钮（48dp × 48dp）
 class _OriginStandaloneAddButton extends StatefulWidget {
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
   final GestureLongPressStartCallback? onLongPressStart;
   final GestureLongPressMoveUpdateCallback? onLongPressMoveUpdate;
   final GestureLongPressEndCallback? onLongPressEnd;
@@ -425,6 +430,7 @@ class _OriginStandaloneAddButton extends StatefulWidget {
   const _OriginStandaloneAddButton({
     super.key,
     required this.onTap,
+    this.onDoubleTap,
     this.onLongPressStart,
     this.onLongPressMoveUpdate,
     this.onLongPressEnd,
@@ -439,6 +445,8 @@ class _OriginStandaloneAddButton extends StatefulWidget {
 class _OriginStandaloneAddButtonState extends State<_OriginStandaloneAddButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _anim;
+  Timer? _singleTapTimer;
+  DateTime? _lastTapTime;
 
   @override
   void initState() {
@@ -454,8 +462,36 @@ class _OriginStandaloneAddButtonState extends State<_OriginStandaloneAddButton>
 
   @override
   void dispose() {
+    _singleTapTimer?.cancel();
     _anim.dispose();
     super.dispose();
+  }
+
+  void _handleTapUp() {
+    _anim.forward();
+    if (widget.onDoubleTap == null) {
+      widget.onTap();
+      return;
+    }
+
+    final now = DateTime.now();
+    if (_lastTapTime != null &&
+        now.difference(_lastTapTime!) < const Duration(milliseconds: 280)) {
+      // 命中双击
+      _singleTapTimer?.cancel();
+      _singleTapTimer = null;
+      _lastTapTime = null;
+      widget.onDoubleTap?.call();
+    } else {
+      // 首次点击，启动延时定时器等待可能发生的第二击
+      _lastTapTime = now;
+      _singleTapTimer?.cancel();
+      _singleTapTimer = Timer(const Duration(milliseconds: 250), () {
+        _singleTapTimer = null;
+        _lastTapTime = null;
+        widget.onTap();
+      });
+    }
   }
 
   @override
@@ -463,12 +499,12 @@ class _OriginStandaloneAddButtonState extends State<_OriginStandaloneAddButton>
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => _anim.reverse(),
-      onTapUp: (_) {
-        _anim.forward();
-        widget.onTap();
-      },
+      onTapUp: (_) => _handleTapUp(),
       onTapCancel: () => _anim.forward(),
       onLongPressStart: (details) {
+        _singleTapTimer?.cancel();
+        _singleTapTimer = null;
+        _lastTapTime = null;
         _anim.reverse();
         widget.onLongPressStart?.call(details);
       },
@@ -533,9 +569,10 @@ class OriginBeeBottomBar extends StatelessWidget {
   final GlobalKey centerButtonKey;
   final ValueChanged<int> onTabTap;
   final VoidCallback onCenterTap;
-  final GestureLongPressStartCallback onCenterLongPressStart;
-  final GestureLongPressMoveUpdateCallback onCenterLongPressMoveUpdate;
-  final GestureLongPressEndCallback onCenterLongPressEnd;
+  final VoidCallback? onCenterDoubleTap;
+  final GestureLongPressStartCallback? onCenterLongPressStart;
+  final GestureLongPressMoveUpdateCallback? onCenterLongPressMoveUpdate;
+  final GestureLongPressEndCallback? onCenterLongPressEnd;
 
   const OriginBeeBottomBar({
     super.key,
@@ -552,9 +589,10 @@ class OriginBeeBottomBar extends StatelessWidget {
     required this.centerButtonKey,
     required this.onTabTap,
     required this.onCenterTap,
-    required this.onCenterLongPressStart,
-    required this.onCenterLongPressMoveUpdate,
-    required this.onCenterLongPressEnd,
+    this.onCenterDoubleTap,
+    this.onCenterLongPressStart,
+    this.onCenterLongPressMoveUpdate,
+    this.onCenterLongPressEnd,
   });
 
   @override
@@ -566,6 +604,7 @@ class OriginBeeBottomBar extends StatelessWidget {
       skin: skin,
       centerButtonKey: centerButtonKey,
       onCenterTap: onCenterTap,
+      onCenterDoubleTap: onCenterDoubleTap,
       onCenterLongPressStart: onCenterLongPressStart,
       onCenterLongPressMoveUpdate: onCenterLongPressMoveUpdate,
       onCenterLongPressEnd: onCenterLongPressEnd,

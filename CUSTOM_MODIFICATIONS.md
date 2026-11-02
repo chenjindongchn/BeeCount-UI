@@ -414,5 +414,69 @@ git rebase main
 | **08** | `lib/custom_ui/widgets/origin_time_picker.dart` | 原厂 22sp 大标题、纯数字滚轮+固定单位与标准 OriginDialog 弹窗 | 定制目录纯增量代码 |
 | **09** | `lib/custom_ui/widgets/origin_wheel_picker.dart` | 单位固定右侧静止、阻尼震动反馈与平滑渐隐滚轮 | 定制目录纯增量代码 |
 
+---
 
+## 九、AI 智能记账助手（vivo OriginOS / 蓝心小V 风格深度重构）
 
+- **改造日期**：2026-11-02
+- **第一性原理与设计依据**：
+  直接对标连接真机提取的 vivo 蓝心小V（`com.vivo.ai.copilot`）最新原厂交互与视觉真值（历史对话流 & 新对话向导）：
+  1. **Borderless 去卡片化通透对话**：
+     - AI 助手回答去除多层厚重白框包裹，文字直接平铺于页面背景，行距宽阔（1.65），左下角配备微型胶囊操作条（复制/删除）；
+     - 用户发言使用主题色 18dp 大圆角活力胶囊，右对齐白字。
+  2. **蓝心小V标志性悬浮大胶囊输入 Dock（Floating Pill Dock）**：
+     - 悬浮于手势条上方，两侧 16dp 留白，完全半圆弧（26dp 圆角）；
+     - 集成左侧相机/识图快捷按钮（支持拍照记账与相册导入）、中间自适应多行输入框、右侧智能流转操作（发送/停止/语音）；
+     - Dock 上方集成单行横滑追问与常用指令药丸群。
+  3. **空会话向导看板（OriginAiEmptyState）**：
+     - 仿蓝心小V大字号浅色柔和问候标语（“智能记账，找小助手”）；
+     - 当前账本月度财务概览微药丸；
+     - 带金色闪烁星标 `✨` 的通透圆角建议卡片（支持一键点发）。
+  4. **记账结果卡片（OriginBillCard）**：
+     - 14dp 圆角、0.5dp 发丝描边、大字号金额、账本徽标与分类圆形色块图标；
+     - 底部集成 30dp 紧凑胶囊按钮（撤销、编辑明细、更换账本），撤销状态自动呈现删除线与优雅置灰。
+  5. **严格零上游冲突挂载**：
+     - 100% 物理隔离于 `lib/custom_ui/pages/custom_ai_chat_page.dart` 及 `lib/custom_ui/widgets/ai/`；
+     - 仅在入口文件（`lib/app.dart`、`custom_home_page.dart`、`custom_analytics_page.dart`）替换 1 行路由指向。
+
+### 1. 修改文件清单与冲突排查指引
+
+| 序号 | 所在源码位置 | 修改内容 | 冲突排查指引 |
+| :--- | :--- | :--- | :--- |
+| **01** | `lib/app.dart` | `AppLinkAction.aiChat` 路由指向 `CustomAIChatPage` | 若上游更新该路由，保留指向 `CustomAIChatPage` 即可 |
+| **02** | `lib/custom_ui/pages/custom_home_page.dart` | 首页右上角/卡片 AI 入口指向 `CustomAIChatPage` | 定制目录纯增量代码 |
+| **03** | `lib/custom_ui/pages/custom_analytics_page.dart` | 报表页 AI 顾问入口指向 `CustomAIChatPage` | 定制目录纯增量代码 |
+| **04** | `lib/custom_ui/pages/custom_ai_chat_page.dart` | 蓝心小V风格 AI 记账对话主页面 | 定制目录纯增量代码 |
+| **05** | `lib/custom_ui/widgets/ai/origin_ai_input_dock.dart` | 蓝心小V标志性悬浮胶囊输入 Dock | 定制目录纯增量代码 |
+| **06** | `lib/custom_ui/widgets/ai/origin_ai_empty_state.dart` | 蓝心小V向导与金色 ✨ 建议卡片组件 | 定制目录纯增量代码 |
+| **07** | `lib/custom_ui/widgets/ai/origin_bill_card.dart` | 14dp 圆角 Origin 记账结果卡片 | 定制目录纯增量代码 |
+| **08** | `lib/custom_ui/widgets/ai/origin_ai_message_bubble.dart` | 通透 Borderless 消息气泡组件 | 定制目录纯增量代码 |
+| **09** | `lib/custom_ui/pages/custom_ai_settings_page.dart` | OriginOS 风格 AI 助手设置页面（权限、记忆、深度、模型服务商） | 定制目录纯增量代码 |
+
+---
+
+## 十、主界面加号手势增强与扇形快捷菜单错位修复
+
+- **改造日期**：2026-11-02
+- **第一性原理与设计依据**：
+  1. **右下角悬浮加号几何原点矫正**：
+     - 原版 `BeeQuickAddFan` 内部针对居中按钮设计并通过 `safeOrigin` 强行限制横坐标，导致加号在右下角时原点严重错位；
+     - 全新封装 `OriginQuickAddFan`，原点 100% 锚定加号按钮真实几何中心，原加号顺滑旋转 45° 变叉号。
+  2. **极简紧凑纯图标扇形交互**：
+     - 去除顶部大块提示文字和各选项文字标签，纯保留 42dp 精致小圆动作图标（相机、相册、语音）；
+     - 展开半径紧凑收紧至约 64dp，呈左上方扇形展开，符合大拇指自然张合，滑动切换灵敏自如。
+  3. **加号手势增强（加号增强开关）**：
+     - 在「我的」页面「货币符号」上方新增「加号增强」开关，支持本地持久化；
+     - 开启后：主页加号按钮单击依然打开记账抽屉，双击快捷调用相机拍照记账，长按直接触发语音记账；
+     - 关闭时：单击保持零延迟立即打开记账，长按展开微型扇形快捷菜单。
+
+### 1. 修改文件清单与冲突排查指引
+
+| 序号 | 所在源码位置 | 修改内容 | 冲突排查指引 |
+| :--- | :--- | :--- | :--- |
+| **01** | `lib/custom_ui/providers/plus_button_enhancement_provider.dart` | 加号增强状态 Provider 与本地持久化 | 定制目录纯增量代码 |
+| **02** | `lib/custom_ui/widgets/origin_quick_add_fan.dart` | 紧凑型纯图标扇形快捷菜单组件 | 定制目录纯增量代码 |
+| **03** | `lib/custom_ui/widgets/origin_bottom_nav_bar.dart` | 底部导航栏加号按钮单击/双击/长按分流与手势检测 | 定制目录纯增量代码 |
+| **04** | `lib/custom_ui/pages/custom_mine_page.dart` | 「我的」页面在货币符号上方新增「加号增强」设置项 | 定制目录纯增量代码 |
+| **05** | `lib/app.dart` | 主入口加号手势事件挂载与 SpeedDialOverlay 适配 | 极小侵入式挂载 |
+| **06** | `test/custom_ui/plus_button_enhancement_test.dart` | 加号增强与扇形菜单专项验收测试套件 | 定制目录纯增量代码 |
