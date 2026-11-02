@@ -6,9 +6,10 @@ import '../../agent/runtime/agent_execution_settings.dart';
 import '../../l10n/app_localizations.dart';
 import '../../pages/ai/agent_activity_page.dart';
 import '../../pages/ai/agent_memory_page.dart';
-import '../../pages/ai/agent_permissions_page.dart';
+import 'custom_agent_permissions_page.dart';
 import '../../pages/ai/ai_provider_manage_page.dart';
 import '../../pages/ai/ai_settings_page.dart';
+import '../../providers.dart';
 import '../../providers/ai_chat_providers.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_dialog.dart';
@@ -18,16 +19,20 @@ import '../widgets/origin_setting_card.dart';
 /// vivo OriginOS 风格 AI 助手设置页面 (CustomAISettingsPage)
 ///
 /// 遵循蓝河/OriginUI 规范：
-/// 1. 紧凑型标题栏（56dp）；
+/// 1. 紧凑型标题栏（OriginSmallTopAppBar）；
 /// 2. 分组式圆角卡片（12dp 圆角，20dp 边距，0.5dp 发丝分割线）；
 /// 3. 全量覆盖权限管控、记忆管理、执行深度、历史轨迹与模型服务商配置；
-/// 4. 执行深度弹窗采用 OriginDialog 拟态单选交互。
+/// 4. 执行深度采用 OriginOS 规范单选对话框 (showOriginChoiceDialog)；
+/// 5. 权限管理全面接入 CustomAgentPermissionsPage；
+/// 6. 收纳清空当前聊天记录功能，使用 OriginOS 危险确认对话框。
 class CustomAISettingsPage extends ConsumerStatefulWidget {
   final int ledgerId;
+  final int? conversationId;
 
   const CustomAISettingsPage({
     super.key,
     required this.ledgerId,
+    this.conversationId,
   });
 
   @override
@@ -76,68 +81,17 @@ class _CustomAISettingsPageState extends ConsumerState<CustomAISettingsPage> {
       (AgentExecutionSettings.maximumTurns, l.agentExecutionDepthCustom, '12 回合 · 完整分析'),
     ];
 
-    final selected = await showOriginCustomDialog<int>(
+    final selected = await showOriginChoiceDialog<int>(
       context,
-      child: OriginDialog(
-        title: l.agentExecutionDepthChooseTitle,
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: depthOptions.map((opt) {
-            final turns = opt.$1;
-            final title = opt.$2;
-            final desc = opt.$3;
-            final isSelected = turns == currentTurns;
-
-            return Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10.0),
-                onTap: () => Navigator.of(context).pop(turns),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: TextStyle(
-                                fontSize: 15.0,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                color: isSelected
-                                    ? OriginTokens.primary(context)
-                                    : OriginTokens.textPrimary(context),
-                              ),
-                            ),
-                            const SizedBox(height: 2.0),
-                            Text(
-                              desc,
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: OriginTokens.textSecondary(context),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle_rounded,
-                          size: 20.0,
-                          color: OriginTokens.primary(context),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-        cancelText: l.commonCancel,
-        onCancel: () => Navigator.of(context).pop(),
-      ),
+      title: l.agentExecutionDepthChooseTitle,
+      selected: currentTurns,
+      options: depthOptions
+          .map((opt) => OriginChoiceOption<int>(
+                value: opt.$1,
+                title: opt.$2,
+                subtitle: opt.$3,
+              ))
+          .toList(),
     );
 
     if (selected == null || selected == currentTurns || !mounted) return;
@@ -150,6 +104,36 @@ class _CustomAISettingsPageState extends ConsumerState<CustomAISettingsPage> {
       await _loadSettings();
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _clearChatHistory() async {
+    final convId = widget.conversationId ?? ref.read(currentConversationIdProvider);
+    if (convId == null) return;
+    HapticFeedback.lightImpact();
+
+    final l = AppLocalizations.of(context);
+    final confirmed = await showOriginConfirmDialog(
+      context,
+      title: l.aiChatClearHistoryDialogTitle,
+      message: l.aiChatClearHistoryDialogContent,
+      confirmText: l.commonConfirm,
+      cancelText: l.commonCancel,
+      isDanger: true,
+    );
+
+    if (confirmed == true && mounted) {
+      final repo = ref.read(repositoryProvider);
+      await repo.deleteMessagesByConversation(convId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l.aiChatHistoryCleared),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -181,22 +165,6 @@ class _CustomAISettingsPageState extends ConsumerState<CustomAISettingsPage> {
         children: [
           const SizedBox(height: 12.0),
 
-          // 顶部描述小字
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: OriginTokens.cardMargin,
-              vertical: 4.0,
-            ),
-            child: Text(
-              l.agentAssistantSettingsSubtitle,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: OriginTokens.textSecondary(context),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10.0),
-
           // 分组一：AI 核心能力与安全权限
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -222,7 +190,7 @@ class _CustomAISettingsPageState extends ConsumerState<CustomAISettingsPage> {
                   size: 20.0,
                   color: Color(0xFF1890FF),
                 ),
-                onTap: () => _navigateTo(const AgentPermissionsPage()),
+                onTap: () => _navigateTo(const CustomAgentPermissionsPage()),
               ),
               OriginSettingItem(
                 title: l.agentAssistantMemoryEntry,
@@ -325,6 +293,39 @@ class _CustomAISettingsPageState extends ConsumerState<CustomAISettingsPage> {
                   color: Color(0xFFEB2F96),
                 ),
                 onTap: () => _navigateTo(const AIProviderManagePage()),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16.0),
+
+          // 分组四：聊天记录与数据
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: OriginTokens.cardMargin,
+              vertical: 4.0,
+            ),
+            child: Text(
+              '聊天数据管理',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: OriginTokens.textSecondary(context),
+              ),
+            ),
+          ),
+          OriginSettingGroup(
+            items: [
+              OriginSettingItem(
+                title: '清空当前聊天记录',
+                subtitle: '删除当前会话中的所有问答与记账生成记录',
+                titleColor: OriginTokens.expenseRed,
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 20.0,
+                  color: OriginTokens.expenseRed,
+                ),
+                onTap: _clearChatHistory,
               ),
             ],
           ),

@@ -12,6 +12,7 @@ class OriginSettingItem {
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool showArrow;
+  final Color? titleColor;
 
   const OriginSettingItem({
     required this.title,
@@ -21,6 +22,7 @@ class OriginSettingItem {
     this.trailing,
     this.onTap,
     this.showArrow = true,
+    this.titleColor,
   });
 }
 
@@ -96,7 +98,7 @@ class _OriginSettingTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15.0,
                       fontWeight: FontWeight.w500,
-                      color: OriginTokens.textPrimary(context),
+                      color: item.titleColor ?? OriginTokens.textPrimary(context),
                     ),
                   ),
                   if (item.subtitle != null && item.subtitle!.isNotEmpty) ...[

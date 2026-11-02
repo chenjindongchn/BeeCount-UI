@@ -19,7 +19,7 @@ import '../../pages/transaction/category_detail/bindings/category_detail.dart';
 import '../../pages/transaction/category_detail_page.dart'
     show categoryDetailSortProvider;
 import '../../pages/transaction/search/bindings/transaction_search.dart';
-import '../../pages/transaction/search_page.dart';
+import 'custom_search_page.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../services/billing/post_processor.dart';
@@ -100,7 +100,7 @@ class _CustomCategoryDetailPageState
     await Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => SearchPage(
+        builder: (_) => CustomSearchPage(
           initialFilter: TransactionSearchFilter(
             category: category,
             start: c.range.start,

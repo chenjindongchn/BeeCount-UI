@@ -189,14 +189,12 @@ class OriginAnalyticsContent extends ConsumerWidget {
         unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
         mainAmount: formatMoneyCompact(data.total, trimZeros: false),
         hideAmounts: hide,
-        onTap: onPeriod,
         action: null,
         metrics: [
           OriginHeroMetric(
             label: averageLabel,
             unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
             value: formatMoneyCompact(data.average, trimZeros: false),
-            onTap: average,
           ),
           OriginHeroMetric(
             label: l.sharePosterRecordCount,

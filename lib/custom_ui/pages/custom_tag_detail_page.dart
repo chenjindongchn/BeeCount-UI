@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../pages/tag/detail/bindings/tag_detail.dart';
-import '../../pages/tag/detail/widgets/tag_detail_sections.dart';
+import '../widgets/custom_tag_detail_sections.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../services/billing/post_processor.dart';
@@ -232,7 +232,7 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
               ),
               data: (value) => value == null
                   ? Center(child: BeeEmptyState(title: l.tagNotFound))
-                  : TagDetailSections(
+                  : CustomTagDetailSections(
                       tag: value,
                       stats: stats,
                       data: data,

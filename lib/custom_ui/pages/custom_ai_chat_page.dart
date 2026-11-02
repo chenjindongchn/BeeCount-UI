@@ -17,7 +17,6 @@ import '../../models/assistant_follow_up_metadata.dart';
 import '../../pages/ai/agent_message_visibility.dart';
 import '../../pages/ai/ai_settings_page.dart';
 import 'custom_ai_settings_page.dart';
-import '../../pages/ai/bindings/agent_tool_authorization_dialog.dart';
 import '../../pages/ai/chat/bindings/agent_execution_timeline.dart';
 import '../../pages/shared/selectors/ledger_selector_dialog.dart';
 import '../../pages/transaction/transaction_editor_page.dart';
@@ -29,12 +28,15 @@ import '../../services/ai/bill_card_info_builder.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/system/logger_service.dart';
 import '../../utils/image_billing_helper.dart';
+import '../../utils/voice_billing_helper.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/ai/origin_ai_empty_state.dart';
 import '../widgets/ai/origin_ai_input_dock.dart';
 import '../widgets/ai/origin_ai_message_bubble.dart';
 import '../widgets/ai/origin_bill_card.dart';
+import '../widgets/ai/origin_tool_authorization_dialog.dart';
 import '../widgets/origin_dialog.dart';
+import '../widgets/origin_menu.dart';
 import '../widgets/origin_scaffold.dart';
 
 /// vivo OriginOS / 蓝心小V 风格 AI 智能记账助手页面 (CustomAIChatPage)
@@ -151,28 +153,18 @@ class _CustomAIChatPageState extends ConsumerState<CustomAIChatPage>
       appBar: OriginSmallTopAppBar(
         title: l10n.aiChatTitle,
         actions: [
-          // 清空历史图标
-          IconButton(
-            tooltip: l10n.aiChatClearHistory,
-            icon: Icon(
-              Icons.delete_outline_rounded,
-              size: 22.0,
-              color: OriginTokens.textSecondary(context),
-            ),
-            onPressed: _showClearHistoryDialog,
-          ),
-          // 助手设置图标
+          // vivo OriginOS 规范顶栏两个点设置入口
           IconButton(
             tooltip: l10n.agentAssistantSettingsTitle,
-            icon: Icon(
-              Icons.tune_rounded,
-              size: 22.0,
-              color: OriginTokens.textSecondary(context),
+            icon: OriginMoreIcon(
+              size: 20.0,
+              color: OriginTokens.textPrimary(context),
             ),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => CustomAISettingsPage(
                   ledgerId: ref.read(currentLedgerIdProvider),
+                  conversationId: _conversationId,
                 ),
               ),
             ),
@@ -256,6 +248,7 @@ class _CustomAIChatPageState extends ConsumerState<CustomAIChatPage>
             onStop: _stopCurrentAgentRun,
             onTakePhoto: () => ImageBillingHelper.openCameraForBilling(context, ref),
             onPickImage: () => ImageBillingHelper.pickImageForBilling(context, ref),
+            onVoice: () => VoiceBillingHelper.startVoiceBilling(context, ref),
           ),
         ],
       ),
@@ -536,7 +529,7 @@ class _CustomAIChatPageState extends ConsumerState<CustomAIChatPage>
             });
             _isAuthorizationDialogOpen = true;
             final choice = mounted
-                ? await AgentToolAuthorizationDialog.show(
+                ? await showOriginToolAuthorizationDialog(
                     context: context,
                     request: request,
                   )
@@ -732,23 +725,6 @@ class _CustomAIChatPageState extends ConsumerState<CustomAIChatPage>
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
-  }
-
-  Future<void> _showClearHistoryDialog() async {
-    final l = AppLocalizations.of(context);
-    final confirmed = await showOriginConfirmDialog(
-      context,
-      title: l.aiChatClearHistoryDialogTitle,
-      message: l.aiChatClearHistoryDialogContent,
-      confirmText: l.commonConfirm,
-      cancelText: l.commonCancel,
-      isDanger: true,
-    );
-    if (confirmed == true && mounted) {
-      final repo = ref.read(repositoryProvider);
-      await repo.deleteMessagesByConversation(_conversationId!);
-      if (mounted) _showToast(l.aiChatHistoryCleared);
-    }
   }
 
   Future<void> _handleUndoOne(int messageId, int transactionId) async {

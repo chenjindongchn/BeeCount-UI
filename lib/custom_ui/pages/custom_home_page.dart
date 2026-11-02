@@ -17,7 +17,7 @@ import 'custom_ledgers_page.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_date_picker.dart';
 import '../../pages/shared/widgets/feature_dot.dart';
-import '../../pages/transaction/search_page.dart';
+import 'custom_search_page.dart';
 import '../../providers/budget_providers.dart';
 import 'custom_budget_page.dart';
 import 'custom_ai_chat_page.dart';
@@ -113,7 +113,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SearchPage(
+        builder: (_) => CustomSearchPage(
           initialBatchMode: batch,
           initialOpenFilter: filters,
         ),

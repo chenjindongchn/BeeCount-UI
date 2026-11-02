@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../styles/origin_tokens.dart';
+import '../origin_bottom_sheet.dart';
+import '../origin_dialog.dart';
 
 /// vivo 蓝心小V 风格悬浮胶囊输入 Dock (OriginAiInputDock)
 ///
@@ -18,6 +20,7 @@ class OriginAiInputDock extends StatefulWidget {
   final VoidCallback onStop;
   final VoidCallback? onPickImage;
   final VoidCallback? onTakePhoto;
+  final VoidCallback? onVoice;
 
   const OriginAiInputDock({
     super.key,
@@ -27,6 +30,7 @@ class OriginAiInputDock extends StatefulWidget {
     required this.onStop,
     this.onPickImage,
     this.onTakePhoto,
+    this.onVoice,
   });
 
   @override
@@ -56,61 +60,31 @@ class _OriginAiInputDockState extends State<OriginAiInputDock> {
     super.dispose();
   }
 
-  void _showImageOptions(BuildContext context) {
+  Future<void> _showImageOptions(BuildContext context) async {
     HapticFeedback.lightImpact();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (bottomContext) {
-        return Container(
-          margin: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF222224) : Colors.white,
-            borderRadius: BorderRadius.circular(20.0),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 16.0,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8.0),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined, size: 22.0),
-                  title: const Text('拍照识票记账', style: TextStyle(fontSize: 15.0)),
-                  onTap: () {
-                    Navigator.of(bottomContext).pop();
-                    widget.onTakePhoto?.call();
-                  },
-                ),
-                Divider(
-                  height: 1.0,
-                  thickness: OriginTokens.hairline,
-                  color: isDark ? Colors.white12 : const Color(0xFFE5E6EA),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined, size: 22.0),
-                  title: const Text('从相册选取账单图片', style: TextStyle(fontSize: 15.0)),
-                  onTap: () {
-                    Navigator.of(bottomContext).pop();
-                    widget.onPickImage?.call();
-                  },
-                ),
-                const SizedBox(height: 8.0),
-              ],
-            ),
-          ),
-        );
-      },
+    final choice = await showOriginActionSheet<String>(
+      context,
+      title: '识图记账',
+      selected: '',
+      options: const [
+        OriginChoiceOption<String>(
+          value: 'camera',
+          title: '拍照识票记账',
+          icon: Icons.camera_alt_outlined,
+        ),
+        OriginChoiceOption<String>(
+          value: 'gallery',
+          title: '从相册选取账单图片',
+          icon: Icons.photo_library_outlined,
+        ),
+      ],
     );
+
+    if (choice == 'camera') {
+      widget.onTakePhoto?.call();
+    } else if (choice == 'gallery') {
+      widget.onPickImage?.call();
+    }
   }
 
   @override
@@ -238,23 +212,27 @@ class _OriginAiInputDockState extends State<OriginAiInputDock> {
                     ),
                   )
                 else
-                  // 未输入时的右侧图标（语音或加号）
+                  // 未输入时的右侧图标（语音记账）
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(
-                        tooltip: '语音记账',
-                        icon: Icon(
-                          Icons.mic_none_rounded,
-                          size: 22.0,
-                          color: OriginTokens.textSecondary(context),
-                        ),
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('按住说话功能持续升级中')),
-                          );
+                      GestureDetector(
+                        onLongPress: () {
+                          HapticFeedback.selectionClick();
+                          widget.onVoice?.call();
                         },
+                        child: IconButton(
+                          tooltip: '语音记账',
+                          icon: Icon(
+                            Icons.mic_none_rounded,
+                            size: 22.0,
+                            color: OriginTokens.textSecondary(context),
+                          ),
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            widget.onVoice?.call();
+                          },
+                        ),
                       ),
                     ],
                   ),

@@ -9,11 +9,14 @@ import '../../../pages/attachment/attachment_preview_page.dart';
 import '../../../pages/shared/resources/category_icon_adapter.dart';
 import '../../../pages/shared/transactions/transaction_list_item.dart';
 import '../../../pages/transaction/search/bindings/transaction_search.dart';
-import '../../../pages/transaction/transaction_detail_page.dart';
+import '../../../providers.dart';
+import '../../../providers/budget_providers.dart';
+import '../../../services/billing/post_processor.dart';
 import '../../../utils/category_utils.dart';
 import '../../../utils/transaction_edit_utils.dart';
 import '../pages/custom_category_detail_page.dart';
 import '../pages/custom_tag_detail_page.dart';
+import 'origin_dialog.dart';
 
 /// vivo OriginOS 风格交易条目绑定组件 (CustomTransactionTileBinding)
 ///
@@ -132,25 +135,35 @@ class CustomTransactionTileBinding extends ConsumerWidget {
       onLongPressStart: batch
           ? null
           : (details) async {
-              final action = await showBeeContextMenu<String>(
+              final confirmed = await showOriginConfirmDialog(
                 context,
-                anchor: details.globalPosition,
-                items: [
-                  BeeMenuAction(
-                    value: 'detail',
-                    label: l.v4TransactionDetailTitle,
-                    icon: const BeeLineIcon('FileText', size: 18),
-                  ),
-                ],
+                title: '确定要删除该条账单吗？删除后不可恢复',
+                confirmText: '确定',
+                cancelText: '取消',
+                isDanger: true,
               );
-              if (action == 'detail' && context.mounted) {
-                await open(
-                  TransactionDetailPage(
-                    transactionId: t.id,
-                    ledgerId: t.ledgerId,
-                    allLedgers: allLedgers,
-                  ),
-                );
+              if (confirmed == true && context.mounted) {
+                if (onDelete != null) {
+                  await onDelete!();
+                } else {
+                  try {
+                    final repo = ref.read(repositoryProvider);
+                    await repo.deleteTransaction(t.id);
+                    final curLedger = ref.read(currentLedgerIdProvider);
+                    ref.invalidate(countsForLedgerProvider(curLedger));
+                    ref.read(statsRefreshProvider.notifier).state++;
+                    ref.read(budgetRefreshProvider.notifier).state++;
+                    PostProcessor.sync(ref, ledgerId: curLedger);
+                    if (context.mounted) {
+                      showBeeToast(context, '删除成功');
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      showBeeToast(context, '删除失败: $e', tone: BeeTone.error);
+                    }
+                  }
+                }
+                onReturned();
               }
             },
       onCategoryTap: !allowCategoryNavigation ||
