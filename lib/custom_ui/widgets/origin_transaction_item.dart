@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers.dart';
 import '../../../data/db.dart';
 import '../../../utils/category_utils.dart';
 import '../../../utils/format_money.dart';
@@ -15,14 +16,18 @@ import '../utils/account_color_utils.dart';
 /// 1. 左侧：通透彩色分类图标（无死板深色底块）；
 /// 2. 中间：分类名称（15.5sp SemiBold）+ 自定义标签（若有）+ 备注（若有，不显示时间）；
 /// 3. 右侧：垂直排列，上方加粗金额（支出黑色，收入橙色），下方展示账户信息（支出/收入账户，转账则展示“从A-B”）；
-/// 4. 交互：长按条目触发删除确认操作。
+/// 4. 交互：长按条目触发删除确认操作，支持批量模式选择。
 class OriginTransactionItem extends ConsumerWidget {
   final Transaction transaction;
   final Category? category;
   final Account? account;
   final Account? toAccount;
   final List<Tag>? tags;
-  final bool hideAmounts;
+  final bool? hideAmounts;
+  final int? transferDirection;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback? onSelectionChanged;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -33,7 +38,11 @@ class OriginTransactionItem extends ConsumerWidget {
     this.account,
     this.toAccount,
     this.tags,
-    this.hideAmounts = false,
+    this.hideAmounts,
+    this.transferDirection,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onSelectionChanged,
     this.onTap,
     this.onLongPress,
   });
@@ -125,11 +134,13 @@ class OriginTransactionItem extends ConsumerWidget {
     }
 
     // 5. 金额计算与显示
+    final effectiveHideAmounts =
+        hideAmounts ?? (ref.watch(hideAmountsProvider) ?? false);
     final amount = transaction.nativeAmount ?? transaction.amount;
     String amountStr;
     Color amountColor;
 
-    if (hideAmounts) {
+    if (effectiveHideAmounts) {
       amountStr = '****';
       amountColor = OriginTokens.textPrimary(context);
     } else {
@@ -140,9 +151,18 @@ class OriginTransactionItem extends ConsumerWidget {
         amountStr = '+${formatMoneyCompact(amount, trimZeros: false)}';
         amountColor = const Color(0xFFFF8200); // 暖橙色
       } else {
-        // 转账
-        amountStr = formatMoneyCompact(amount, trimZeros: false);
-        amountColor = OriginTokens.textPrimary(context);
+        // 转账：若在单卡详情中指定了流向，-1 为流出当前账户（支出），1 为流入当前账户（收入）
+        if (transferDirection == -1) {
+          amountStr = '-${formatMoneyCompact(amount, trimZeros: false)}';
+          amountColor = OriginTokens.textPrimary(context);
+        } else if (transferDirection == 1) {
+          amountStr = '+${formatMoneyCompact(amount, trimZeros: false)}';
+          amountColor = const Color(0xFFFF8200);
+        } else {
+          // 普通通用无流向转账
+          amountStr = formatMoneyCompact(amount, trimZeros: false);
+          amountColor = OriginTokens.textPrimary(context);
+        }
       }
     }
 
@@ -152,18 +172,49 @@ class OriginTransactionItem extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress != null
-            ? () {
-                HapticFeedback.mediumImpact();
-                onLongPress!();
-              }
-            : null,
+        onTap: isSelectionMode ? onSelectionChanged : onTap,
+        onLongPress: isSelectionMode
+            ? null
+            : onLongPress != null
+                ? () {
+                    HapticFeedback.mediumImpact();
+                    onLongPress!();
+                  }
+                : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // 0. 批量选择模式复选框
+              if (isSelectionMode) ...[
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 20,
+                  height: 20,
+                  margin: const EdgeInsets.only(right: 12.0),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.transparent,
+                    border: Border.all(
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : OriginTokens.divider(context),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: isSelected
+                      ? const Icon(
+                          Icons.check,
+                          size: 13,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+              ],
+
               // 1. 左侧图标 (通透无底色，居中放置)
               SizedBox(
                 width: 32.0,

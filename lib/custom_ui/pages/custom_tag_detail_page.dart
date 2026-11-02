@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
+import '../../pages/shared/resources/widgets/detail_period_controls.dart'
+    show detailRangeLabel;
 import '../../pages/tag/detail/bindings/tag_detail.dart';
 import '../widgets/custom_tag_detail_sections.dart';
 import '../../providers.dart';
@@ -10,21 +14,22 @@ import '../../providers/budget_providers.dart';
 import '../../services/billing/post_processor.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/month_range.dart';
-import '../widgets/origin_date_picker.dart';
+import '../widgets/origin_period_picker.dart';
 import 'custom_category_detail_page.dart';
-import '../../pages/transaction/transaction_editor_page.dart';
+import 'custom_transaction_sheet.dart';
 import '../../pages/tag/tag_edit_page.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_menu.dart';
-import '../widgets/origin_segmented_control.dart';
 
 /// vivo OriginOS 风格自定义标签详情页面 (CustomTagDetailPage)
 ///
 /// 核心特性：
-/// 1. 右上角采用统一的 2 个点入口 (OriginMoreButton)，点击呼出高质感展开式气泡菜单；
-/// 2. 气泡菜单集成：编辑标签、删除标签；
-/// 3. 复用已有标签数据查询与统计，与上游 upstream 保持零冲突。
+/// 1. 右上角采用统一的 2 个点入口 (OriginMoreButton)，点击呼出高质感展开式气泡菜单（编辑、删除）；
+/// 2. 顶部提供高质感周期切换滑块 (BeeCompactTabs: 月/年/全部) 及动态日期调节条 (BeeDateRangeBar)；
+/// 3. 页面内容集成 OriginHeroCard 顶级数据看板卡片，展示标签专属色彩底、核心支出数额与核心多维指标；
+/// 4. 底部常驻“使用此标签记一笔”高质感大胶囊按钮 (Bottom CTA)，无缝联动 OriginOS 记账抽屉，预选当前标签；
+/// 5. 纯 Riverpod 驱动，复用底层标签数据与业务逻辑，零上游冲突。
 class CustomTagDetailPage extends ConsumerStatefulWidget {
   const CustomTagDetailPage({
     super.key,
@@ -53,18 +58,29 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
     ref.invalidate(tagDetailTagProvider(widget.tagId));
   }
 
-  Future<void> _date(DateTime initial) async {
-    final date = await showOriginDatePicker(
+  Future<void> _date(DateTime anchor) async {
+    final chosen = await showOriginPeriodPicker(
       context,
-      initial: initial,
-      mode: _period == TagDetailPeriod.month
-          ? OriginDatePickerMode.ym
-          : OriginDatePickerMode.y,
-      maxDate: DateTime.now(),
+      period: _period.name,
+      anchor: anchor,
     );
-    if (date != null && mounted) {
-      setState(() => _anchor = DateTime(
-          date.year, _period == TagDetailPeriod.year ? 1 : date.month));
+    if (chosen != null && mounted) {
+      setState(() {
+        _period = TagDetailPeriod.values.byName(chosen.period);
+        _anchor = chosen.anchor;
+      });
+    }
+  }
+
+  Future<void> _record(db.Tag? currentTag) async {
+    final tagId = currentTag?.id ?? widget.tagId;
+    final saved = await showCustomTransactionSheet(
+      context,
+      initialKind: 'expense',
+      initialTagIds: [tagId],
+    );
+    if (saved == true && mounted) {
+      _refresh();
     }
   }
 
@@ -138,6 +154,7 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context),
         startDay = ref.watch(currentMonthStartDayProvider);
+    final primaryColor = ref.watch(primaryColorProvider);
     final anchor = _anchor ?? labelForDate(DateTime.now(), startDay);
     final range = tagDetailRange(_period, startDay, anchor);
     _scope = (
@@ -188,34 +205,59 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
       ),
       body: Column(
         children: [
+          // 顶部时间选择滑块与日期调节条
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: OriginTokens.cardMargin,
-              vertical: 8.0,
-            ),
-            child: OriginSegmentedControl<TagDetailPeriod>(
-              items: const [
-                TagDetailPeriod.month,
-                TagDetailPeriod.year,
-                TagDetailPeriod.all,
+            padding: const EdgeInsets.symmetric(horizontal: 17),
+            child: Column(
+              children: [
+                BeeCompactTabs<TagDetailPeriod>(
+                  value: _period,
+                  trackHeight: 32,
+                  tapHeight: 44,
+                  items: [
+                    BeeSegment(
+                      TagDetailPeriod.month,
+                      l.v4DetailMonth,
+                    ),
+                    BeeSegment(
+                      TagDetailPeriod.year,
+                      l.v4DetailYear,
+                    ),
+                    BeeSegment(
+                      TagDetailPeriod.all,
+                      l.analyticsAll,
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _period = value);
+                  },
+                ),
+                if (_period != TagDetailPeriod.all)
+                  BeeDateRangeBar(
+                    label: detailRangeLabel(
+                      context,
+                      _period.name,
+                      anchor,
+                    ),
+                    onChoose: () => _date(anchor),
+                    previousLabel:
+                        MaterialLocalizations.of(context).previousMonthTooltip,
+                    nextLabel:
+                        MaterialLocalizations.of(context).nextMonthTooltip,
+                    onPrevious: () => setState(() {
+                      _anchor = _period == TagDetailPeriod.year
+                          ? DateTime(anchor.year - 1, anchor.month)
+                          : DateTime(anchor.year, anchor.month - 1);
+                    }),
+                    onNext: () => setState(() {
+                      _anchor = _period == TagDetailPeriod.year
+                          ? DateTime(anchor.year + 1, anchor.month)
+                          : DateTime(anchor.year, anchor.month + 1);
+                    }),
+                  ),
               ],
-              selectedItem: _period,
-              onSelected: (item) => setState(() => _period = item),
-              labelBuilder: (item) => switch (item) {
-                TagDetailPeriod.month => l.analyticsMonth,
-                TagDetailPeriod.year => l.analyticsYear,
-                TagDetailPeriod.all => l.analyticsAll,
-              },
             ),
           ),
-          if (_period != TagDetailPeriod.all)
-            TextButton.icon(
-              onPressed: () => _date(anchor),
-              icon: const Icon(Icons.calendar_today_rounded, size: 14),
-              label: Text(_period == TagDetailPeriod.year
-                  ? '${anchor.year}'
-                  : '${anchor.year}-${anchor.month.toString().padLeft(2, '0')}'),
-            ),
           const SizedBox(height: 8),
           Expanded(
             child: tag.when(
@@ -237,6 +279,8 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
                       stats: stats,
                       data: data,
                       allLedgers: widget.allLedgers,
+                      period: _period,
+                      anchor: anchor,
                       onRetry: retry,
                       onCategory: (category) => _open(CustomCategoryDetailPage(
                         categoryId: category.id,
@@ -246,16 +290,55 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
                         startDate: range?.start,
                         endDate: range?.end,
                       )),
-                      onRecord: () => _open(TransactionEditorPage(
-                        initialKind: 'expense',
-                        initialTagIds: [value.id],
-                      )),
                       onDelete: _deleteTransaction,
                       onReturned: _refresh,
                     ),
             ),
           ),
         ],
+      ),
+      // 底部常驻“使用此标签记一笔”大胶囊按钮
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OriginTokens.cardMargin,
+            vertical: 12.0,
+          ),
+          child: SizedBox(
+            height: OriginTokens.buttonHeight,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    OriginTokens.buttonRadius,
+                  ),
+                ),
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _record(tag.valueOrNull);
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    l.v4TagRecord,
+                    style: const TextStyle(
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

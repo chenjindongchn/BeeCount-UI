@@ -106,6 +106,25 @@ class _CustomAccountDetailPageState
     unawaited(c.refresh());
   }
 
+  String _formatDateHeader(DateTime date) {
+    final now = DateTime.now();
+    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+    final isYesterday = date.year == now.year && date.month == now.month && date.day == now.day - 1;
+    const weekdays = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+    final weekday = weekdays[date.weekday - 1];
+
+    final prefix = date.year == now.year
+        ? '${date.month.toString().padLeft(2, '0')}月${date.day.toString().padLeft(2, '0')}日'
+        : '${date.year}年${date.month.toString().padLeft(2, '0')}月${date.day.toString().padLeft(2, '0')}日';
+
+    if (isToday) {
+      return '$prefix 今天 · $weekday';
+    } else if (isYesterday) {
+      return '$prefix 昨天 · $weekday';
+    }
+    return '$prefix $weekday';
+  }
+
   void _onDataChanged() {
     // 抽屉展开及退场动画期间，不触发底层页面刷新，避免背景重绘跳闪
     if (_isSheetOpen) return;
@@ -504,6 +523,18 @@ class _CustomAccountDetailPageState
                                   ? 1
                                   : 0;
 
+                          final prevT = index > 1 ? c.rows[index - 2] : null;
+                          final isNewDay = prevT == null ||
+                              prevT.happenedAt.year != t.happenedAt.year ||
+                              prevT.happenedAt.month != t.happenedAt.month ||
+                              prevT.happenedAt.day != t.happenedAt.day;
+
+                          final nextT = index < c.rows.length ? c.rows[index] : null;
+                          final nextIsNewDay = nextT != null &&
+                              (nextT.happenedAt.year != t.happenedAt.year ||
+                               nextT.happenedAt.month != t.happenedAt.month ||
+                               nextT.happenedAt.day != t.happenedAt.day);
+
                           final isFirst = index == 1;
                           final isLast = index == c.rows.length;
 
@@ -526,38 +557,53 @@ class _CustomAccountDetailPageState
                               color: OriginTokens.cardBackground(context),
                               borderRadius: cardBorderRadius,
                               clipBehavior: Clip.antiAlias,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 14),
-                                child: Column(
-                                  children: [
-                                    CustomTransactionTileBinding(
-                                      key: ValueKey('account-transaction-${t.id}'),
-                                      row: (
-                                        t: t,
-                                        category: resources?.categoryFor(t),
-                                        account: resources?.accounts[t.accountId],
-                                        toAccount:
-                                            resources?.accounts[t.toAccountId],
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // 跨天轻量日期小标题栏
+                                  if (isNewDay) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(16.0, 14.0, 16.0, 10.0),
+                                      child: Text(
+                                        _formatDateHeader(t.happenedAt),
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: OriginTokens.textPrimary(context),
+                                          letterSpacing: -0.2,
+                                        ),
                                       ),
-                                      tags: metadata.valueOrNull?.tags[t.id] ??
-                                          const [],
-                                      attachmentCount: metadata
-                                              .valueOrNull?.attachments[t.id] ??
-                                          0,
-                                      fullDate: true,
-                                      allLedgers: true,
-                                      allowCategoryNavigation: false,
-                                      ledgerName:
-                                          resources?.ledgers[t.ledgerId]?.name,
-                                      baseCurrency:
-                                          resources?.ledgers[t.ledgerId]?.currency,
-                                      transferDirection: direction,
-                                      onReturned: _refresh,
                                     ),
-                                    if (!isLast)
-                                      const OriginDivider(startIndent: 48),
+                                    const OriginDivider(startIndent: 0),
                                   ],
-                                ),
+                                  CustomTransactionTileBinding(
+                                    key: ValueKey('account-transaction-${t.id}'),
+                                    row: (
+                                      t: t,
+                                      category: resources?.categoryFor(t),
+                                      account: resources?.accounts[t.accountId],
+                                      toAccount:
+                                          resources?.accounts[t.toAccountId],
+                                    ),
+                                    tags: metadata.valueOrNull?.tags[t.id] ??
+                                        const [],
+                                    attachmentCount: metadata
+                                            .valueOrNull?.attachments[t.id] ??
+                                        0,
+                                    fullDate: true,
+                                    allLedgers: hasMultipleLedgers,
+                                    allowCategoryNavigation: false,
+                                    ledgerName: hasMultipleLedgers
+                                        ? resources?.ledgers[t.ledgerId]?.name
+                                        : null,
+                                    baseCurrency:
+                                        resources?.ledgers[t.ledgerId]?.currency,
+                                    transferDirection: direction,
+                                    onReturned: _refresh,
+                                  ),
+                                  if (!isLast)
+                                    OriginDivider(startIndent: nextIsNewDay ? 0 : 56),
+                                ],
                               ),
                             ),
                           );

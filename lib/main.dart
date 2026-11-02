@@ -58,8 +58,8 @@ Future<void> main() async {
     observers: const [_WidgetUpdateObserver()],
   );
 
-  // 初始化应用模式（从 SharedPreferences 读取并设置到 appModeProvider）
-  await _initializeAppMode(container);
+  // 初始化应用模式（从 SharedPreferences 异步读取，不阻塞首帧挂载）
+  unawaited(_initializeAppMode(container));
 
   // 启动 URL 监听（用于快捷指令/AppLink 自动记账）
   _setupUrlListener(container);
@@ -75,7 +75,7 @@ Future<void> main() async {
 
   // 核心启动优化（第一性原理）：
   // 所有非首屏必须的后台系统服务（时区、本地通知、记账提醒、信用卡提醒、小组件回调、截图监听、孤立文件GC等）
-  // 统一异步延后执行，绝不在 runApp() 之前串行阻塞首帧渲染！
+  // 统一异步错峰延后执行，绝不在 runApp() 之前或首帧期间争抢主线程与 SQLite！
   unawaited(_runDeferredBackgroundTasks(container));
 
   runApp(ProviderScope(
@@ -84,8 +84,11 @@ Future<void> main() async {
   ));
 }
 
-/// 后台延时异步初始化的非关键系统服务
+/// 后台延时异步初始化的非关键系统服务（三阶段阶梯式错峰调度）
 Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
+  // 错峰阶段一：延后 2.5 秒，让首屏挂载、关键帧渲染与进场动画彻底完成并稳定
+  await Future.delayed(const Duration(milliseconds: 2500));
+
   // 初始化时区（必须在通知服务之前，修复iOS通知问题）
   try {
     NotificationFactory.initializeTimeZone();
@@ -130,6 +133,9 @@ Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
     // 静默失败，不影响运行
   }
 
+  // 错峰阶段二：延后至 5 秒后，再注册小组件回调、恢复截图监听与图片分享
+  await Future.delayed(const Duration(milliseconds: 2500));
+
   // 注册小组件交互回调
   try {
     await WidgetManager.registerCallback();
@@ -145,7 +151,8 @@ Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
     _setupImageShareHandler(container);
   }
 
-  // 启动一次性磁盘孤立文件 GC
+  // 错峰阶段三：延后至 8 秒后，再执行一次性磁盘孤立文件 GC
+  await Future.delayed(const Duration(seconds: 3));
   await _runOrphanFileGcOnce(container);
 }
 
@@ -167,8 +174,8 @@ class _WidgetUpdateObserver extends ProviderObserver {
 
   void _updateWidgetOnStart(ProviderContainer container) async {
     try {
-      // 延后 1.5 秒执行，优先让首屏关键帧渲染完成，避免主线程发生离屏截图与 SQLite 争抢
-      await Future.delayed(const Duration(milliseconds: 1500));
+      // 延后 4 秒执行，优先让首屏关键帧与用户首次浏览操作完成，避免主线程发生离屏截图与 SQLite 争抢
+      await Future.delayed(const Duration(seconds: 4));
       await container.read(baseCurrencyInitProvider.future);
       final repository = container.read(repositoryProvider);
       final ledgerId = container.read(currentLedgerIdProvider);
@@ -281,25 +288,21 @@ Future<void> _restoreScreenshotMonitor(ProviderContainer container) async {
 
 /// 初始化应用模式
 ///
-/// 在应用启动时从 SharedPreferences 读取模式并设置到 appModeProvider
-/// 这样可以确保后续使用 repositoryProvider 时能获取到正确的模式
+/// 在应用启动时从 SharedPreferences 异步读取模式并设置到 appModeProvider
+/// 仅当读取到的模式与当前默认不一致时更新状态，杜绝冷启动无谓重复写入磁盘
 /// [container] Provider容器
 Future<void> _initializeAppMode(ProviderContainer container) async {
   try {
-    print('⏳ 初始化应用模式...');
-
-    // 从 SharedPreferences 直接读取模式
     final prefs = await SharedPreferences.getInstance();
     final modeStr = prefs.getString('app_mode');
-    final mode = modeStr != null ? AppMode.fromString(modeStr) : AppMode.local;
-
-    // 使用 switchMode 方法设置模式，确保 repositoryProvider 能立即获取到正确的模式
-    // switchMode 不会重复写入 SharedPreferences，因为值已经存在
-    await container.read(appModeProvider.notifier).switchMode(mode);
-
-    print('✅ 应用模式已初始化: ${mode.label}');
+    if (modeStr != null) {
+      final mode = AppMode.fromString(modeStr);
+      final currentMode = container.read(appModeProvider);
+      if (currentMode != mode) {
+        await container.read(appModeProvider.notifier).switchMode(mode);
+      }
+    }
   } catch (e, stackTrace) {
-    print('⚠️  应用模式初始化失败: $e');
     logger.error('Main', '应用模式初始化失败', e, stackTrace);
   }
 }

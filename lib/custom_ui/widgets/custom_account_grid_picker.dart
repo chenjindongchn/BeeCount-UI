@@ -166,10 +166,6 @@ class CustomAccountGridPicker extends ConsumerWidget {
                       ? '不选择账户'
                       : (account?.name ?? '');
 
-                  final IconData itemIcon = isNoAccountItem
-                      ? Icons.not_interested_rounded
-                      : getIconForAccountType(account!.type);
-
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
@@ -200,15 +196,20 @@ class CustomAccountGridPicker extends ConsumerWidget {
                                 : null,
                           ),
                           child: Center(
-                            child: Icon(
-                              itemIcon,
-                              size: 22,
-                              color: isSelected
-                                  ? primary
-                                  : (isDark
-                                      ? Colors.white70
-                                      : const Color(0xFF4A4A4F)),
-                            ),
+                            child: isNoAccountItem
+                                ? Icon(
+                                    Icons.not_interested_rounded,
+                                    size: 22,
+                                    color: isSelected
+                                        ? primary
+                                        : (isDark
+                                            ? Colors.white70
+                                            : const Color(0xFF4A4A4F)),
+                                  )
+                                : AccountTypeIcon(
+                                    type: account!.type,
+                                    size: 24,
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 6),

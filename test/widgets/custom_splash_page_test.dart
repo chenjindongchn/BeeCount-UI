@@ -66,6 +66,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           appSplashInitProvider.overrideWith((ref) async {}),
+          customAppSplashInitProvider.overrideWith((ref) async {}),
         ],
       );
       addTearDown(container.dispose);

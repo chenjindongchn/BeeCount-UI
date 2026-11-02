@@ -31,11 +31,16 @@ final customAppSplashInitProvider = FutureProvider<void>((ref) async {
   ref.onDispose(() => disposed = true);
 
   try {
-    // 1. 并行等待核心 UI 配置就绪
+    // 1. 核心首屏依赖（遵循第一性原理：只阻塞等待主题色、暗黑模式、账本ID、应用锁状态，其余14项配置异步预热）
     await Future.wait([
       ref.watch(primaryColorInitProvider.future),
       ref.watch(themeModeInitProvider.future),
       ref.watch(appInitProvider.future),
+      ref.watch(securityInitProvider.future),
+    ]);
+
+    // 后台非阻塞预热其余非首屏关键配置（有默认值托底，不卡启动门）
+    unawaited(Future.wait([
       ref.watch(fontScaleInitProvider.future),
       ref.watch(hideAmountsInitProvider.future),
       ref.watch(compactAmountInitProvider.future),
@@ -50,8 +55,7 @@ final customAppSplashInitProvider = FutureProvider<void>((ref) async {
       ref.watch(displayNameInitProvider.future),
       ref.watch(baseCurrencyInitProvider.future),
       ref.watch(headerSkinInitProvider.future),
-      ref.watch(securityInitProvider.future),
-    ]);
+    ]));
 
     if (disposed) return;
 
@@ -98,9 +102,10 @@ final customAppSplashInitProvider = FutureProvider<void>((ref) async {
           '定制极速预加载完成，耗时: ${DateTime.now().difference(startTime).inMilliseconds}ms，切换到主界面');
     }
 
-    // 2. 后台微任务：异步生成待处理周期交易（绝不阻塞首屏呈现）
+    // 2. 后台异步生成待处理周期交易（错峰延后 3 秒，绝不阻塞或争抢首屏关键帧）
     unawaited(() async {
       try {
+        await Future.delayed(const Duration(seconds: 3));
         final repo = ref.read(repositoryProvider);
         final generatedLedgerIds =
             await RecurringTransactionService.generatePendingTransactionsStatic(

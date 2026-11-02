@@ -584,10 +584,9 @@ class _OriginAccountRow extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Icon(
-                  getIconForAccountType(account.type),
+                child: AccountTypeIcon(
+                  type: account.type,
                   size: 20.0,
-                  color: OriginTokens.textPrimary(context),
                 ),
               ),
             ),

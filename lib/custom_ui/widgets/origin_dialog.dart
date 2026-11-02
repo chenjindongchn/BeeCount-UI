@@ -922,7 +922,11 @@ Future<void> showOriginAccountPickerDialog({
             children: [
               // 不设默认项
               _OriginAccountPickerTile(
-                icon: Icons.not_interested_rounded,
+                icon: Icon(
+                  Icons.not_interested_rounded,
+                  size: 18.0,
+                  color: currentId == null ? primaryColor : OriginTokens.textSecondary(context),
+                ),
                 title: '不设默认',
                 subtitle: '记账时需手动选择或使用上次选择',
                 isSelected: currentId == null,
@@ -947,7 +951,10 @@ Future<void> showOriginAccountPickerDialog({
                   endIndent: 12.0,
                 ),
                 _OriginAccountPickerTile(
-                  icon: getIconForAccountType(acc.type),
+                  icon: AccountTypeIcon(
+                    type: acc.type,
+                    size: 20.0,
+                  ),
                   title: acc.name,
                   subtitle: ref.watch(currencyLockedProvider)
                       ? getAccountTypeLabel(context, acc.type)
@@ -978,7 +985,7 @@ Future<void> showOriginAccountPickerDialog({
 }
 
 class _OriginAccountPickerTile extends StatelessWidget {
-  final IconData icon;
+  final Widget icon;
   final String title;
   final String subtitle;
   final bool isSelected;
@@ -1011,11 +1018,7 @@ class _OriginAccountPickerTile extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Icon(
-                  icon,
-                  size: 18.0,
-                  color: isSelected ? primaryColor : OriginTokens.textSecondary(context),
-                ),
+                child: icon,
               ),
             ),
             const SizedBox(width: 10.0),

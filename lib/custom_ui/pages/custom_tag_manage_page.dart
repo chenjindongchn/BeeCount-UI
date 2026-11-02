@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:beecount_business_ui/beecount_business_ui.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db.dart';
@@ -255,17 +256,13 @@ class _CustomTagManagePageState extends ConsumerState<CustomTagManagePage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final tags = ref.watch(tagsWithStatsProvider);
+    final primaryColor = ref.watch(primaryColorProvider);
 
     return OriginScaffold(
       appBar: OriginSmallTopAppBar(
         title: l.tagManageTitle,
         leading: const BackButton(),
         actions: [
-          IconButton(
-            tooltip: l.tagAddTitle,
-            icon: const Icon(Icons.add_rounded, size: 24),
-            onPressed: _busy ? null : () => _open(null),
-          ),
           OriginMoreButton(
             items: [
               OriginMenuItem(
@@ -369,6 +366,43 @@ class _CustomTagManagePageState extends ConsumerState<CustomTagManagePage> {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OriginTokens.cardMargin,
+            vertical: 12.0,
+          ),
+          child: SizedBox(
+            height: OriginTokens.buttonHeight,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    OriginTokens.buttonRadius,
+                  ),
+                ),
+              ),
+              onPressed: _busy
+                  ? null
+                  : () {
+                      HapticFeedback.lightImpact();
+                      _open(null);
+                    },
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
+                l.tagAddTitle,
+                style: const TextStyle(
+                  fontSize: 15.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

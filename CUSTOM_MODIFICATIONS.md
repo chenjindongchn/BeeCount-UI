@@ -618,3 +618,150 @@ String formatDisplayAmount(double value,
   final shouldShowCurrency = globalCurrencyLocked ? false : (showCurrency ?? globalShowCurrencySymbol);
 >>>>
 ```
+
+---
+
+## 六、冷启动速度极致优化与后台任务错峰调度
+
+- **修改日期**：2026-11-03
+- **优化原则**：遵循第一性原理（冷启动核心目标为以百毫秒级速度让用户看到首屏并能交互），消除非必要阻塞与并发争抢。
+- **改动收敛控制**：核心非增量改动仅在 `lib/main.dart`（挂载接触面），主要定制逻辑集中在 `lib/custom_ui/pages/custom_splash_page.dart`，100% 保持上游平滑可 Rebase。
+
+### 1. 涉及文件清单与架构角色
+
+| 序号 | 文件路径 | 架构角色 | 变更性质 | 冲突排查与维护指引 |
+| :--- | :--- | :--- | :--- | :--- |
+| **01** | `lib/main.dart` | 入口挂载点 | 极小侵入（仅 3 处调度优化） | 若上游更新 `main.dart`，核对 `unawaited(_initializeAppMode)`、`_runDeferredBackgroundTasks` 阶梯延迟与 `_updateWidgetOnStart` 延时 |
+| **02** | `lib/custom_ui/pages/custom_splash_page.dart` | 定制启动页与预加载 Provider | 定制目录纯增量代码 | 原作者仓库无此文件，Rebase 零冲突 |
+| **03** | `test/widgets/custom_splash_page_test.dart` | 自动化测试套件 | 测试代码 | 运行 `flutter test test/widgets/custom_splash_page_test.dart` 保证无回归 |
+
+---
+
+### 2. 代码行级 Diff 备查（`lib/main.dart`）
+
+#### (1) `main()` 内部 `_initializeAppMode` 改为非阻塞异步调用
+```dart
+<<<< 上游原版 / 优化前:
+  // 初始化应用模式（从 SharedPreferences 读取并设置到 appModeProvider）
+  await _initializeAppMode(container);
+==== 本地定制 / 优化后:
+  // 初始化应用模式（从 SharedPreferences 异步读取，不阻塞首帧挂载）
+  unawaited(_initializeAppMode(container));
+>>>>
+```
+
+#### (2) `_runDeferredBackgroundTasks` 引入三阶段阶梯式错峰调度
+```dart
+<<<< 上游原版 / 优化前:
+Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
+  // 初始化时区
+  try {
+    NotificationFactory.initializeTimeZone();
+  ...
+==== 本地定制 / 优化后:
+Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
+  // 错峰阶段一：延后 2.5 秒，让首屏挂载、关键帧渲染与进场动画彻底完成并稳定
+  await Future.delayed(const Duration(milliseconds: 2500));
+  ...
+  // 错峰阶段二：延后至 5 秒后，再注册小组件回调、恢复截图监听与图片分享
+  await Future.delayed(const Duration(milliseconds: 2500));
+  ...
+  // 错峰阶段三：延后至 8 秒后，再执行一次性磁盘孤立文件 GC
+  await Future.delayed(const Duration(seconds: 3));
+  await _runOrphanFileGcOnce(container);
+>>>>
+```
+
+#### (3) `_updateWidgetOnStart` 小组件渲染避开首屏交互期
+```dart
+<<<< 上游原版 / 优化前:
+  void _updateWidgetOnStart(ProviderContainer container) async {
+    try {
+      // 延后 1.5 秒执行
+      await Future.delayed(const Duration(milliseconds: 1500));
+==== 本地定制 / 优化后:
+  void _updateWidgetOnStart(ProviderContainer container) async {
+    try {
+      // 延后 4 秒执行，优先让首屏关键帧与用户首次浏览操作完成，避免主线程发生离屏截图与 SQLite 争抢
+      await Future.delayed(const Duration(seconds: 4));
+>>>>
+```
+
+#### (4) `_initializeAppMode` 消除冷启动多余的 SharedPreferences 磁盘持久化
+```dart
+<<<< 上游原版 / 优化前:
+    await container.read(appModeProvider.notifier).switchMode(mode);
+==== 本地定制 / 优化后:
+    final currentMode = container.read(appModeProvider);
+    if (currentMode != mode) {
+      container.read(appModeProvider.notifier).state = mode;
+    }
+>>>>
+```
+
+---
+
+### 3. 后续上游更新（Git Rebase）标准操作指南
+
+当原作者（`upstream/main`）更新了代码，需要合入到定制分支时，请严格按以下步骤操作：
+
+#### 步骤 1：拉取上游最新提交并 Rebase
+```bash
+# 1. 确保工作区干净，切换到 main 分支同步上游
+git checkout main
+git pull upstream main
+git push origin main
+
+# 2. 切换到定制分支并进行变基
+git checkout custom-ui-v4
+git rebase main
+```
+
+#### 步骤 2：若遇到 `lib/main.dart` 冲突的秒级处理方案
+因为所有 UI 代码都在 `lib/custom_ui/`，**99% 的文件会自动通过**。若 `lib/main.dart` 提示冲突：
+1. 打开 `lib/main.dart`，寻找 `<<<<<<< HEAD` 冲突块；
+2. **黄金原则**：
+   - 保留上游新增加的业务 Provider 或路由配置；
+   - 将模式加载保持为 `unawaited(_initializeAppMode(container));`；
+   - 保持后台任务 `_runDeferredBackgroundTasks` 里的分步 `await Future.delayed` 延时（2.5s / 2.5s / 3s）；
+   - 保持 `_updateWidgetOnStart` 延时为 `const Duration(seconds: 4)`；
+   - 保持 `home: _getHomePage(initState, ref)` 挂载到 `CustomAppStartupGate` 与 `CustomHomeStartupGate`。
+3. 解决冲突后执行：
+   ```bash
+   git add lib/main.dart
+   git rebase --continue
+   ```
+
+#### 步骤 3：验证与回归检查
+合入完成后，运行以下三道检查确保安全：
+```bash
+# 1. 语法与静态检查
+flutter analyze
+
+# 2. 启动与核心测试用例
+flutter test test/widgets/custom_splash_page_test.dart
+
+# 3. 编译运行验证
+flutter run -d macos  # 或 -d chrome / 连接真机
+```
+
+---
+
+## 七、全局明细显示规范统一（资产、分类、标签、搜索与首页明细彻底对齐）
+
+- **修改日期**：2026-11-03
+- **优化原则**：
+  - 遵循第一性原理：交易流水核心四要素（支出名称、备注、金额、银行卡）在全应用所有场景下具有唯一且统一的呈现语义。
+  - 单一真实来源（SSOT）：以 `OriginTransactionItem` 为全局唯一流水条目渲染引擎，彻底移除对上游旧版 `TransactionListItem` 的依赖。
+  - 零侵入保证：改造完全收敛在 `lib/custom_ui/` 内部，上游核心文件零接触，保证 Pull / Rebase 零冲突。
+
+### 1. 涉及文件清单与架构角色
+
+| 序号 | 文件路径 | 架构角色 | 变更性质 | 维护与对齐指引 |
+| :--- | :--- | :--- | :--- | :--- |
+| **01** | `lib/custom_ui/widgets/origin_transaction_item.dart` | 全局统一明细条目渲染引擎 | 增量能力增强 | 增强 `transferDirection`（资产单卡流向正负号与颜色判断）、`isSelectionMode`/`isSelected`（批量模式复选框），并自动联动全局 `hideAmountsProvider` |
+| **02** | `lib/custom_ui/widgets/custom_transaction_tile.dart` | 通用流水数据适配层 | 重构统一 | 彻底解耦上游旧版 `TransactionListItem`，直接消费 `OriginTransactionItem`，使消费此组件的二级流水全部继承明细规范 |
+| **03** | `lib/custom_ui/pages/custom_account_detail_page.dart` | 资产管理详情页 | UI排版优化 | 移除多余内边距（贴合 16dp 规范），引入优雅的跨日小分组标签与动态分割线缩进（跨日全宽，日内 56dp） |
+| **04** | 关联受益页面（`CustomCategoryDetailPage`、`CustomTagDetailSections`、`CustomSearchResults`） | 二级流水页面 | 自然统一 | 经由 `CustomTransactionTileBinding` 一并实现支出名称、备注、金额、银行卡与账户色彩的全局统一 |
+
+

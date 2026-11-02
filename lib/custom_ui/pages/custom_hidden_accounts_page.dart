@@ -283,10 +283,12 @@ class _HiddenAccountRow extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Icon(
-                  getIconForAccountType(account.type),
-                  size: 20.0,
-                  color: OriginTokens.textTertiary(context),
+                child: Opacity(
+                  opacity: 0.6,
+                  child: AccountTypeIcon(
+                    type: account.type,
+                    size: 20.0,
+                  ),
                 ),
               ),
             ),
