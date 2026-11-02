@@ -18,7 +18,7 @@ import '../services/data/tag_seed_service.dart';
 import '../pages/shared/dialogs/app_dialogs.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import '../styles/tokens.dart';
-import '../custom_ui/widgets/voice/origin_voice_assistant_sheet.dart';
+import '../custom_ui/widgets/voice/origin_voice_overlay.dart';
 
 /// 语音记账帮助类
 class VoiceBillingHelper {
@@ -127,7 +127,7 @@ class VoiceBillingHelper {
         barrierDismissible: false,
         barrierColor: Colors.transparent,
         barrierLabel: 'OriginVoiceAssistant',
-        pageBuilder: (dialogContext, _, __) => OriginVoiceAssistantSheet(
+        pageBuilder: (dialogContext, _, __) => OriginVoiceOverlay(
           audioPath: audioPath,
           recorder: recorder,
           triggerMode: settings.triggerMode,

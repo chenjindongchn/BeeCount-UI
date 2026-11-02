@@ -483,29 +483,48 @@ git rebase main
 
 ---
 
-## 十一、AI 语音助手全域极光唤醒与动态流体声浪特效重构
+## 十一、语音记账唤醒层：Gemini 底部光弧 + 悬浮流光微岛
 
 - **改造日期**：2026-11-02
-- **第一性原理与设计依据**：
-  1. **摒弃生硬的原生居中对话框**：
-     - 原版采用 Material 原生居中方块 `AlertDialog`，视觉单调、遮挡视线、缺乏智能体呼出的沉浸氛围；
-     - 融合 **蓝心小V (vivo OriginOS)**、**iOS 18 Siri (Apple Intelligence)** 与 **Google Gemini** 设计语言。
-  2. **全屏边缘流光氛围（Screen Edge Aura Glow）**：
-     - 唤醒时在屏幕边缘渲染顺畅流动的多彩渐变霓虹光晕（蓝青、极光紫、灵动粉、暖琥珀），随音量振幅律动呼吸；
-     - 背景附带动态暗化与轻量毛玻璃，营造整个系统被唤醒的未来感包围氛围。
-  3. **底部晶透超椭圆悬浮舱（Origin Floating Capsule）**：
-     - 32dp 超椭圆大圆角、`BackdropFilter` 双层毛玻璃、微光渐变描边；
-     - 遵循 OriginOS 弹簧物理曲线（`Cubic(0.25, 0.95, 0.32, 1.0)`）从底部优雅升起。
-  4. **动态流体极光声浪（Fluid Aurora Waveform）**：
-     - 3 层相位交错的平滑正弦/贝塞尔波浪叠加，波峰实时响应麦克风音量振幅（`amplitude`），中心配以高斯脉冲呼吸光斑；
-     - 进入思考识别阶段时，声浪平滑收束转为极光旋转光环（Aurora Shimmer Ring），并在识别成功时提供涟漪与触感震动反馈。
+- **设计**：去掉原生居中 `AlertDialog`。底部升起 Gemini 四色（#4285F4 / #9B72CB / #D96570 / #F4B400）流动光弧，光弧随说话振幅升高；光弧上方悬浮 48dp 毛玻璃微岛，微岛内的四色丝带随声音起伏。识别中丝带汇成平线并扫光，成功时收拢成 ✓，失败时光弧褪灰。按住说话模式按住微岛录音；自动检测模式点击微岛结束录音；点击空白处取消。系统开启"减弱动态效果"时关闭星尘和流动效果。
+- **提示与文案**：全部复用上游 `showBeeToast` 与 l10n 文案，不新增任何硬编码字符串。
 
 ### 1. 修改文件清单与冲突排查指引
 
 | 序号 | 所在源码位置 | 修改内容 | 冲突排查指引 |
 | :--- | :--- | :--- | :--- |
-| **01** | `lib/custom_ui/widgets/voice/origin_voice_edge_glow.dart` | 全屏边缘极光流动动画渲染器 | 定制目录纯增量代码 |
-| **02** | `lib/custom_ui/widgets/voice/origin_voice_wave_visualizer.dart` | 动态多层贝塞尔流体声浪与极光光环组件 | 定制目录纯增量代码 |
-| **03** | `lib/custom_ui/widgets/voice/origin_voice_assistant_sheet.dart` | 底部晶透超椭圆交互舱与完整状态机管理 | 定制目录纯增量代码 |
-| **04** | `lib/utils/voice_billing_helper.dart` | 将原版原生 `showDialog` 替换为 `showGeneralDialog` 挂载 `OriginVoiceAssistantSheet` | 仅改动 2~3 行挂载点代码 |
+| **01** | `lib/custom_ui/widgets/voice/origin_voice_session.dart` | 语音会话纯逻辑控制器（与上游私有录音状态机对齐的副本） | 定制目录纯增量代码，**见下方同步说明** |
+| **02** | `lib/custom_ui/widgets/voice/gemini_glow_arc.dart` | 底部光弧 + 星尘 | 定制目录纯增量代码 |
+| **03** | `lib/custom_ui/widgets/voice/gemini_voice_ribbons.dart` | 四色丝带 / 扫光 / ✓ | 定制目录纯增量代码 |
+| **04** | `lib/custom_ui/widgets/voice/gemini_voice_island.dart` | 毛玻璃微岛与手势 | 定制目录纯增量代码 |
+| **05** | `lib/custom_ui/widgets/voice/origin_voice_overlay.dart` | 唤醒层组合与进退场动画 | 定制目录纯增量代码 |
+| **06** | `test/custom_ui/voice_overlay_test.dart` | 唤醒层组件测试 | 定制目录纯增量代码 |
+| **07** | `lib/utils/voice_billing_helper.dart` | ① 新增 1 行 import；② `showDialog` 改为 `showGeneralDialog`；③ 用 `pageBuilder` 挂载 `OriginVoiceOverlay`。上游 `_VoiceRecordingDialog` 类保持原样未改动 | 冲突时保留上游其余改动，仅重新套用这 3 处 |
 
+### 2. Diff 备查（`lib/utils/voice_billing_helper.dart`）
+```dart
+<<<< 上游原版:
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => _VoiceRecordingDialog(
+==== 本地定制:
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        barrierLabel: 'OriginVoiceAssistant',
+        pageBuilder: (dialogContext, _, __) => OriginVoiceOverlay(
+>>>>
+```
+
+### 3. ⚠️ 逻辑副本同步说明（每次 rebase 后必做）
+上游的录音、静音检测和 AI 调用逻辑写在私有类 `_VoiceRecordingDialogState` 中，没有 Provider 可以复用，因此 `origin_voice_session.dart` 保留了一份逐项对齐的副本。
+这份副本**不会产生 Git 冲突，但也不会自动跟上上游的修改**。
+
+- 对齐基线：上游 commit `ce01d69dacb954c1e014a6065fd0378f10521ed8`
+- 检查命令：
+  ```bash
+  git diff ce01d69d HEAD -- lib/utils/voice_billing_helper.dart
+  ```
+- 如果输出中出现 `_VoiceRecordingDialogState` 的变化（如阈值、守卫、调用顺序、新增提示），请同步到 `origin_voice_session.dart`，并把上面的基线更新为新的 commit。UI 文件无需改动。
