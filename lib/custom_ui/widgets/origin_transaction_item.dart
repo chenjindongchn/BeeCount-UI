@@ -6,6 +6,8 @@ import '../../../utils/category_utils.dart';
 import '../../../utils/format_money.dart';
 import '../../../pages/shared/resources/bindings/recording_category_icon.dart';
 import '../styles/origin_tokens.dart';
+import '../providers/account_color_display_provider.dart';
+import '../utils/account_color_utils.dart';
 
 /// vivo OriginOS 风格交易流水条目组件
 ///
@@ -73,6 +75,7 @@ class OriginTransactionItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final showAccountColor = ref.watch(accountColorDisplayProvider);
     final isTransfer = transaction.type == 'transfer';
     final isExpense = transaction.type == 'expense';
     final isIncome = transaction.type == 'income';
@@ -281,16 +284,11 @@ class OriginTransactionItem extends ConsumerWidget {
                     // 下层：支出/收入账户或转账从A-B
                     if (accountText.isNotEmpty) ...[
                       const SizedBox(height: 3.0),
-                      Text(
-                        accountText,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: OriginTokens.textTertiary(context),
-                          height: 1.2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.end,
+                      _buildAccountLabel(
+                        context,
+                        showAccountColor: showAccountColor,
+                        isTransfer: isTransfer,
+                        fallbackText: accountText,
                       ),
                     ],
                   ],
@@ -300,6 +298,96 @@ class OriginTransactionItem extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAccountLabel(
+    BuildContext context, {
+    required bool showAccountColor,
+    required bool isTransfer,
+    required String fallbackText,
+  }) {
+    final defaultColor = OriginTokens.textTertiary(context);
+    const style = TextStyle(
+      fontSize: 11.5,
+      height: 1.2,
+    );
+
+    if (!showAccountColor) {
+      return Text(
+        fallbackText,
+        style: style.copyWith(color: defaultColor),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.end,
+      );
+    }
+
+    if (isTransfer) {
+      final fromName = account?.name;
+      final toName = toAccount?.name;
+      final hasFrom = fromName != null && fromName.isNotEmpty;
+      final hasTo = toName != null && toName.isNotEmpty;
+
+      if (!hasFrom && !hasTo) {
+        return Text(
+          fallbackText,
+          style: style.copyWith(color: defaultColor),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.end,
+        );
+      }
+
+      final fromColor = getAccountTypeColor(account?.type);
+      final toColor = getAccountTypeColor(toAccount?.type);
+
+      return Text.rich(
+        TextSpan(
+          children: [
+            if (hasFrom) ...[
+              TextSpan(text: '从', style: style.copyWith(color: defaultColor)),
+              TextSpan(
+                text: fromName,
+                style: style.copyWith(
+                  color: fromColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+            if (hasFrom && hasTo)
+              TextSpan(text: ' → ', style: style.copyWith(color: defaultColor)),
+            if (hasTo) ...[
+              if (!hasFrom)
+                TextSpan(text: '到', style: style.copyWith(color: defaultColor)),
+              TextSpan(
+                text: toName,
+                style: style.copyWith(
+                  color: toColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.end,
+      );
+    }
+
+    final accName = account?.name ?? fallbackText;
+    final accColor = getAccountTypeColor(account?.type);
+
+    return Text(
+      accName,
+      style: style.copyWith(
+        color: accColor,
+        fontWeight: FontWeight.w500,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.end,
     );
   }
 }

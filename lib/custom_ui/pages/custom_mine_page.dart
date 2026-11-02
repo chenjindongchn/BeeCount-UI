@@ -45,6 +45,7 @@ import '../widgets/origin_dialog.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../providers/amount_format_provider.dart';
 import '../providers/plus_button_enhancement_provider.dart';
+import '../providers/account_color_display_provider.dart';
 import '../providers/frequent_notes_enabled_provider.dart';
 
 /// vivo OriginOS 风格“我的”与设置页面 (CustomMinePage)
@@ -163,6 +164,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
     // 记账显示与偏好
     final isCurrencyLocked = ref.watch(currencyLockedProvider);
     final plusButtonEnhanced = ref.watch(plusButtonEnhancedProvider);
+    final accountColorDisplayEnabled = ref.watch(accountColorDisplayProvider);
     final frequentNotesEnabled = ref.watch(frequentNotesEnabledProvider);
     final compactAmount = ref.watch(compactAmountProvider);
     final showCurrencySymbol = ref.watch(currencySymbolVisibleProvider);
@@ -482,6 +484,28 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                 ),
                 onTap: () => ref
                     .read(plusButtonEnhancedProvider.notifier)
+                    .toggle(),
+              ),
+              OriginSettingItem(
+                title: '明细页面资产颜色显示',
+                subtitle: accountColorDisplayEnabled
+                    ? '开启：按资产属性变换颜色（微信绿/支付宝蓝/信用卡紫等）'
+                    : '关闭：保持默认灰色',
+                leading: Icon(
+                  Icons.palette_outlined,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                showArrow: false,
+                trailing: OriginSwitch(
+                  value: accountColorDisplayEnabled,
+                  activeColor: primaryColor,
+                  onChanged: (v) => ref
+                      .read(accountColorDisplayProvider.notifier)
+                      .setEnabled(v),
+                ),
+                onTap: () => ref
+                    .read(accountColorDisplayProvider.notifier)
                     .toggle(),
               ),
               OriginSettingItem(
