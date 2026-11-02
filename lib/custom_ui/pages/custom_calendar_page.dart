@@ -275,13 +275,13 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 12),
-          // 1. 日历主卡片 (嵌入 OriginCard)
+          const SizedBox(height: 8),
+          // 1. 日历主卡片 (嵌入 OriginCard，采用紧凑高空间利用率排版)
           OriginCard(
             margin: const EdgeInsets.symmetric(
               horizontal: OriginTokens.cardMargin,
             ),
-            padding: const EdgeInsets.fromLTRB(10, 6, 10, 14),
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
             child: Column(
               children: [
                 _buildMonthHeader(context, locale),
@@ -290,16 +290,16 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
 
           // 2. 当日明细 Section (若有选中日期)
           if (_selectedDay != null) ...[
             _buildDayHeading(context, locale, totals),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             _buildDayTransactionsCard(context, ledgerId, _selectedDay!),
           ],
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -313,7 +313,7 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
     final canNext = !next.isAfter(_calLastDay);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 6, 4, 10),
+      padding: const EdgeInsets.fromLTRB(6, 2, 2, 4),
       child: Row(
         children: [
           // 年月选择器触发按钮
@@ -321,10 +321,10 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
             onTap: _showMonthJumpPicker,
             behavior: HitTestBehavior.opaque,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
                 color: OriginTokens.cardSecondary(context),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(7),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -413,16 +413,16 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
       selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
       onDaySelected: _onDaySelected,
       onPageChanged: _onPageChanged,
-      rowHeight: 68 * scaler.scale(1).clamp(1.0, 1.3),
-      daysOfWeekHeight: 32,
+      rowHeight: 48 * scaler.scale(1).clamp(1.0, 1.25),
+      daysOfWeekHeight: 22,
       daysOfWeekStyle: DaysOfWeekStyle(
         weekdayStyle: TextStyle(
-          fontSize: 12.5,
+          fontSize: 11.5,
           fontWeight: FontWeight.w500,
           color: OriginTokens.textTertiary(context),
         ),
         weekendStyle: TextStyle(
-          fontSize: 12.5,
+          fontSize: 11.5,
           fontWeight: FontWeight.w500,
           color: OriginTokens.textTertiary(context),
         ),
@@ -466,10 +466,16 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
             ? OriginTokens.textTertiary(context).withValues(alpha: 0.35)
             : OriginTokens.textPrimary(context));
 
-    final hasAmount = !outside && (expense > 0 || income > 0);
+    final hasExpense = !outside && expense > 0;
+    final hasIncome = !outside && income > 0;
+    final hasBoth = hasExpense && hasIncome;
+
+    // 自适应字号，确保在 48dp 紧凑行高中优雅居中且不拥挤
+    final double dayFontSize = hasBoth ? 12.0 : (hasExpense || hasIncome ? 13.0 : 14.5);
+    final double amountFontSize = hasBoth ? 8.8 : 9.5;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 1.5),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
@@ -481,7 +487,7 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
               : (isToday
                   ? primaryColor.withValues(alpha: 0.1)
                   : Colors.transparent),
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(10.0),
           border: isToday && !isSelected
               ? Border.all(
                   color: primaryColor.withValues(alpha: 0.55),
@@ -492,8 +498,8 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
               ? [
                   BoxShadow(
                     color: primaryColor.withValues(alpha: 0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    blurRadius: 5,
+                    offset: const Offset(0, 1.5),
                   ),
                 ]
               : null,
@@ -504,50 +510,47 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
             Text(
               '${day.day}',
               style: TextStyle(
-                fontSize: 15.0,
-                height: 1.15,
+                fontSize: dayFontSize,
+                height: 1.1,
                 fontWeight:
                     isSelected || isToday ? FontWeight.w700 : FontWeight.w500,
                 color: fg,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
-            if (hasAmount) ...[
-              const SizedBox(height: 2),
-              if (expense > 0)
-                Text(
-                  _calendarCompactAmount(expense, '-'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    height: 1.1,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? Colors.white.withValues(alpha: 0.95)
-                        : expenseColor,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                )
-              else
-                const SizedBox(height: 12),
-              if (income > 0)
-                Text(
-                  _calendarCompactAmount(income, '+'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    height: 1.1,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? Colors.white.withValues(alpha: 0.95)
-                        : incomeColor,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                )
-              else
-                const SizedBox(height: 12),
+            if (hasExpense) ...[
+              const SizedBox(height: 1),
+              Text(
+                _calendarCompactAmount(expense, '-'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: amountFontSize,
+                  height: 1.1,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.95)
+                      : expenseColor,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+            if (hasIncome) ...[
+              const SizedBox(height: 1),
+              Text(
+                _calendarCompactAmount(income, '+'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: amountFontSize,
+                  height: 1.1,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.95)
+                      : incomeColor,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
             ],
           ],
         ),
@@ -646,14 +649,7 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
                   color: incomeColor,
                 ),
               ),
-          ] else
-            Text(
-              '无账单',
-              style: TextStyle(
-                fontSize: 12,
-                color: OriginTokens.textTertiary(context),
-              ),
-            ),
+          ],
         ],
       ),
     );

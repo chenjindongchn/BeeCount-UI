@@ -180,6 +180,17 @@ mixin _RecurringEditorActions on ConsumerState<RecurringEditorControls> {
   String? _getLedgerErrorText() {
     if (!_hasAttemptedSave) return null;
     if (_selectedLedgerId == null) {
+      final currentId = ref.read(currentLedgerIdProvider);
+      if (currentId > 0) {
+        _selectedLedgerId = currentId;
+        return null;
+      }
+      final firstLedger =
+          ref.read(localLedgersProvider).valueOrNull?.firstOrNull;
+      if (firstLedger != null) {
+        _selectedLedgerId = firstLedger.id;
+        return null;
+      }
       return '请选择账本';
     }
     return null;
@@ -202,7 +213,18 @@ mixin _RecurringEditorActions on ConsumerState<RecurringEditorControls> {
 
     // 检查账本
     if (_selectedLedgerId == null) {
-      return false;
+      final currentId = ref.read(currentLedgerIdProvider);
+      if (currentId > 0) {
+        _selectedLedgerId = currentId;
+      } else {
+        final firstLedger =
+            ref.read(localLedgersProvider).valueOrNull?.firstOrNull;
+        if (firstLedger != null) {
+          _selectedLedgerId = firstLedger.id;
+        } else {
+          return false;
+        }
+      }
     }
 
     // 检查分类（非转账）

@@ -212,14 +212,15 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     ref.watch(monthlyTotalsProvider(params));
     final (income, expense) =
         ref.watch(lastMonthlyTotalsProvider(params)) ?? (0.0, 0.0);
+    final isLocked = ref.watch(currencyLockedProvider);
     final currency = ledger?.currency ?? 'CNY';
-    final currencySymbol = getCurrencySymbol(currency);
+    final currencySymbol = isLocked ? '' : getCurrencySymbol(currency);
     final isPrimaryLight =
         ThemeData.estimateBrightnessForColor(primaryColor) == Brightness.light;
     final cardMainTextColor =
         isPrimaryLight ? const Color(0xFF1D1D1F) : Colors.white;
-    final cardUnitText = currency == 'CNY' ? '元' : currencySymbol;
-    final showCurrency = ref.watch(currencySymbolVisibleProvider);
+    final cardUnitText = isLocked ? '' : (currency == 'CNY' ? '元' : currencySymbol);
+    final showCurrency = !isLocked && ref.watch(currencySymbolVisibleProvider);
     final symbolPrefix = showCurrency ? '$currencySymbol ' : '';
 
     // 今日支出与预算数据

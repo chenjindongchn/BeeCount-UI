@@ -526,3 +526,95 @@ git rebase main
   git diff ce01d69d HEAD -- lib/utils/voice_billing_helper.dart
   ```
 - 如果输出中出现 `_VoiceRecordingDialogState` 的变化（如阈值、守卫、调用顺序、新增提示），请同步到 `origin_voice_session.dart`，并把上面的基线更新为新的 commit。UI 文件无需改动。
+
+---
+
+## 十二、锁定币种（单币种纯净极简模式）
+
+- **改造日期**：2026-11-02
+- **第一性原理与设计依据**：
+  为不使用多币种的用户提供纯粹、清爽的单币种记账体验：
+  1. **设置页「货币与汇率」分组改造**：
+     - 在「主币种」正下方新增「锁定币种」开关（`OriginSwitch`，由 `currencyLockedProvider` 驱动，本地持久化）；
+     - 开启后：全软件隐藏货币符号（`¥`、`$`、`元`）、币种切换胶囊与多币种折算行；
+     - 同分组下的「汇率管理」入口在开启后自动隐藏；
+     - 「外观与偏好」分组下的「货币符号」开关自动联动隐藏。
+  2. **记账与业务流程收敛**：
+     - 记账抽屉隐藏金额左侧币种下拉选择胶囊与汇率折算行，强制使用账本基准币，不触发公网汇率拉取；
+     - 账户新建与编辑表单隐藏「币种」选择行，新建账户自动锁定为账本币种；
+     - 账本新建与编辑弹窗隐藏「本位币」设置行，新建账本自动继承全局主币种；
+     - 账户快捷设置隐藏「汇率管理」入口，账户选择列表移除币种代码前缀（如 `CNY · 活期存款` 净化为 `活期存款`）；
+     - 资产看板、首页看板、报表看板隐藏货币单位与符号；
+     - 搜索筛选隐藏原币/账本金额切换组；
+     - 交易列表与 AI 记账卡片纯净展示金额数字，不含币种符号或折算副标题。
+  3. **严格零上游冲突物理隔离**：
+     - 业务状态管理与全部 UI 修改 100% 收敛在 `lib/custom_ui/` 目录下；
+     - 对原作者文件的唯一修改仅为 `lib/utils/format_money.dart` 中的 `globalCurrencyLocked` 全局变量注入。
+
+### 1. 修改文件清单与冲突排查指引
+
+| 序号 | 所在源码位置 | 修改内容 | 冲突排查指引 |
+| :--- | :--- | :--- | :--- |
+| **01** | `lib/utils/format_money.dart` | 声明 `globalCurrencyLocked` 并在 `formatDisplayAmount` 中加入锁定短路 | 若上游更新该文件，保留该变量与三目判断即可 |
+| **02** | `lib/custom_ui/providers/amount_format_provider.dart` | 新增 `currencyLockedProvider` 与 SharedPreferences 持久化 | 定制目录纯增量代码 |
+| **03** | `lib/custom_ui/pages/custom_mine_page.dart` | 「主币种」下方挂载「锁定币种」开关，锁定时隐藏「汇率管理」与「货币符号」| 定制目录纯增量代码 |
+| **04** | `lib/custom_ui/pages/custom_transaction_sheet.dart` | 锁定时隐藏金额左侧选币胶囊、外币折算行，禁用汇率拉取 | 定制目录纯增量代码 |
+| **05** | `lib/custom_ui/pages/custom_account_edit_page.dart` | 锁定时隐藏账户币种选择行与初始余额货币符号 | 定制目录纯增量代码 |
+| **06** | `lib/custom_ui/pages/custom_ledgers_page.dart` | 锁定时隐藏新建/编辑账本弹窗中的本位币选择行 | 定制目录纯增量代码 |
+| **07** | `lib/custom_ui/pages/custom_accounts_page.dart` | 锁定时隐藏资产看板单位与账户卡片货币符号 | 定制目录纯增量代码 |
+| **08** | `lib/custom_ui/pages/custom_account_detail_page.dart` | 锁定时隐藏账户详情页货币符号、多币种折算行与币种代码指标 | 定制目录纯增量代码 |
+| **09** | `lib/custom_ui/pages/custom_hidden_accounts_page.dart` | 锁定时隐藏隐藏账户列表中的货币符号 | 定制目录纯增量代码 |
+| **10** | `lib/custom_ui/widgets/origin_dialog.dart` | 锁定时快捷菜单隐藏「汇率管理」，账户选择列表隐藏币种代码前缀 | 定制目录纯增量代码 |
+| **11** | `lib/custom_ui/widgets/origin_bottom_sheet.dart` | 锁定时快捷菜单隐藏「汇率管理」，账户选择列表隐藏币种代码前缀 | 定制目录纯增量代码 |
+| **12** | `lib/custom_ui/pages/custom_home_page.dart` | 锁定时首页收支看板隐藏货币单位与符号 | 定制目录纯增量代码 |
+| **13** | `lib/custom_ui/widgets/custom_transaction_tile.dart` | 锁定时交易列表条目抑制币种符号与外币折算副标题 | 定制目录纯增量代码 |
+| **14** | `lib/custom_ui/pages/custom_net_worth_trend_page.dart` | 锁定时净资产趋势隐藏货币单位与多币种折算注记 | 定制目录纯增量代码 |
+| **15** | `lib/custom_ui/widgets/origin_analytics_content.dart` | 锁定时洞察看板隐藏货币单位与符号，趋势图隐藏单位 | 定制目录纯增量代码 |
+| **16** | `lib/custom_ui/pages/custom_budget_page.dart` | 锁定时预算看板与列表隐藏货币符号 | 定制目录纯增量代码 |
+| **17** | `lib/custom_ui/pages/custom_budget_edit_page.dart` | 锁定时预算添加与编辑表单隐藏货币符号 | 定制目录纯增量代码 |
+| **18** | `lib/custom_ui/widgets/origin_search_filter_sheet.dart` | 锁定时搜索筛选弹窗隐藏原币/账本金额切换组 | 定制目录纯增量代码 |
+| **19** | `lib/custom_ui/widgets/custom_search_results.dart` | 锁定时搜索结果摘要与列表隐藏货币符号 | 定制目录纯增量代码 |
+| **20** | `lib/custom_ui/widgets/ai/origin_bill_card.dart` | 锁定时 AI 记账卡片纯净展示金额数字，不含币种符号 | 定制目录纯增量代码 |
+| **21** | `lib/custom_ui/pages/custom_category_detail_page.dart` | 锁定时隐藏货币符号、币种代码与多币种提示条 | 定制目录纯增量代码 |
+| **22** | `lib/custom_ui/widgets/custom_tag_detail_sections.dart` | 锁定时隐藏货币符号与多币种提示条 | 定制目录纯增量代码 |
+| **23** | `test/custom_ui/currency_locked_test.dart` | 锁定币种开关状态流、持久化与金额格式化专项验收测试套件 | 定制目录纯增量代码 |
+
+### 2. Diff 备查（`lib/utils/format_money.dart`）
+```dart
+<<<< 上游原版:
+/// 全局货币符号显示开关（默认 false：不显示 ¥ / $ 等货币符号；开启为 true：显示货币符号）
+bool globalShowCurrencySymbol = false;
+
+/// Shared by App bindings and AmountText. Currency selection, locale and
+/// compact preference are resolved by the host; presentation packages only
+/// receive the final display text.
+String formatDisplayAmount(double value,
+    {String? currencyCode,
+    bool? showCurrency,
+    bool useCompactFormat = false,
+    bool isChineseLocale = true,
+    bool signed = true,
+    int decimals = 2,
+    bool? useThousandSeparator}) {
+  final shouldShowCurrency = showCurrency ?? globalShowCurrencySymbol;
+==== 本地定制:
+/// 全局货币符号显示开关（默认 false：不显示 ¥ / $ 等货币符号；开启为 true：显示货币符号）
+bool globalShowCurrencySymbol = false;
+
+/// 全局锁定币种开关（默认 false：未锁定；开启为 true：强制隐藏全软件货币符号与多币种标记）
+bool globalCurrencyLocked = false;
+
+/// Shared by App bindings and AmountText. Currency selection, locale and
+/// compact preference are resolved by the host; presentation packages only
+/// receive the final display text.
+String formatDisplayAmount(double value,
+    {String? currencyCode,
+    bool? showCurrency,
+    bool useCompactFormat = false,
+    bool isChineseLocale = true,
+    bool signed = true,
+    int decimals = 2,
+    bool? useThousandSeparator}) {
+  final shouldShowCurrency = globalCurrencyLocked ? false : (showCurrency ?? globalShowCurrencySymbol);
+>>>>
+```

@@ -7,6 +7,8 @@ import '../../../ai/core/bill_info.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers.dart';
 import '../../../utils/format_utils.dart';
+import '../../../utils/format_money.dart';
+import '../../providers/amount_format_provider.dart';
 import '../../styles/origin_tokens.dart';
 import '../origin_divider.dart';
 
@@ -214,7 +216,7 @@ class OriginBillCard extends ConsumerWidget {
                   const SizedBox(width: 12.0),
                   // 金额大字号
                   Text(
-                    '$amountSign${formatBalanceFull(rawAmount, currency)}',
+                    '$amountSign${ref.watch(currencyLockedProvider) ? formatMoneyCompact(rawAmount, trimZeros: false) : formatBalanceFull(rawAmount, currency)}',
                     style: TextStyle(
                       fontSize: 18.0,
                       fontWeight: FontWeight.bold,

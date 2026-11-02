@@ -56,7 +56,8 @@ class _CustomHiddenAccountsPageState extends ConsumerState<CustomHiddenAccountsP
     final allStatsAsync = ref.watch(allAccountStatsProvider);
     final hideAmounts = ref.watch(hideAmountsProvider);
     final baseCurrency = ref.watch(baseCurrencyProvider);
-    final showCurrency = ref.watch(currencySymbolVisibleProvider);
+    final isLocked = ref.watch(currencyLockedProvider);
+    final showCurrency = !isLocked && ref.watch(currencySymbolVisibleProvider);
     final currencySymbol =
         showCurrency ? getCurrencySymbol(baseCurrency) : '';
 

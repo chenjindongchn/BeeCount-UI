@@ -69,7 +69,9 @@ class OriginAnalyticsContent extends ConsumerWidget {
             ? l.homeIncome
             : l.homeBalance;
 
-    final showCurrency = ref.watch(currencySymbolVisibleProvider);
+    final isLocked = ref.watch(currencyLockedProvider);
+    final showCurrency = !isLocked && ref.watch(currencySymbolVisibleProvider);
+    final cardUnit = isLocked ? '' : (base == 'CNY' ? '元' : getCurrencySymbol(base));
     String money(double v) => hide
         ? '****'
         : formatDisplayAmount(
@@ -185,14 +187,14 @@ class OriginAnalyticsContent extends ConsumerWidget {
       OriginHeroCard(
         margin: EdgeInsets.zero,
         title: period,
-        unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
+        unit: cardUnit,
         mainAmount: formatMoneyCompact(data.total, trimZeros: false),
         hideAmounts: hide,
         action: null,
         metrics: [
           OriginHeroMetric(
             label: averageLabel,
-            unit: base == 'CNY' ? '元' : getCurrencySymbol(base),
+            unit: cardUnit,
             value: formatMoneyCompact(data.average, trimZeros: false),
           ),
           OriginHeroMetric(
@@ -206,7 +208,7 @@ class OriginAnalyticsContent extends ConsumerWidget {
         data: data,
         scope: scope,
         title: l.v4InsightsTrendTitle(label),
-        unit: l.v4InsightsAmountUnit(base),
+        unit: isLocked ? '' : l.v4InsightsAmountUnit(base),
         averageLabel: '$averageLabel ${money(data.average)}',
         formatValue: money,
         onAverage: average,

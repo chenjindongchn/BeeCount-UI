@@ -16,6 +16,7 @@ import '../../../utils/category_utils.dart';
 import '../../../utils/transaction_edit_utils.dart';
 import '../pages/custom_category_detail_page.dart';
 import '../pages/custom_tag_detail_page.dart';
+import '../providers/amount_format_provider.dart';
 import 'origin_dialog.dart';
 
 /// vivo OriginOS 风格交易条目绑定组件 (CustomTransactionTileBinding)
@@ -78,7 +79,7 @@ class CustomTransactionTileBinding extends ConsumerWidget {
       category: row.category,
       ledgerName: ledgerName,
       baseCurrencyCode: baseCurrency,
-      alwaysShowCurrency: allLedgers,
+      alwaysShowCurrency: ref.watch(currencyLockedProvider) ? false : allLedgers,
       onDelete: onDelete,
       title: transfer && (t.note?.isEmpty ?? true)
           ? l.transferTitle
@@ -92,8 +93,8 @@ class CustomTransactionTileBinding extends ConsumerWidget {
                   .join(' → ')
               : row.account?.name,
       amount: t.amount,
-      currencyCode: t.currencyCode,
-      nativeAmount: t.nativeAmount,
+      currencyCode: ref.watch(currencyLockedProvider) ? baseCurrency : t.currencyCode,
+      nativeAmount: ref.watch(currencyLockedProvider) ? null : t.nativeAmount,
       isExpense: t.type == 'expense',
       isTransfer: transfer,
       transferDirection: transferDirection,

@@ -15,6 +15,7 @@ import '../../pages/shared/selectors/currency_picker_sheet.dart';
 import '../../providers.dart';
 import '../../services/billing/post_processor.dart';
 import '../../utils/currencies.dart';
+import '../../utils/format_money.dart';
 import '../../utils/format_utils.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
@@ -352,21 +353,23 @@ class _CustomLedgerEditorDialogState extends State<_CustomLedgerEditorDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _DialogPreferenceRow(
-                  icon: Icons.monetization_on_outlined,
-                  title: l.ledgerBaseCurrencyLabel,
-                  value: displayCurrency(currency, context),
-                  onTap: () async {
-                    final code = await showCurrencyPickerSheet(
-                      context,
-                      selected: currency,
-                      primaryColor: primaryColor,
-                      title: l.ledgersSelectCurrency,
-                    );
-                    if (mounted && code != null) setState(() => currency = code);
-                  },
-                ),
-                const OriginDivider(startIndent: 44.0, endIndent: 12.0),
+                if (!globalCurrencyLocked) ...[
+                  _DialogPreferenceRow(
+                    icon: Icons.monetization_on_outlined,
+                    title: l.ledgerBaseCurrencyLabel,
+                    value: displayCurrency(currency, context),
+                    onTap: () async {
+                      final code = await showCurrencyPickerSheet(
+                        context,
+                        selected: currency,
+                        primaryColor: primaryColor,
+                        title: l.ledgersSelectCurrency,
+                      );
+                      if (mounted && code != null) setState(() => currency = code);
+                    },
+                  ),
+                  const OriginDivider(startIndent: 44.0, endIndent: 12.0),
+                ],
                 _DialogPreferenceRow(
                   icon: Icons.calendar_today_outlined,
                   title: l.ledgersMonthStartDay,

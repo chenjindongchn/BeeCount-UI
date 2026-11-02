@@ -14,6 +14,7 @@ import '../../utils/currencies.dart';
 import '../../utils/account_type_utils.dart';
 import '../../providers/credit_card_reminder_providers.dart';
 import '../../pages/shared/selectors/currency_picker_sheet.dart';
+import '../providers/amount_format_provider.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
@@ -122,7 +123,10 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
         TextEditingController(text: widget.account?.cardLastFour ?? '');
     _noteController = TextEditingController(text: widget.account?.note ?? '');
     _selectedType = widget.account?.type ?? 'cash';
-    _selectedCurrency = widget.account?.currency ?? 'CNY';
+    _selectedCurrency = widget.account?.currency ??
+        (ref.read(currencyLockedProvider)
+            ? ref.read(currentLedgerCurrencyProvider)
+            : 'CNY');
     _billingDay = widget.account?.billingDay;
     _paymentDueDay = widget.account?.paymentDueDay;
     _typeTab = isValuationOnlyType(_selectedType) ? 1 : 0;
@@ -1112,40 +1116,28 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
         body: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: OriginTokens.cardMargin,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.only(top: 8, bottom: 28),
             children: [
               // 1. 账户分类选择卡片
               _buildTypeCard(l, primary, isDark),
-              const SizedBox(height: 12),
 
               // 2. 基本信息卡片
               _buildBasicInfoCard(l, primary, editableBalance, isCredit, isDark),
-              const SizedBox(height: 12),
 
               // 3. 信用卡属性卡片（信用卡专属）
-              if (isCredit) ...[
+              if (isCredit)
                 _buildCreditCardSettings(l, primary, isDark),
-                const SizedBox(height: 12),
-              ],
 
               // 4. 银行卡属性卡片（银行卡或信用卡）
-              if (isBank || isCredit) ...[
+              if (isBank || isCredit)
                 _buildBankCardSettings(l, isDark),
-                const SizedBox(height: 12),
-              ],
 
               // 5. 备注卡片
               _buildNoteCard(l, isDark),
 
               // 6. 编辑模式管理区
-              if (isEditing) ...[
-                const SizedBox(height: 12),
+              if (isEditing)
                 _buildDangerSection(l),
-              ],
-              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -1255,7 +1247,21 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
     );
   }
 
-  /// 2. 基础信息卡片
+  Widget _buildFieldLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2, bottom: 8),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: OriginTokens.textSecondary(context),
+        ),
+      ),
+    );
+  }
+
+  /// 2. 基本信息卡片
   Widget _buildBasicInfoCard(
     AppLocalizations l,
     Color primary,
@@ -1268,67 +1274,22 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 账户名称
+          // 账户名称（带上方文字说明）
+          _buildFieldLabel(l.accountNameLabel),
           OriginTextField(
             controller: _nameController,
-            label: l.accountNameLabel,
             hintText: l.accountNameHint,
             clearable: true,
             errorText: _nameErrorText,
             onChanged: _checkNameDuplicate,
           ),
-          const SizedBox(height: 14),
-          const OriginDivider(startIndent: 0, endIndent: 0),
-          const SizedBox(height: 10),
 
-          // 币种选择
-          InkWell(
-            onTap: _pickCurrency,
-            borderRadius: BorderRadius.circular(10),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.language_rounded,
-                    size: 20,
-                    color: OriginTokens.textSecondary(context),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    l.ledgersCurrency,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: OriginTokens.textPrimary(context),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    displayCurrency(_selectedCurrency, context),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: OriginTokens.textSecondary(context),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 14,
-                    color: OriginTokens.textSecondary(context),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 金额设置
+          // 金额设置（带上方文字说明，排在币种上方）
           if (editableBalance) ...[
-            const SizedBox(height: 10),
-            const OriginDivider(startIndent: 0, endIndent: 0),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
+            _buildFieldLabel(_getBalanceLabel(l)),
             OriginTextField(
               controller: _initialBalanceController,
-              label: _getBalanceLabel(l),
               hintText: _getBalanceHint(l),
               errorText: _balanceErrorText,
               onChanged: (v) {
@@ -1340,16 +1301,18 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
                 decimal: true,
                 signed: true,
               ),
-              prefixIcon: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Text(
-                  getCurrencySymbol(_selectedCurrency),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              prefixIcon: ref.watch(currencyLockedProvider)
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Text(
+                        getCurrencySymbol(_selectedCurrency),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
               suffixIcon: !_balanceLoaded
                   ? const Padding(
                       padding: EdgeInsets.all(12),
@@ -1363,9 +1326,9 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
             ),
           ],
 
-          // 信用卡欠款/多缴模式切换
+          // 信用卡欠款/多缴模式切换（紧随初始资金）
           if (isCredit) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             OriginSegmentedControl<bool>(
               items: const [false, true],
               selectedItem: _creditOverpayment,
@@ -1375,6 +1338,51 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
                 HapticFeedback.lightImpact();
                 setState(() => _creditOverpayment = v);
               },
+            ),
+          ],
+
+          // 币种选择（调整至初始资金下方；锁定币种时彻底隐藏）
+          if (!ref.watch(currencyLockedProvider)) ...[
+            const SizedBox(height: 16),
+            const OriginDivider(startIndent: 0, endIndent: 0),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: _pickCurrency,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.language_rounded,
+                      size: 20,
+                      color: OriginTokens.textSecondary(context),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      l.ledgersCurrency,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: OriginTokens.textPrimary(context),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      displayCurrency(_selectedCurrency, context),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: OriginTokens.textSecondary(context),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: OriginTokens.textSecondary(context),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ],
@@ -1412,9 +1420,9 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
           ),
           const SizedBox(height: 16),
           // 信用额度
+          _buildFieldLabel(l.creditLimit),
           OriginTextField(
             controller: _creditLimitController,
-            label: l.creditLimit,
             hintText: l.creditLimitHint,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
@@ -1585,22 +1593,36 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
           ),
           const SizedBox(height: 14),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: OriginTextField(
-                  controller: _bankNameController,
-                  label: l.accountBankName,
-                  hintText: l.accountBankNameHint,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildFieldLabel(l.accountBankName),
+                    OriginTextField(
+                      controller: _bankNameController,
+                      hintText: l.accountBankNameHint,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: OriginTextField(
-                  controller: _cardLastFourController,
-                  label: l.accountCardLastFour,
-                  hintText: l.accountCardLastFourHint,
-                  maxLength: 4,
-                  keyboardType: TextInputType.number,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildFieldLabel(l.accountCardLastFour),
+                    OriginTextField(
+                      controller: _cardLastFourController,
+                      hintText: l.accountCardLastFourHint,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                      ],
+                      keyboardType: TextInputType.number,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1617,9 +1639,9 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildFieldLabel(l.accountNote),
           OriginTextField(
             controller: _noteController,
-            label: l.accountNote,
             hintText: l.accountNoteHint,
             maxLines: 3,
           ),

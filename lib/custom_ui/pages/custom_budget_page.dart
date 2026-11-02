@@ -36,8 +36,9 @@ class CustomBudgetPage extends ConsumerWidget {
     ref.watch(totalBudgetProvider);
     ref.watch(allBudgetsProvider);
     final ledger = ref.watch(currentLedgerProvider).asData?.value;
-    final showCurrency = ref.watch(currencySymbolVisibleProvider);
-    final actualSymbol = getCurrencySymbol(ledger?.currency ?? 'CNY');
+    final isLocked = ref.watch(currencyLockedProvider);
+    final showCurrency = !isLocked && ref.watch(currencySymbolVisibleProvider);
+    final actualSymbol = isLocked ? '' : getCurrencySymbol(ledger?.currency ?? 'CNY');
     final currencySymbol = showCurrency ? actualSymbol : '';
     final canEdit =
         ledger == null || !ledger.isShared || ledger.myRole == 'owner';

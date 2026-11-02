@@ -54,13 +54,16 @@ class _RecurringEditorControlsState
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context), currency = _effectiveCurrency();
+    final ledgers = ref.watch(localLedgersProvider).valueOrNull ?? const [];
+    final hasMultipleLedgers = ledgers.length > 1;
     final values = <BeeRecurringEditorField, BeeRecurringEditorValue>{
-      BeeRecurringEditorField.ledger: BeeRecurringEditorValue(
-          label: l.ledgerSelectTitle,
-          value: _ledgerName ?? l.ledgerSelect,
-          icon: 'BookOpen',
-          error: _getLedgerErrorText(),
-          onSelect: _selectLedger),
+      if (hasMultipleLedgers)
+        BeeRecurringEditorField.ledger: BeeRecurringEditorValue(
+            label: l.ledgerSelectTitle,
+            value: _ledgerName ?? l.ledgerSelect,
+            icon: 'BookOpen',
+            error: _getLedgerErrorText(),
+            onSelect: _selectLedger),
       BeeRecurringEditorField.currency: BeeRecurringEditorValue(
           label: l.txCurrencyLabel,
           value: displayCurrency(currency, context),

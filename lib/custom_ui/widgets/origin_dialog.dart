@@ -8,6 +8,7 @@ import '../pages/custom_ledgers_page.dart';
 import '../../providers.dart';
 import '../../utils/account_type_utils.dart';
 import '../styles/origin_tokens.dart';
+import '../providers/amount_format_provider.dart';
 import 'origin_divider.dart';
 import 'origin_switch.dart';
 
@@ -816,7 +817,7 @@ class _OriginAccountPreferencesDialog extends ConsumerWidget {
             ),
 
             // 4. 多币种汇率管理
-            if (hasMultipleCurrencies) ...[
+            if (!ref.watch(currencyLockedProvider) && hasMultipleCurrencies) ...[
               const OriginDivider(startIndent: 44.0, endIndent: 14.0),
               _OriginDialogSettingRow(
                 icon: Icons.currency_exchange_rounded,
@@ -948,7 +949,9 @@ Future<void> showOriginAccountPickerDialog({
                 _OriginAccountPickerTile(
                   icon: getIconForAccountType(acc.type),
                   title: acc.name,
-                  subtitle: '${acc.currency} · ${getAccountTypeLabel(context, acc.type)}',
+                  subtitle: ref.watch(currencyLockedProvider)
+                      ? getAccountTypeLabel(context, acc.type)
+                      : '${acc.currency} · ${getAccountTypeLabel(context, acc.type)}',
                   isSelected: currentId == acc.id,
                   primaryColor: primaryColor,
                   onTap: () async {

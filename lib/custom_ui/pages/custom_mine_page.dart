@@ -45,6 +45,7 @@ import '../widgets/origin_dialog.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../providers/amount_format_provider.dart';
 import '../providers/plus_button_enhancement_provider.dart';
+import '../providers/frequent_notes_enabled_provider.dart';
 
 /// vivo OriginOS 风格“我的”与设置页面 (CustomMinePage)
 ///
@@ -160,7 +161,9 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
     final skinAnimation = ref.watch(skinAnimationEnabledProvider);
 
     // 记账显示与偏好
+    final isCurrencyLocked = ref.watch(currencyLockedProvider);
     final plusButtonEnhanced = ref.watch(plusButtonEnhancedProvider);
+    final frequentNotesEnabled = ref.watch(frequentNotesEnabledProvider);
     final compactAmount = ref.watch(compactAmountProvider);
     final showCurrencySymbol = ref.watch(currencySymbolVisibleProvider);
     final thousandSeparator = ref.watch(thousandSeparatorProvider);
@@ -482,27 +485,50 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                     .toggle(),
               ),
               OriginSettingItem(
-                title: '货币符号',
-                subtitle: showCurrencySymbol
-                    ? '开启：显示货币符号（如 ¥8888.00）'
-                    : '关闭：不显示货币符号（如 8888.00）',
+                title: '常用备注推荐',
+                subtitle: frequentNotesEnabled
+                    ? '开启：记账时展示高频历史备注'
+                    : '关闭：不展示高频历史备注',
                 leading: Icon(
-                  Icons.currency_yen_rounded,
+                  Icons.auto_awesome_outlined,
                   color: primaryColor,
                   size: 22.0,
                 ),
                 showArrow: false,
                 trailing: OriginSwitch(
-                  value: showCurrencySymbol,
+                  value: frequentNotesEnabled,
                   activeColor: primaryColor,
                   onChanged: (v) => ref
-                      .read(currencySymbolVisibleProvider.notifier)
+                      .read(frequentNotesEnabledProvider.notifier)
                       .setEnabled(v),
                 ),
                 onTap: () => ref
-                    .read(currencySymbolVisibleProvider.notifier)
+                    .read(frequentNotesEnabledProvider.notifier)
                     .toggle(),
               ),
+              if (!isCurrencyLocked)
+                OriginSettingItem(
+                  title: '货币符号',
+                  subtitle: showCurrencySymbol
+                      ? '开启：显示货币符号（如 ¥8888.00）'
+                      : '关闭：不显示货币符号（如 8888.00）',
+                  leading: Icon(
+                    Icons.currency_yen_rounded,
+                    color: primaryColor,
+                    size: 22.0,
+                  ),
+                  showArrow: false,
+                  trailing: OriginSwitch(
+                    value: showCurrencySymbol,
+                    activeColor: primaryColor,
+                    onChanged: (v) => ref
+                        .read(currencySymbolVisibleProvider.notifier)
+                        .setEnabled(v),
+                  ),
+                  onTap: () => ref
+                      .read(currencySymbolVisibleProvider.notifier)
+                      .toggle(),
+                ),
               OriginSettingItem(
                 title: '金额千分位',
                 subtitle: thousandSeparator
@@ -636,15 +662,38 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                 onTap: _pickCurrency,
               ),
               OriginSettingItem(
-                title: l.exchangeRatePageTitle,
-                subtitle: l.exchangeRateEntrySubtitle,
+                title: '锁定币种',
+                subtitle: isCurrencyLocked
+                    ? '已锁定单币种，全软件隐藏币种标识与符号'
+                    : '关闭多币种功能，隐藏币种切换与货币符号',
                 leading: Icon(
-                  Icons.currency_exchange_rounded,
+                  Icons.lock_outline_rounded,
                   color: primaryColor,
                   size: 22.0,
                 ),
-                onTap: () => _open(const ExchangeRatePage()),
+                showArrow: false,
+                trailing: OriginSwitch(
+                  value: isCurrencyLocked,
+                  activeColor: primaryColor,
+                  onChanged: (v) => ref
+                      .read(currencyLockedProvider.notifier)
+                      .setEnabled(v),
+                ),
+                onTap: () => ref
+                    .read(currencyLockedProvider.notifier)
+                    .toggle(),
               ),
+              if (!isCurrencyLocked)
+                OriginSettingItem(
+                  title: l.exchangeRatePageTitle,
+                  subtitle: l.exchangeRateEntrySubtitle,
+                  leading: Icon(
+                    Icons.currency_exchange_rounded,
+                    color: primaryColor,
+                    size: 22.0,
+                  ),
+                  onTap: () => _open(const ExchangeRatePage()),
+                ),
             ],
           ),
 

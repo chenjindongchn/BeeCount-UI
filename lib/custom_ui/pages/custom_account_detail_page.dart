@@ -303,6 +303,8 @@ class _CustomAccountDetailPageState
           );
           final valuation = isValuationOnlyType(c.account.type);
           final hidden = ref.watch(hideAmountsProvider);
+          final hasMultipleLedgers =
+              (ref.watch(localLedgersProvider).valueOrNull?.length ?? 0) > 1;
 
           return OriginScaffold(
             appBar: _CustomAccountTopAppBar(
@@ -329,11 +331,12 @@ class _CustomAccountDetailPageState
                         icon: const Icon(Icons.search_rounded),
                         onTap: () => _perform(_search),
                       ),
-                    OriginMenuItem(
-                      title: l.v4AccountLinkedBooks,
-                      icon: const Icon(Icons.auto_stories_outlined),
-                      onTap: () => _perform(_ledgers),
-                    ),
+                    if (hasMultipleLedgers)
+                      OriginMenuItem(
+                        title: l.v4AccountLinkedBooks,
+                        icon: const Icon(Icons.auto_stories_outlined),
+                        onTap: () => _perform(_ledgers),
+                      ),
                     if (c.account.id >= 0) ...[
                       OriginMenuItem(
                         title: c.account.hidden ? l.accountRestore : l.accountHide,
@@ -647,8 +650,10 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final credit = account.type == 'credit_card';
     final liability = isLiabilityType(account.type);
-    final showCurrency = ref.watch(currencySymbolVisibleProvider);
+    final isLocked = ref.watch(currencyLockedProvider);
+    final showCurrency = !isLocked && ref.watch(currencySymbolVisibleProvider);
     final symbol = showCurrency ? getDistinctCurrencySymbol(account.currency) : '';
+    final unit = isLocked ? '' : (account.currency == 'CNY' ? '元' : symbol);
     final base = ref.watch(baseCurrencyProvider);
     final rates = ref.watch(effectiveRatesProvider).valueOrNull;
 
@@ -670,9 +675,9 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
 
     final due = daysUntilAccountPayment(account.paymentDueDay, DateTime.now());
 
-    // 外币换算提示（未隐藏且币种不同于账本基准币时呈现）
+    // 外币换算提示（未锁定、未隐藏且币种不同于账本基准币时呈现）
     String? conversionText;
-    if (!hidden && account.currency.toUpperCase() != base.toUpperCase()) {
+    if (!isLocked && !hidden && account.currency.toUpperCase() != base.toUpperCase()) {
       if (rates != null) {
         final converted = computeNativeAmount(
           amount: balance,
@@ -695,7 +700,7 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
         metrics.add(
           OriginHeroMetric(
             label: l.creditLimit,
-            unit: account.currency == 'CNY' ? '元' : symbol,
+            unit: unit,
             value: formatMoneyCompact(account.creditLimit!, trimZeros: false),
           ),
         );
@@ -718,32 +723,36 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
           value: conversionText,
         ),
       );
-      metrics.add(
-        OriginHeroMetric(
-          label: '账户币种',
-          value: account.currency.toUpperCase(),
-        ),
-      );
+      if (!isLocked) {
+        metrics.add(
+          OriginHeroMetric(
+            label: '账户币种',
+            value: account.currency.toUpperCase(),
+          ),
+        );
+      }
     } else {
       metrics.add(
         OriginHeroMetric(
           label: '初始金额',
-          unit: account.currency == 'CNY' ? '元' : symbol,
+          unit: unit,
           value: formatMoneyCompact(account.initialBalance, trimZeros: false),
         ),
       );
-      metrics.add(
-        OriginHeroMetric(
-          label: '账户币种',
-          value: account.currency.toUpperCase(),
-        ),
-      );
+      if (!isLocked) {
+        metrics.add(
+          OriginHeroMetric(
+            label: '账户币种',
+            value: account.currency.toUpperCase(),
+          ),
+        );
+      }
     }
 
     // 单项资产大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
     return OriginHeroCard(
       title: balanceLabel,
-      unit: account.currency == 'CNY' ? '元' : symbol,
+      unit: unit,
       mainAmount: formatMoneyCompact(value, trimZeros: false),
       hideAmounts: hidden,
       onToggleHideAmounts: () {

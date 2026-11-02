@@ -1177,6 +1177,8 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         !_isSubmitting &&
         (_selectedAccountId == null || _selectedAccountCurrency != null);
     final ledger = ref.watch(ledgerByIdProvider(widget.ledgerId)).valueOrNull;
+    final hasMultipleLedgers =
+        (ref.watch(localLedgersProvider).valueOrNull?.length ?? 0) > 1;
     final accountsEnabled = widget.showAccountPicker &&
         (ref.watch(accountFeatureEnabledProvider).valueOrNull ?? false);
     final account = _selectedAccountId == null
@@ -1221,7 +1223,9 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         ledger: RecordingLedgerControl(
             key: const ValueKey('recording-ledger'),
             name: ledger?.name ?? '',
-            onTap: widget.onLedgerChanged == null ? null : _pickCardLedger),
+            onTap: (widget.onLedgerChanged == null || !hasMultipleLedgers)
+                ? null
+                : _pickCardLedger),
         amount: amount,
         hint: _op == null
             ? l10n.v4RecordingCalculationHint

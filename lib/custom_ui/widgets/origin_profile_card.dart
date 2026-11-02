@@ -269,6 +269,8 @@ class _OriginProfileCardState extends ConsumerState<OriginProfileCard> {
     final ledger = ref.watch(currentLedgerProvider).valueOrNull;
     final counts = ref.watch(countsForLedgerProvider(ledgerId)).valueOrNull;
     final name = ref.watch(displayNameProvider);
+    final hasMultipleLedgers =
+        (ref.watch(localLedgersProvider).valueOrNull?.length ?? 0) > 1;
 
     final greetingInfo = _greeting(l10n);
     final displayName = name.isEmpty ? OriginAppInfo.appName : name;
@@ -437,9 +439,9 @@ class _OriginProfileCardState extends ConsumerState<OriginProfileCard> {
                     ref.read(bottomTabIndexProvider.notifier).state = 0,
               ),
               const Spacer(),
-              // 当前账本胶囊
+              // 当前账本胶囊（多账本时提供选择切换，单账本时作为状态展示）
               GestureDetector(
-                onTap: () => showLedgerPicker(context),
+                onTap: hasMultipleLedgers ? () => showLedgerPicker(context) : null,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10.0,
@@ -479,12 +481,14 @@ class _OriginProfileCardState extends ConsumerState<OriginProfileCard> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 2.0),
-                      Icon(
-                        Icons.expand_more_rounded,
-                        size: 14.0,
-                        color: OriginTokens.textTertiary(context),
-                      ),
+                      if (hasMultipleLedgers) ...[
+                        const SizedBox(width: 2.0),
+                        Icon(
+                          Icons.expand_more_rounded,
+                          size: 14.0,
+                          color: OriginTokens.textTertiary(context),
+                        ),
+                      ],
                     ],
                   ),
                 ),

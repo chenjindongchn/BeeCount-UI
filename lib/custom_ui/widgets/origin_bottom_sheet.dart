@@ -14,6 +14,7 @@ import 'origin_divider.dart';
 import 'origin_dialog.dart';
 import 'origin_switch.dart';
 import '../providers/account_display_preferences_provider.dart';
+import '../providers/amount_format_provider.dart';
 
 /// 以 OriginUI 规范弹出自底向上升起的抽屉 (OriginBottomSheet)
 ///
@@ -696,8 +697,8 @@ class _OriginAccountPreferencesSheet extends ConsumerWidget {
                     },
                   ),
 
-                  // 4. 多币种汇率管理（仅多币种时展示）
-                  if (hasMultipleCurrencies) ...[
+                  // 4. 多币种汇率管理（仅未锁定且多币种时展示）
+                  if (!ref.watch(currencyLockedProvider) && hasMultipleCurrencies) ...[
                     const OriginDivider(startIndent: 50.0, endIndent: 16.0),
                     _OriginSheetSettingRow(
                       icon: Icons.currency_exchange_rounded,
@@ -916,7 +917,9 @@ class _OriginAccountPickerSheetContent extends ConsumerWidget {
                     _OriginAccountRow(
                       icon: getIconForAccountType(acc.type),
                       title: acc.name,
-                      subtitle: '${acc.currency} · ${getAccountTypeLabel(context, acc.type)}',
+                      subtitle: ref.watch(currencyLockedProvider)
+                          ? getAccountTypeLabel(context, acc.type)
+                          : '${acc.currency} · ${getAccountTypeLabel(context, acc.type)}',
                       isSelected: currentId == acc.id,
                       primaryColor: primaryColor,
                       onTap: () async {

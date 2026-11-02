@@ -320,9 +320,11 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
           final visibleAccounts = accounts.where((a) => !a.hidden).toList();
           final hiddenAccounts = accounts.where((a) => a.hidden).toList();
 
-          final showCurrency = ref.watch(currencySymbolVisibleProvider);
+          final isLocked = ref.watch(currencyLockedProvider);
+          final showCurrency = !isLocked && ref.watch(currencySymbolVisibleProvider);
           final currencySymbol =
               showCurrency ? getCurrencySymbol(baseCurrency) : '';
+          final cardUnit = isLocked ? '' : (baseCurrency == 'CNY' ? '元' : currencySymbol);
 
           // 按账户类型分组
           final Map<String, List<db.Account>> grouped = {};
@@ -354,7 +356,7 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
               // 1. 资产总览大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感)
               OriginHeroCard(
                 title: l10n.netWorthTrendLineNet,
-                unit: baseCurrency == 'CNY' ? '元' : currencySymbol,
+                unit: cardUnit,
                 mainAmount: formatMoneyCompact(netAssets),
                 hideAmounts: hideAmounts,
                 onToggleHideAmounts: () {
@@ -364,12 +366,12 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
                 metrics: [
                   OriginHeroMetric(
                     label: l10n.netWorthTrendLineAssets,
-                    unit: baseCurrency == 'CNY' ? '元' : currencySymbol,
+                    unit: cardUnit,
                     value: formatMoneyCompact(totalAssets),
                   ),
                   OriginHeroMetric(
                     label: l10n.netWorthTrendLineLiabilities,
-                    unit: baseCurrency == 'CNY' ? '元' : currencySymbol,
+                    unit: cardUnit,
                     value: formatMoneyCompact(totalLiabilities),
                   ),
                 ],

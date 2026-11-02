@@ -6,6 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../pages/shared/resources/category_icon_adapter.dart';
 import '../../../pages/transaction/search/bindings/transaction_search.dart';
 import '../../../utils/category_utils.dart';
+import '../../../utils/format_money.dart';
 import '../styles/origin_tokens.dart';
 import 'origin_bottom_sheet.dart';
 import 'origin_card.dart';
@@ -432,26 +433,27 @@ class _OriginSearchFilterSheetState extends State<OriginSearchFilterSheet> {
 
                   // 5. 金额区间筛选
                   _buildSectionHeader(context, l.searchAmountFilter),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                      children: [
-                        OriginFilterChip(
-                          label: l.v4SearchOriginalAmount,
-                          selected: _basis == SearchAmountBasis.original,
-                          onTap: () => setState(
-                              () => _basis = SearchAmountBasis.original),
-                        ),
-                        const SizedBox(width: 8.0),
-                        OriginFilterChip(
-                          label: '${l.v4SearchLedgerAmount} (${widget.currency})',
-                          selected: _basis == SearchAmountBasis.ledger,
-                          onTap: () => setState(
-                              () => _basis = SearchAmountBasis.ledger),
-                        ),
-                      ],
+                  if (!globalCurrencyLocked)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Row(
+                        children: [
+                          OriginFilterChip(
+                            label: l.v4SearchOriginalAmount,
+                            selected: _basis == SearchAmountBasis.original,
+                            onTap: () => setState(
+                                () => _basis = SearchAmountBasis.original),
+                          ),
+                          const SizedBox(width: 8.0),
+                          OriginFilterChip(
+                            label: '${l.v4SearchLedgerAmount} (${widget.currency})',
+                            selected: _basis == SearchAmountBasis.ledger,
+                            onTap: () => setState(
+                                () => _basis = SearchAmountBasis.ledger),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   Row(
                     children: [
                       Expanded(

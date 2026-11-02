@@ -12,6 +12,7 @@ import '../styles/origin_tokens.dart';
 import '../widgets/origin_hero_card.dart';
 import '../widgets/origin_report_period_sheets.dart';
 import '../widgets/origin_scaffold.dart';
+import '../providers/amount_format_provider.dart';
 
 /// vivo OriginOS 风格净资产趋势页面 (CustomNetWorthTrendPage)
 ///
@@ -106,7 +107,8 @@ class _CustomNetWorthTrendPageState
     final primaryColor = ref.watch(primaryColorProvider);
     final currency = ref.watch(baseCurrencyProvider).toUpperCase();
     final earliest = ref.watch(earliestTransactionDateProvider).valueOrNull;
-    final multi = (ref.watch(usedCurrenciesProvider).valueOrNull?.length ?? 1) > 1;
+    final isLocked = ref.watch(currencyLockedProvider);
+    final multi = !isLocked && (ref.watch(usedCurrenciesProvider).valueOrNull?.length ?? 1) > 1;
 
     final dates = _resolveDates(earliest);
     final seriesAsync = ref.watch(netWorthTrendSeriesProvider(dates));
@@ -377,7 +379,9 @@ class _CustomNetWorthTrendPageState
         OriginHeroCard(
           margin: EdgeInsets.zero,
           title: rangeText,
-          unit: currency == 'CNY' ? '元' : getCurrencySymbol(currency),
+          unit: ref.watch(currencyLockedProvider)
+              ? ''
+              : (currency == 'CNY' ? '元' : getCurrencySymbol(currency)),
           mainAmount: formatDisplayAmount(
             last,
             currencyCode: currency,

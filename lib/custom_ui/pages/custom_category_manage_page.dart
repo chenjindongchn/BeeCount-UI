@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -432,17 +433,13 @@ class _CustomCategoryManagePageState
   Widget build(BuildContext context) {
     final categoriesWithCountAsync = ref.watch(categoriesWithCountProvider);
     final l10n = AppLocalizations.of(context);
+    final primaryColor = ref.watch(primaryColorProvider);
 
     return OriginScaffold(
       appBar: OriginSmallTopAppBar(
         title: l10n.categoryTitle,
         leading: const BackButton(),
         actions: [
-          IconButton(
-            tooltip: l10n.categoryNew,
-            icon: const Icon(Icons.add_rounded, size: 24),
-            onPressed: () => _addCategory(),
-          ),
           OriginMoreButton(
             items: [
               OriginMenuItem(
@@ -485,8 +482,13 @@ class _CustomCategoryManagePageState
             child: OriginSegmentedControl<int>(
               items: const [0, 1],
               selectedItem: _tabController.index,
+              tabController: _tabController,
               onSelected: (val) {
-                _tabController.animateTo(val);
+                _tabController.animateTo(
+                  val,
+                  duration: const Duration(milliseconds: 250),
+                  curve: OriginTokens.fastOutSlowIn,
+                );
               },
               labelBuilder: (val) =>
                   val == 0 ? l10n.categoryExpense : l10n.categoryIncome,
@@ -519,6 +521,41 @@ class _CustomCategoryManagePageState
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OriginTokens.cardMargin,
+            vertical: 12.0,
+          ),
+          child: SizedBox(
+            height: OriginTokens.buttonHeight,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    OriginTokens.buttonRadius,
+                  ),
+                ),
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _addCategory();
+              },
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
+                l10n.categoryNew,
+                style: const TextStyle(
+                  fontSize: 15.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

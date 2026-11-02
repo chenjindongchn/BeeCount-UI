@@ -8,6 +8,7 @@ import '../../../pages/transaction/search/bindings/transaction_search.dart';
 import '../../../providers.dart';
 import '../../../utils/currencies.dart';
 import '../../../utils/format_money.dart';
+import '../providers/amount_format_provider.dart';
 import '../styles/origin_tokens.dart';
 import 'custom_transaction_tile.dart';
 import 'origin_card.dart';
@@ -45,9 +46,11 @@ class CustomSearchResults extends ConsumerWidget {
     final accounts =
         ref.watch(accountFeatureEnabledProvider).valueOrNull ?? true;
 
+    final isLocked = ref.watch(currencyLockedProvider);
+    final symbol = isLocked ? '' : getDistinctCurrencySymbol(ledger?.currency ?? 'CNY');
     String money(double value) => hidden
         ? '••••'
-        : '${getDistinctCurrencySymbol(ledger?.currency ?? 'CNY')}${formatMoneyCompact(value, trimZeros: false)}';
+        : '$symbol${formatMoneyCompact(value, trimZeros: false)}';
 
     if (c.loading) {
       return Center(
@@ -448,7 +451,11 @@ class CustomSearchResults extends ConsumerWidget {
       );
     }
 
-    // 无输入时的初始状态：展示历史搜索记录与提示
+    // 无输入时的初始状态：仅在有历史搜索记录时展示历史卡片，不再显示“输入关键词开始搜索”及图标
+    if (c.history.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         OriginTokens.cardMargin,
@@ -456,88 +463,57 @@ class CustomSearchResults extends ConsumerWidget {
         OriginTokens.cardMargin,
         12.0,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (c.history.isNotEmpty) ...[
-            OriginCard(
-              margin: EdgeInsets.zero,
-              padding: const EdgeInsets.all(14.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l.v4SearchRecent,
-                        style: TextStyle(
-                          fontSize: 13.0,
-                          fontWeight: FontWeight.w600,
-                          color: OriginTokens.textPrimary(context),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          c.clearHistory();
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Text(
-                          l.v4SearchClearHistory,
-                          style: TextStyle(
-                            fontSize: 12.0,
-                            color: OriginTokens.textTertiary(context),
-                          ),
-                        ),
-                      ),
-                    ],
+      child: OriginCard(
+        margin: EdgeInsets.zero,
+        padding: const EdgeInsets.all(14.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l.v4SearchRecent,
+                  style: TextStyle(
+                    fontSize: 13.0,
+                    fontWeight: FontWeight.w600,
+                    color: OriginTokens.textPrimary(context),
                   ),
-                  const SizedBox(height: 10.0),
-                  Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: c.history
-                        .map(
-                          (q) => OriginFilterChip(
-                            label: q,
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              onQuery(q);
-                            },
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24.0),
-          ],
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 36.0),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.manage_search_rounded,
-                    size: 44.0,
-                    color: OriginTokens.textTertiary(context),
-                  ),
-                  const SizedBox(height: 10.0),
-                  Text(
-                    l.searchNoInput,
+                ),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    c.clearHistory();
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    l.v4SearchClearHistory,
                     style: TextStyle(
-                      fontSize: 13.0,
+                      fontSize: 12.0,
                       color: OriginTokens.textTertiary(context),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 10.0),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: c.history
+                  .map(
+                    (q) => OriginFilterChip(
+                      label: q,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        onQuery(q);
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ),
       ),
     );
   }

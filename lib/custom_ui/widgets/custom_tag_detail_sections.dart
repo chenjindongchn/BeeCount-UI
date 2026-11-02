@@ -11,6 +11,7 @@ import '../../../utils/format_money.dart';
 import '../../../pages/shared/resources/bindings/recording_category_icon.dart';
 import '../../../pages/tag/detail/bindings/tag_detail.dart';
 import '../../../pages/shared/currency/bindings/detail_currency_notice.dart';
+import '../providers/amount_format_provider.dart';
 import 'custom_transaction_tile.dart';
 
 /// vivo OriginOS 风格标签详情子组件 (CustomTagDetailSections)
@@ -53,8 +54,11 @@ class CustomTagDetailSections extends ConsumerWidget {
     final projection = resource?.currency;
     final complete =
         projection?.complete == true && !data.isLoading && !stats.isLoading;
-    final symbol = getDistinctCurrencySymbol(
-        projection?.targetCurrency ?? book?.currency ?? '—');
+    final isLocked = ref.watch(currencyLockedProvider);
+    final symbol = isLocked
+        ? ''
+        : getDistinctCurrencySymbol(
+            projection?.targetCurrency ?? book?.currency ?? '—');
     String number(double value) => hide
         ? '••••'
         : complete
@@ -123,7 +127,8 @@ class CustomTagDetailSections extends ConsumerWidget {
                 value:
                     totals == null ? '—' : l.tagTransactionCount(totals.count))
           ]),
-      if (projection != null &&
+      if (!isLocked &&
+          projection != null &&
           (allLedgers || !complete || projection.hasForeignSources))
         Padding(
             padding: const EdgeInsets.only(top: 8),

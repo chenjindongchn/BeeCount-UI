@@ -31,6 +31,7 @@ import '../styles/origin_tokens.dart';
 import '../widgets/origin_menu.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_hero_card.dart';
+import '../providers/amount_format_provider.dart';
 import 'custom_transaction_sheet.dart';
 
 /// vivo OriginOS 风格分类详情页面 (CustomCategoryDetailPage)
@@ -584,7 +585,8 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
     final accounts =
         ref.watch(accountFeatureEnabledProvider).valueOrNull ?? true;
     final currency = c.summaryCurrency ?? current?.currency ?? '—';
-    final symbol = getDistinctCurrencySymbol(currency);
+    final isLocked = ref.watch(currencyLockedProvider);
+    final symbol = isLocked ? '' : getDistinctCurrencySymbol(currency);
     final complete = c.summaryComplete;
 
     String number(double value) => hide
@@ -610,7 +612,7 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
       CategoryDetailPeriod.custom => periodLabel ?? l.v4DetailCustom,
     };
 
-    final metricLabel = currency;
+    final metricLabel = isLocked ? '' : currency;
     final rows = showAll ? c.rows : c.rows.take(4).toList();
 
     final days = <DateTime, ({double expense, double income})>{};
@@ -675,7 +677,8 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
             ),
           ],
         ),
-        if (c.currencyProjection != null &&
+        if (!isLocked &&
+            c.currencyProjection != null &&
             (allLedgers ||
                 !complete ||
                 c.currencyProjection!.hasForeignSources)) ...[

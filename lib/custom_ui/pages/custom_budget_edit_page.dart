@@ -17,6 +17,7 @@ import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_segmented_control.dart';
 import '../widgets/origin_amount_field.dart';
 import '../widgets/origin_dialog.dart';
+import '../providers/amount_format_provider.dart';
 
 /// vivo OriginOS 风格预算编辑/添加页面 (CustomBudgetEditPage)
 class CustomBudgetEditPage extends ConsumerStatefulWidget {
@@ -233,7 +234,9 @@ class _CustomBudgetEditPageState extends ConsumerState<CustomBudgetEditPage> {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
     final ledger = ref.watch(currentLedgerProvider).asData?.value;
-    final currencySymbol = getCurrencySymbol(ledger?.currency ?? 'CNY');
+    final isLocked = ref.watch(currencyLockedProvider);
+    final showCurrency = !isLocked && ref.watch(currencySymbolVisibleProvider);
+    final currencySymbol = showCurrency ? getCurrencySymbol(ledger?.currency ?? 'CNY') : '';
     final permitted =
         ledger == null || !ledger.isShared || ledger.myRole == 'owner';
 

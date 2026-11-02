@@ -7,6 +7,9 @@ bool globalUseThousandSeparator = true;
 /// 全局货币符号显示开关（默认 false：不显示 ¥ / $ 等货币符号；开启为 true：显示货币符号）
 bool globalShowCurrencySymbol = false;
 
+/// 全局锁定币种开关（默认 false：未锁定；开启为 true：强制隐藏全软件货币符号与多币种标记）
+bool globalCurrencyLocked = false;
+
 /// Shared by App bindings and AmountText. Currency selection, locale and
 /// compact preference are resolved by the host; presentation packages only
 /// receive the final display text.
@@ -18,7 +21,7 @@ String formatDisplayAmount(double value,
     bool signed = true,
     int decimals = 2,
     bool? useThousandSeparator}) {
-  final shouldShowCurrency = showCurrency ?? globalShowCurrencySymbol;
+  final shouldShowCurrency = globalCurrencyLocked ? false : (showCurrency ?? globalShowCurrencySymbol);
   if ((shouldShowCurrency || useCompactFormat) && currencyCode != null) {
     var formatted =
         formatBalance(value, currencyCode, isChineseLocale: isChineseLocale, showCurrency: shouldShowCurrency);

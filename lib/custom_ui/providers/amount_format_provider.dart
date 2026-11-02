@@ -89,3 +89,47 @@ class CurrencySymbolVisibleNotifier extends StateNotifier<bool> {
 
   Future<void> toggle() => setEnabled(!state);
 }
+
+/// 锁定币种开关 Provider（默认 false：未锁定；开启为 true：锁定币种，隐藏全软件币种标识与符号）
+final currencyLockedProvider =
+    StateNotifierProvider<CurrencyLockedNotifier, bool>((ref) {
+  return CurrencyLockedNotifier();
+});
+
+class CurrencyLockedNotifier extends StateNotifier<bool> {
+  CurrencyLockedNotifier() : super(false) {
+    globalCurrencyLocked = false;
+    _loadPreference();
+  }
+
+  static const String _prefKey = 'lock_currency_mode';
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getBool(_prefKey);
+      if (saved != null) {
+        state = saved;
+        globalCurrencyLocked = saved;
+      } else {
+        state = false;
+        globalCurrencyLocked = false;
+      }
+    } catch (_) {
+      state = false;
+      globalCurrencyLocked = false;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    if (state == enabled) return;
+    state = enabled;
+    globalCurrencyLocked = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefKey, enabled);
+    } catch (_) {}
+  }
+
+  Future<void> toggle() => setEnabled(!state);
+}

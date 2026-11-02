@@ -330,6 +330,8 @@ class _CustomAIChatPageState extends ConsumerState<CustomAIChatPage>
     // 记账结果卡片类型
     if (message.messageType == 'bill_card' && message.metadata != null) {
       final parsed = _parseBillMetadata(message);
+      final hasMultipleLedgers =
+          (ref.watch(localLedgersProvider).valueOrNull?.length ?? 0) > 1;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -347,7 +349,8 @@ class _CustomAIChatPageState extends ConsumerState<CustomAIChatPage>
                       !parsed.undoneIds.contains(parsed.txIds[i])
                   ? () => _handleEdit(message.id, parsed.txIds[i])
                   : null,
-              onChangeLedger: i < parsed.txIds.length &&
+              onChangeLedger: hasMultipleLedgers &&
+                      i < parsed.txIds.length &&
                       !parsed.undoneIds.contains(parsed.txIds[i])
                   ? () => _handleChangeLedger(message.id, parsed.txIds[i])
                   : null,
