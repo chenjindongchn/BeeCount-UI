@@ -129,7 +129,7 @@ class CustomAccountGridPicker extends ConsumerWidget {
               ),
             ),
 
-            // 标题行与操作按钮
+            // 标题行与关闭按钮
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 16, 8),
               child: Row(
@@ -143,61 +143,24 @@ class CustomAccountGridPicker extends ConsumerWidget {
                       color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 新建账户轻量胶囊按钮
-                      GestureDetector(
-                        onTap: () => _handleCreateAccount(context),
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: primary.withValues(
-                              alpha: isDark ? 0.2 : 0.1,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.add_rounded, size: 16, color: primary),
-                              const SizedBox(width: 2),
-                              Text(
-                                '新建',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white10
+                            : Colors.black.withValues(alpha: 0.05),
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(width: 8),
-                      // 关闭按钮
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white10
-                                : Colors.black.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 16,
-                            color: isDark ? Colors.white70 : Colors.black54,
-                          ),
-                        ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: isDark ? Colors.white70 : Colors.black54,
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
