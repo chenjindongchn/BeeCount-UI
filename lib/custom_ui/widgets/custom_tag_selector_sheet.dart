@@ -101,15 +101,10 @@ class _CustomTagSelectorSheetState
     final primaryColor = OriginTokens.primary(context);
 
     final allAsync = ref.watch(tagsForCurrentLedgerProvider).unwrapPrevious();
-    final recentAsync =
-        ref.watch(recentTagsForCurrentLedgerProvider).unwrapPrevious();
     final canCreate = ref.watch(canCreateTagForCurrentLedgerProvider);
 
     final allTags = allAsync.valueOrNull ?? <Tag>[];
-    final visibleIds = allAsync.valueOrNull?.map((t) => t.id).toSet();
-    final recentTags = (recentAsync.valueOrNull ?? <Tag>[])
-        .where((tag) => visibleIds?.contains(tag.id) == true)
-        .toList();
+    final visibleIds = allTags.map((t) => t.id).toSet();
 
     // 弹窗最大高度限制在屏幕高度的 68%
     final maxSheetHeight = MediaQuery.sizeOf(context).height * 0.68;
@@ -160,14 +155,13 @@ class _CustomTagSelectorSheetState
 
             const OriginDivider(),
 
-            // 3. 标签列表内容区域（去除了搜索框，纯粹平铺展示）
+            // 3. 标签列表内容区域（去除了搜索框与最近使用，纯粹平铺展示全部标签）
             Flexible(
               child: _buildBodyContent(
                 context,
                 l10n: l10n,
                 allAsync: allAsync,
                 allTags: allTags,
-                recentTags: recentTags,
                 canCreate: canCreate,
               ),
             ),
@@ -222,7 +216,6 @@ class _CustomTagSelectorSheetState
     required AppLocalizations l10n,
     required AsyncValue<List<Tag>> allAsync,
     required List<Tag> allTags,
-    required List<Tag> recentTags,
     required bool canCreate,
   }) {
     if (allAsync.isLoading) {
@@ -302,39 +295,6 @@ class _CustomTagSelectorSheetState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 最近使用标签分组
-          if (recentTags.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                l10n.tagSelectRecentlyUsed,
-                style: TextStyle(
-                  fontSize: 12.0,
-                  fontWeight: FontWeight.w500,
-                  color: OriginTokens.summaryText(context),
-                ),
-              ),
-            ),
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: recentTags.map(_buildTagChip).toList(),
-            ),
-            const SizedBox(height: 16.0),
-          ],
-
-          // 全部标签分组
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              recentTags.isNotEmpty ? l10n.tagSelectAllTags : '所有标签',
-              style: TextStyle(
-                fontSize: 12.0,
-                fontWeight: FontWeight.w500,
-                color: OriginTokens.summaryText(context),
-              ),
-            ),
-          ),
           Wrap(
             spacing: 8.0,
             runSpacing: 8.0,

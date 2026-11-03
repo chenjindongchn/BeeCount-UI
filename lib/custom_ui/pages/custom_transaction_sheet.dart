@@ -22,6 +22,7 @@ import '../../services/attachment_service.dart';
 import '../../utils/currencies.dart';
 import '../../utils/format_money.dart';
 import '../providers/amount_format_provider.dart';
+import '../providers/account_display_preferences_provider.dart';
 import '../providers/frequent_notes_enabled_provider.dart';
 import '../providers/last_account_preference_provider.dart';
 import '../styles/origin_sheet_tokens.dart';
@@ -223,6 +224,15 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     if (mounted) setState(() {});
   }
 
+  List<Account> _getSortedAccounts() {
+    final raw = (ref.read(allAccountsStreamProvider).valueOrNull ??
+            const <Account>[])
+        .where((a) => !a.hidden)
+        .toList();
+    final globalOrderIds = ref.read(customAccountOrderProvider);
+    return sortAccountsLikeAssetsPage(raw, globalOrderIds);
+  }
+
   Future<void> _initDefaultAccount() async {
     if (_selectedAccountId != null) return;
     if (widget.editingTransactionId != null) return;
@@ -251,10 +261,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
               _selectedCategory = targetCat;
             });
           }
-          final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
-                  const <Account>[])
-              .where((a) => !a.hidden)
-              .toList();
+          final accounts = _getSortedAccounts();
           final memService = ref.read(categoryAccountMemoryServiceProvider);
           final acc = await memService.getLastAccountId(
             ledgerId: _ledgerId,
@@ -310,10 +317,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
               _selectedCategory = defaultCat;
             });
           }
-          final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
-                  const <Account>[])
-              .where((a) => !a.hidden)
-              .toList();
+          final accounts = _getSortedAccounts();
           final memService = ref.read(categoryAccountMemoryServiceProvider);
           final acc = await memService.getLastAccountId(
             ledgerId: _ledgerId,
@@ -372,10 +376,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     if (ref.read(rememberLastAccountEnabledProvider) &&
         widget.editingTransactionId == null) {
       try {
-        final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
-                const <Account>[])
-            .where((a) => !a.hidden)
-            .toList();
+        final accounts = _getSortedAccounts();
         final memService = ref.read(categoryAccountMemoryServiceProvider);
         final lastAccId = await memService.getLastAccountId(
           ledgerId: _ledgerId,
@@ -771,10 +772,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
       return;
     }
 
-    final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
-            const <Account>[])
-        .where((a) => !a.hidden)
-        .toList();
+    final accounts = _getSortedAccounts();
     final baseCurrency = ref.read(currentLedgerCurrencyProvider);
     final txCurrency = _txCurrency(accounts);
     final currentRate = _currentRate(txCurrency, baseCurrency);
@@ -932,9 +930,13 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
     final accountsAsync = ref.watch(allAccountsStreamProvider);
-    final accounts = (accountsAsync.valueOrNull ?? const <Account>[])
-        .where((a) => !a.hidden)
-        .toList();
+    final globalOrderIds = ref.watch(customAccountOrderProvider);
+    final accounts = sortAccountsLikeAssetsPage(
+      (accountsAsync.valueOrNull ?? const <Account>[])
+          .where((a) => !a.hidden)
+          .toList(),
+      globalOrderIds,
+    );
     final baseCurrency = ref.watch(currentLedgerCurrencyProvider);
     final txCurrency = _txCurrency(accounts);
     final showFrequentNotes = ref.watch(frequentNotesEnabledProvider);
@@ -1357,14 +1359,10 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.account_balance_wallet_outlined,
-                          size: compact ? 13 : 15,
-                          color: isDark ? Colors.white70 : const Color(0xFF424242),
-                        ),
-                        const SizedBox(width: 4),
                         ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 88),
+                          constraints: BoxConstraints(
+                            maxWidth: compact ? 100 : 120,
+                          ),
                           child: Text(
                             accountTitle,
                             maxLines: 1,
