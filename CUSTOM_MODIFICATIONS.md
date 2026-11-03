@@ -558,7 +558,7 @@ git rebase main
 | **01** | `lib/utils/format_money.dart` | 声明 `globalCurrencyLocked` 并在 `formatDisplayAmount` 中加入锁定短路 | 若上游更新该文件，保留该变量与三目判断即可 |
 | **02** | `lib/custom_ui/providers/amount_format_provider.dart` | 新增 `currencyLockedProvider` 与 SharedPreferences 持久化 | 定制目录纯增量代码 |
 | **03** | `lib/custom_ui/pages/custom_mine_page.dart` | 「主币种」下方挂载「锁定币种」开关，锁定时隐藏「汇率管理」与「货币符号」| 定制目录纯增量代码 |
-| **04** | `lib/custom_ui/pages/custom_transaction_sheet.dart` | 锁定时隐藏金额左侧选币胶囊、外币折算行，禁用汇率拉取 | 定制目录纯增量代码 |
+| **04** | `lib/custom_ui/pages/custom_transaction_sheet.dart` | 锁定时隐藏金额左侧选币胶囊、外币折算行，转账模式卡片隐藏币种标签，禁用汇率拉取 | 定制目录纯增量代码 |
 | **05** | `lib/custom_ui/pages/custom_account_edit_page.dart` | 锁定时隐藏账户币种选择行与初始余额货币符号 | 定制目录纯增量代码 |
 | **06** | `lib/custom_ui/pages/custom_ledgers_page.dart` | 锁定时隐藏新建/编辑账本弹窗中的本位币选择行 | 定制目录纯增量代码 |
 | **07** | `lib/custom_ui/pages/custom_accounts_page.dart` | 锁定时隐藏资产看板单位与账户卡片货币符号 | 定制目录纯增量代码 |

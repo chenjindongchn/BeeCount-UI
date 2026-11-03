@@ -427,7 +427,9 @@ class OriginTransactionListState extends ConsumerState<OriginTransactionList> {
     if (_groupedDays.isEmpty) {
       return ListView(
         controller: _controller,
-        physics: const BouncingScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
         children: [
           if (hasHeader) widget.header!,
           Padding(
@@ -451,7 +453,9 @@ class OriginTransactionListState extends ConsumerState<OriginTransactionList> {
 
     return FlutterListView(
       controller: _controller,
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
       delegate: FlutterListViewDelegate(
         (BuildContext context, int index) {
           if (hasHeader && index == 0) {

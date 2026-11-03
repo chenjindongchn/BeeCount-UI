@@ -70,5 +70,49 @@ void main() {
       expect(lockedUsd, isNot(contains('USD')));
       expect(lockedUsd, equals('99.9'));
     });
+
+    testWidgets('3. 记账抽屉转账模式下，锁定币种开启时隐藏账户卡片上的 CNY 币种标签',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          currencyLockedProvider.overrideWith((ref) => CurrencyLockedNotifier()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      Widget buildChip(WidgetRef ref) {
+        final isLocked = ref.watch(currencyLockedProvider);
+        const currency = 'CNY';
+        return Column(
+          children: [
+            const Text('账户名'),
+            if (!isLocked) ...[
+              const SizedBox(height: 1),
+              Text(currency),
+            ],
+          ],
+        );
+      }
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: Scaffold(
+              body: Consumer(builder: (context, ref, _) => buildChip(ref)),
+            ),
+          ),
+        ),
+      );
+
+      // 默认未锁定：应能找到 CNY 标签
+      expect(find.text('CNY'), findsOneWidget);
+
+      // 开启锁定币种：CNY 标签应彻底消失
+      await container.read(currencyLockedProvider.notifier).setEnabled(true);
+      await tester.pumpAndSettle();
+
+      expect(find.text('CNY'), findsNothing);
+    });
   });
 }

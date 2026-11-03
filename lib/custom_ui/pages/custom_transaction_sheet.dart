@@ -1933,14 +1933,16 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 1),
-            Text(
-              currency,
-              style: TextStyle(
-                fontSize: 9.5,
-                color: isDark ? Colors.white38 : Colors.black38,
+            if (!ref.watch(currencyLockedProvider)) ...[
+              const SizedBox(height: 1),
+              Text(
+                currency,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

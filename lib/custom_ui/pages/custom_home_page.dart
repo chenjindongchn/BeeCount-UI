@@ -302,15 +302,26 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
       ),
       body: Stack(
         children: [
-          // 1. 流水列表（外层包裹滚动通知监听，感知上滑进入明细区域）
-          NotificationListener<ScrollNotification>(
+          // 1. 流水列表（外层包裹滚动通知监听，感知上滑进入明细区域与屏幕旋转重排）
+          NotificationListener<Notification>(
             onNotification: (notification) {
-              if (notification.metrics.axis == Axis.vertical) {
-                final show = notification.metrics.pixels > 65.0;
-                if (show != _showStickyMonthBar) {
-                  setState(() {
-                    _showStickyMonthBar = show;
-                  });
+              if (notification is ScrollNotification) {
+                if (notification.metrics.axis == Axis.vertical) {
+                  final show = notification.metrics.pixels > 65.0;
+                  if (show != _showStickyMonthBar) {
+                    setState(() {
+                      _showStickyMonthBar = show;
+                    });
+                  }
+                }
+              } else if (notification is ScrollMetricsNotification) {
+                if (notification.metrics.axis == Axis.vertical) {
+                  final show = notification.metrics.pixels > 65.0;
+                  if (show != _showStickyMonthBar) {
+                    setState(() {
+                      _showStickyMonthBar = show;
+                    });
+                  }
                 }
               }
               return false;
