@@ -443,9 +443,9 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: difference > 0
-                                      ? OriginTokens.incomeGreen
+                                      ? OriginTokens.resolveIncomeColor(sheetContext, ref)
                                       : difference < 0
-                                          ? OriginTokens.expenseRed
+                                          ? OriginTokens.resolveExpenseColor(sheetContext, ref)
                                           : OriginTokens.textSecondary(sheetContext),
                                 ),
                               ),

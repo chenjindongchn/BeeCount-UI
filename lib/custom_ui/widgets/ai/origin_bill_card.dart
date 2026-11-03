@@ -66,7 +66,9 @@ class OriginBillCard extends ConsumerWidget {
         ? OriginTokens.textTertiary(context)
         : (isTransfer
             ? OriginTokens.textPrimary(context)
-            : (isIncome ? OriginTokens.incomeGreen : OriginTokens.expenseRed));
+            : (isIncome
+                ? OriginTokens.resolveIncomeColor(context, ref)
+                : OriginTokens.resolveExpenseColor(context, ref)));
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),

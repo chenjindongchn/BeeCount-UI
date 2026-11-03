@@ -557,7 +557,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                         style: TextStyle(
                           fontSize: 14.0,
                           fontWeight: FontWeight.w500,
-                          color: OriginTokens.textPrimary(context),
+                          color: OriginTokens.resolveExpenseColor(context, ref),
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
@@ -574,7 +574,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                         style: TextStyle(
                           fontSize: 14.0,
                           fontWeight: FontWeight.w500,
-                          color: OriginTokens.textPrimary(context),
+                          color: OriginTokens.resolveIncomeColor(context, ref),
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),

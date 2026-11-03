@@ -11,7 +11,7 @@ import 'package:beecount_business_ui/beecount_business_ui.dart';
 
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
-import '../../pages/category/category_edit_page.dart';
+import 'custom_category_edit_page.dart';
 import '../../pages/shared/resources/bindings/recording_category_icon.dart';
 import '../../providers.dart';
 import '../../services/billing/post_processor.dart';
@@ -75,7 +75,7 @@ class _CustomCategoryManagePageState
         kind ?? (_tabController.index == 0 ? 'expense' : 'income');
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CategoryEditPage(kind: categoryKind),
+        builder: (_) => CustomCategoryEditPage(kind: categoryKind),
       ),
     );
   }
@@ -201,34 +201,37 @@ class _CustomCategoryManagePageState
 
       if (!mounted) return;
 
-      final mode = await showDialog<String>(
-        context: context,
-        builder: (context) => BeeDialog(
-          title: Text(l10n.categoryImportModeTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              BeeMenuRow(
-                leading: const BeeLineIcon('GitMerge'),
-                title: l10n.categoryImportModeMerge,
-                subtitle: l10n.categoryImportModeMergeDesc,
-                onTap: () => Navigator.pop(context, 'merge'),
-              ),
-              BeeMenuRow(
-                leading: const BeeLineIcon('RefreshCw'),
-                title: l10n.categoryImportModeOverwrite,
-                subtitle: l10n.categoryImportModeOverwriteDesc,
-                onTap: () => Navigator.pop(context, 'overwrite'),
-              ),
-            ],
-          ),
-          actions: [
-            BeeButton(
-              label: l10n.commonCancel,
-              kind: BeeButtonKind.secondary,
-              onPressed: () => Navigator.pop(context),
+      final mode = await showOriginCustomDialog<String>(
+        context,
+        child: OriginDialog(
+          title: l10n.categoryImportModeTitle,
+          textAlign: TextAlign.center,
+          content: Container(
+            decoration: BoxDecoration(
+              color: OriginTokens.cardSecondary(context),
+              borderRadius: BorderRadius.circular(14.0),
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BeeMenuRow(
+                  leading: const BeeLineIcon('GitMerge'),
+                  title: l10n.categoryImportModeMerge,
+                  subtitle: l10n.categoryImportModeMergeDesc,
+                  onTap: () => Navigator.pop(context, 'merge'),
+                ),
+                const OriginDivider(startIndent: 44.0, endIndent: 12.0),
+                BeeMenuRow(
+                  leading: const BeeLineIcon('RefreshCw'),
+                  title: l10n.categoryImportModeOverwrite,
+                  subtitle: l10n.categoryImportModeOverwriteDesc,
+                  onTap: () => Navigator.pop(context, 'overwrite'),
+                ),
+              ],
+            ),
+          ),
+          cancelText: l10n.commonCancel,
+          onCancel: () => Navigator.pop(context),
         ),
       );
 
@@ -265,53 +268,64 @@ class _CustomCategoryManagePageState
     final kindName =
         kind == 'expense' ? l10n.categoryExpense : l10n.categoryIncome;
 
-    final useHierarchical = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        var selectedMode = false;
-        return StatefulBuilder(
-          builder: (context, setDialogState) => BeeDialog(
-            title: Text('${l10n.categoryGenerateDefault} · $kindName'),
+    final useHierarchical = await showOriginCustomDialog<bool>(
+      context,
+      child: StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          var selectedMode = false;
+          return OriginDialog(
+            title: '${l10n.categoryGenerateDefault} · $kindName',
+            textAlign: TextAlign.center,
             content: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                BeeRadioTile<bool>(
-                  value: false,
-                  groupValue: selectedMode,
-                  label: l10n.categoryGenerateDefaultFlat,
-                  onChanged: (value) =>
-                      setDialogState(() => selectedMode = value),
+                Container(
+                  decoration: BoxDecoration(
+                    color: OriginTokens.cardSecondary(dialogCtx),
+                    borderRadius: BorderRadius.circular(14.0),
+                  ),
+                  child: Column(
+                    children: [
+                      BeeRadioTile<bool>(
+                        value: false,
+                        groupValue: selectedMode,
+                        label: l10n.categoryGenerateDefaultFlat,
+                        onChanged: (value) =>
+                            setDialogState(() => selectedMode = value),
+                      ),
+                      const OriginDivider(startIndent: 44.0, endIndent: 12.0),
+                      BeeRadioTile<bool>(
+                        value: true,
+                        groupValue: selectedMode,
+                        label: l10n.categoryGenerateDefaultHierarchical,
+                        onChanged: (value) =>
+                            setDialogState(() => selectedMode = value),
+                      ),
+                    ],
+                  ),
                 ),
-                BeeRadioTile<bool>(
-                  value: true,
-                  groupValue: selectedMode,
-                  label: l10n.categoryGenerateDefaultHierarchical,
-                  onChanged: (value) =>
-                      setDialogState(() => selectedMode = value),
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
+                const SizedBox(height: 10.0),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
                   child: Text(
                     l10n.categoryGenerateDefaultHint,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: TextStyle(
+                      fontSize: 12.0,
+                      color: OriginTokens.textTertiary(dialogCtx),
+                      height: 1.3,
+                    ),
                   ),
                 ),
               ],
             ),
-            actions: [
-              BeeButton(
-                label: l10n.commonCancel,
-                kind: BeeButtonKind.secondary,
-                onPressed: () => Navigator.pop(dialogContext),
-              ),
-              BeeButton(
-                label: l10n.commonConfirm,
-                onPressed: () => Navigator.pop(dialogContext, selectedMode),
-              ),
-            ],
-          ),
-        );
-      },
+            confirmText: l10n.commonConfirm,
+            cancelText: l10n.commonCancel,
+            onConfirm: () => Navigator.pop(dialogCtx, selectedMode),
+            onCancel: () => Navigator.pop(dialogCtx),
+          );
+        },
+      ),
     );
 
     if (useHierarchical == null || !mounted) return;
@@ -635,7 +649,7 @@ class _CustomCategoryList extends ConsumerWidget {
         if (category != null) {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => CategoryEditPage(
+              builder: (_) => CustomCategoryEditPage(
                 category: category,
                 kind: category.kind,
               ),
@@ -648,7 +662,7 @@ class _CustomCategoryList extends ConsumerWidget {
         if (category != null) {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => CategoryEditPage(
+              builder: (_) => CustomCategoryEditPage(
                 parentCategory: category,
                 kind: category.kind,
               ),

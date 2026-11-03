@@ -764,4 +764,46 @@ flutter run -d macos  # 或 -d chrome / 连接真机
 | **03** | `lib/custom_ui/pages/custom_account_detail_page.dart` | 资产管理详情页 | UI排版优化 | 移除多余内边距（贴合 16dp 规范），引入优雅的跨日小分组标签与动态分割线缩进（跨日全宽，日内 56dp） |
 | **04** | 关联受益页面（`CustomCategoryDetailPage`、`CustomTagDetailSections`、`CustomSearchResults`） | 二级流水页面 | 自然统一 | 经由 `CustomTransactionTileBinding` 一并实现支出名称、备注、金额、银行卡与账户色彩的全局统一 |
 
+---
+
+## 八、收支颜色方案全局联动与统一接入（跟随设置动态变化）
+
+- **修改日期**：2026-11-03
+- **优化原则**：
+  - 第一性原理：金融流水数字的红绿语义必须严格忠于用户的个人习惯与设置选择（红涨绿跌 vs 绿涨红跌）。
+  - 单一真实来源（SSOT）：在 `OriginTokens` 中封装 `incomeColor` 与 `expenseColor` 解析方法，集中读取 `incomeExpenseColorSchemeProvider`。
+  - 全场景一致性：不仅是单笔流水条目，包括首页吸顶月度看板、日小计、搜索汇总、AI 记账账单卡片与资产差额调整，全部接入统一的收支配色体系。
+
+### 1. 涉及文件清单与架构角色
+
+| 序号 | 文件路径 | 架构角色 | 变更性质 | 维护与对齐指引 |
+| :--- | :--- | :--- | :--- | :--- |
+| **01** | `lib/custom_ui/styles/origin_tokens.dart` | 色彩系统 Token | 核心支持 | 新增 `incomeColor`、`expenseColor`、`resolveIncomeColor` 与 `resolveExpenseColor`，适配暗黑/亮色与用户设置 |
+| **02** | `lib/custom_ui/widgets/origin_transaction_item.dart` | 流水条目组件 | 动态色彩接入 | 金额由原先的写死黑色与橙色，改为实时解析用户收支颜色方案；单卡转账流向同步跟随 |
+| **03** | `lib/custom_ui/pages/custom_home_page.dart` | 首页看板 | 动态色彩接入 | 吸顶月份统计栏中的支出和收入数字接入动态色彩 |
+| **04** | `lib/custom_ui/widgets/origin_transaction_feed.dart` | 首页流水流 | 动态色彩接入 | 每日头部小计（`支... 收...`）按收支配色高亮展示 |
+| **05** | `lib/custom_ui/widgets/custom_search_results.dart` | 搜索流水与汇总 | 动态色彩接入 | 修复搜索结果顶部卡片写死 Red/Green 导致模式反转的隐患，接入动态配色 |
+| **06** | `lib/custom_ui/pages/custom_account_edit_page.dart` | 资产编辑页 | 动态色彩接入 | 账户余额调整产生的差额数字根据收支配色动态着色 |
+| **07** | `lib/custom_ui/widgets/ai/origin_bill_card.dart` | AI 账单卡片 | 动态色彩接入 | AI 记账生成的卡片金额颜色动态跟随收支配色方案 |
+
+---
+
+## 九、局域网自建服务离线记账卡顿根治（Local-First 本地优先与网络超时韧性）
+
+- **修改日期**：2026-11-03
+- **问题根因**：自建局域网服务端用户在离家/断开 Wi-Fi 情况下，本地 Access Token 过期后记账，主流程被 `TxAuthorService` 中的 `currentUser` 阻塞，触发串行网络刷新与重登，且底层 HTTP 缺乏超时机制，导致死等操作系统 60~75 秒 TCP 握手超时。
+- **优化原则**：
+  - 第一性原理（Local-First）：记账本质是本地 SQLite 插入，必须 0 毫秒秒级落库，绝不能被任何远端鉴权或网络副作用阻塞。
+  - 纯本地只读：以本地已持久化 Session 中的 `currentUserId` 替代网络连网鉴权。
+  - 网络韧性（Resilience）：为底层 HTTP 通信补齐超时时限，防止局域网断网时无限挂起。
+
+### 1. 涉及文件清单与架构角色
+
+| 序号 | 文件路径 | 架构角色 | 变更性质 | 维护与对齐指引 |
+| :--- | :--- | :--- | :--- | :--- |
+| **01** | `lib/services/data/tx_author_service.dart` | 交易作者回填服务 | 纯本地化改造 | 移除阻塞主事务的 `currentUser` 异步远程鉴权，改为纯本地内存读取 `cloud.currentUserId` |
+| **02** | `packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` | 云同步通信 Provider | 稳定性增强 | 暴露 `currentUserId` 同步只读属性，并为所有 HTTP 请求配置合理的超时控制（5~60秒） |
+
+
+
 

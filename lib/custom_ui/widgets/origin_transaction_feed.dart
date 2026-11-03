@@ -530,12 +530,34 @@ class OriginTransactionListState extends ConsumerState<OriginTransactionList> {
                           letterSpacing: -0.2,
                         ),
                       ),
-                      Text(
-                        '支$expenseStr  收$incomeStr',
-                        style: TextStyle(
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '支$expenseStr',
+                              style: TextStyle(
+                                color: OriginTokens.resolveExpenseColor(context, ref),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            TextSpan(
+                              text: '  ',
+                              style: TextStyle(
+                                color: OriginTokens.textSecondary(context),
+                              ),
+                            ),
+                            TextSpan(
+                              text: '收$incomeStr',
+                              style: TextStyle(
+                                color: OriginTokens.resolveIncomeColor(context, ref),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: const TextStyle(
                           fontSize: 12.5,
-                          color: OriginTokens.textSecondary(context),
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                          fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],

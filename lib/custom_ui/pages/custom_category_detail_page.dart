@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db.dart' show Category;
 import '../../l10n/app_localizations.dart';
-import '../../pages/category/category_edit_page.dart';
+import 'custom_category_edit_page.dart';
 import 'custom_category_manage_page.dart';
 import '../../pages/category/category_migration_page.dart';
 import '../../pages/shared/currency/bindings/detail_currency_notice.dart';
@@ -126,7 +126,7 @@ class _CustomCategoryDetailPageState
     await Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => CategoryEditPage(
+        builder: (_) => CustomCategoryEditPage(
           category: category,
           kind: category.kind,
         ),

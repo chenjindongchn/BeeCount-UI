@@ -90,6 +90,9 @@ class BeeCountCloudProvider implements CloudProvider {
   String? get baseUrl => _auth?.baseUrl;
   String? get apiPrefix => _auth?.apiPrefix;
 
+  /// 本地已持久化 Session 中的当前用户 ID（纯同步/纯内存获取，无网络请求）。
+  String? get currentUserId => _auth?.currentUserId;
+
   @override
   CloudAuthService get auth {
     final auth = _auth;
@@ -1817,7 +1820,9 @@ class BeeCountCloudAuthService implements CloudAuthService {
       request.body = jsonEncode(body);
     }
 
-    final streamed = await _httpClient.send(request);
+    final streamed = await _httpClient
+        .send(request)
+        .timeout(const Duration(seconds: 10));
     return http.Response.fromStream(streamed);
   }
 }
@@ -2557,7 +2562,8 @@ class BeeCountCloudStorageService implements CloudStorageService {
   /// 显示 server 版本,不需要 token。
   Future<BeeCountCloudServerVersion> fetchServerVersion() async {
     final uri = Uri.parse('$baseUrl$apiPrefix/version');
-    final response = await _httpClient.get(uri);
+    final response =
+        await _httpClient.get(uri).timeout(const Duration(seconds: 5));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw CloudStorageException(
           'Fetch version failed: ${_extractErrorMessage(response)}');
@@ -3337,7 +3343,9 @@ class BeeCountCloudStorageService implements CloudStorageService {
     if (body != null) {
       request.body = jsonEncode(body);
     }
-    final streamed = await _httpClient.send(request);
+    final streamed = await _httpClient
+        .send(request)
+        .timeout(const Duration(seconds: 15));
     return http.Response.fromStream(streamed);
   }
 
@@ -3362,7 +3370,9 @@ class BeeCountCloudStorageService implements CloudStorageService {
     if (mimeType != null && mimeType.trim().isNotEmpty) {
       request.fields['mime_type'] = mimeType.trim();
     }
-    final streamed = await _httpClient.send(request);
+    final streamed = await _httpClient
+        .send(request)
+        .timeout(const Duration(seconds: 60));
     return http.Response.fromStream(streamed);
   }
 
@@ -3387,7 +3397,9 @@ class BeeCountCloudStorageService implements CloudStorageService {
     if (mimeType != null && mimeType.trim().isNotEmpty) {
       request.fields['mime_type'] = mimeType.trim();
     }
-    final streamed = await _httpClient.send(request);
+    final streamed = await _httpClient
+        .send(request)
+        .timeout(const Duration(seconds: 30));
     return http.Response.fromStream(streamed);
   }
 
@@ -3410,7 +3422,9 @@ class BeeCountCloudStorageService implements CloudStorageService {
     if (mimeType != null && mimeType.trim().isNotEmpty) {
       request.fields['mime_type'] = mimeType.trim();
     }
-    final streamed = await _httpClient.send(request);
+    final streamed = await _httpClient
+        .send(request)
+        .timeout(const Duration(seconds: 30));
     return http.Response.fromStream(streamed);
   }
 }

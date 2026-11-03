@@ -146,18 +146,18 @@ class OriginTransactionItem extends ConsumerWidget {
     } else {
       if (isExpense) {
         amountStr = '-${formatMoneyCompact(amount, trimZeros: false)}';
-        amountColor = OriginTokens.textPrimary(context);
+        amountColor = OriginTokens.resolveExpenseColor(context, ref);
       } else if (isIncome) {
         amountStr = '+${formatMoneyCompact(amount, trimZeros: false)}';
-        amountColor = const Color(0xFFFF8200); // 暖橙色
+        amountColor = OriginTokens.resolveIncomeColor(context, ref);
       } else {
         // 转账：若在单卡详情中指定了流向，-1 为流出当前账户（支出），1 为流入当前账户（收入）
         if (transferDirection == -1) {
           amountStr = '-${formatMoneyCompact(amount, trimZeros: false)}';
-          amountColor = OriginTokens.textPrimary(context);
+          amountColor = OriginTokens.resolveExpenseColor(context, ref);
         } else if (transferDirection == 1) {
           amountStr = '+${formatMoneyCompact(amount, trimZeros: false)}';
-          amountColor = const Color(0xFFFF8200);
+          amountColor = OriginTokens.resolveIncomeColor(context, ref);
         } else {
           // 普通通用无流向转账
           amountStr = formatMoneyCompact(amount, trimZeros: false);

@@ -39,8 +39,9 @@ class TxAuthorService {
     try {
       final cloud = await ref.read(beecountCloudProviderInstance.future);
       if (cloud == null) return;
-      final me = await cloud.auth.currentUser;
-      final userId = me?.id;
+      // 优先从本地已持久化的 session 读取 currentUserId（纯内存/本地同步读取）
+      // 绝不触发 currentUser 的远端 refresh/login 网络请求，确保离网/无 Wi-Fi 场景下记账 0 毫秒落库
+      final userId = cloud.currentUserId;
       if (userId == null || userId.isEmpty) return;
       final repo = ref.read(repositoryProvider);
       if (repo is! LocalRepository) return;
@@ -63,8 +64,8 @@ class TxAuthorService {
     try {
       final cloud = await c.read(beecountCloudProviderInstance.future);
       if (cloud == null) return;
-      final me = await cloud.auth.currentUser;
-      final userId = me?.id;
+      // 优先从本地已持久化的 session 读取 currentUserId（纯内存/本地同步读取）
+      final userId = cloud.currentUserId;
       if (userId == null || userId.isEmpty) return;
       final repo = c.read(repositoryProvider);
       if (repo is! LocalRepository) return;

@@ -122,7 +122,7 @@ class CustomSearchResults extends ConsumerWidget {
       itemCount: (days.isEmpty ? 1 : days.length) + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
-          return _buildHeader(context, l, c, ledger?.name, money);
+          return _buildHeader(context, ref, l, c, ledger?.name, money);
         }
 
         if (days.isEmpty) {
@@ -224,6 +224,7 @@ class CustomSearchResults extends ConsumerWidget {
 
   Widget _buildHeader(
     BuildContext context,
+    WidgetRef ref,
     AppLocalizations l,
     TransactionSearchController c,
     String? ledgerName,
@@ -372,10 +373,10 @@ class CustomSearchResults extends ConsumerWidget {
                             const SizedBox(height: 2.0),
                             Text(
                               money(c.expense),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15.0,
                                 fontWeight: FontWeight.w600,
-                                color: OriginTokens.expenseRed,
+                                color: OriginTokens.resolveExpenseColor(context, ref),
                               ),
                             ),
                           ],
@@ -394,10 +395,10 @@ class CustomSearchResults extends ConsumerWidget {
                             const SizedBox(height: 2.0),
                             Text(
                               money(c.income),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15.0,
                                 fontWeight: FontWeight.w600,
-                                color: OriginTokens.incomeGreen,
+                                color: OriginTokens.resolveIncomeColor(context, ref),
                               ),
                             ),
                           ],

@@ -14,7 +14,7 @@ import '../../pages/transaction/recording/bindings/amount_editor_sheet.dart';
 import '../../pages/transaction/recording/bindings/recording_save.dart';
 import '../../pages/transaction/recording/bindings/recording_category_section.dart';
 import '../../pages/transaction/recording/bindings/transfer_inline_accounts.dart';
-import '../../pages/category/category_edit_page.dart';
+import 'custom_category_edit_page.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 import '../../pages/shared/selectors/currency_picker_sheet.dart';
 import '../../services/attachment_service.dart';
@@ -1654,7 +1654,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
   Future<void> _openCategoryEdit() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CategoryEditPage(kind: _currentKind),
+        builder: (_) => CustomCategoryEditPage(kind: _currentKind),
       ),
     );
     if (mounted) {

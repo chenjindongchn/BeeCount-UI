@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/theme_providers.dart';
 import 'origin_page_transitions.dart';
 
 /// vivo OriginOS 视觉与交互规范设计系统 Token (OriginTokens)
@@ -289,11 +291,47 @@ class OriginTokens {
   /// 默认主题强调色兜底常量（仅无 context 时备用）
   static const Color defaultPrimary = Color(0xFF0066FF);
 
-  /// 收入强调色（默认翡翠绿）
+  /// 收入强调色常量（翡翠绿）
   static const Color incomeGreen = Color(0xFF00B060);
 
-  /// 支出强调色（默认赤红）
+  /// 支出强调色常量（赤红）
   static const Color expenseRed = Color(0xFFFF4D4F);
+
+  /// 根据全局收支颜色方案获取收入颜色
+  /// - redForIncome = true（红涨绿跌，默认）：红色
+  /// - redForIncome = false（绿涨红跌）：绿色
+  static Color incomeColor(BuildContext context, {required bool redForIncome}) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (redForIncome) {
+      return dark ? const Color(0xFFFF6B6B) : const Color(0xFFF04438);
+    } else {
+      return dark ? const Color(0xFF34D399) : const Color(0xFF00B060);
+    }
+  }
+
+  /// 根据全局收支颜色方案获取支出颜色
+  /// - redForIncome = true（红涨绿跌，默认）：绿色
+  /// - redForIncome = false（绿涨红跌）：红色
+  static Color expenseColor(BuildContext context, {required bool redForIncome}) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (redForIncome) {
+      return dark ? const Color(0xFF34D399) : const Color(0xFF00B060);
+    } else {
+      return dark ? const Color(0xFFFF6B6B) : const Color(0xFFF04438);
+    }
+  }
+
+  /// 快捷重载：直接传入 ref 动态读取当前用户的收支颜色方案
+  static Color resolveIncomeColor(BuildContext context, WidgetRef ref) {
+    final redForIncome = ref.watch(incomeExpenseColorSchemeProvider);
+    return incomeColor(context, redForIncome: redForIncome);
+  }
+
+  /// 快捷重载：直接传入 ref 动态读取当前用户的收支颜色方案
+  static Color resolveExpenseColor(BuildContext context, WidgetRef ref) {
+    final redForIncome = ref.watch(incomeExpenseColorSchemeProvider);
+    return expenseColor(context, redForIncome: redForIncome);
+  }
 
   /// 气泡菜单表面背景色（日间纯白 #FFFFFF，夜间深灰 #282828 依据 OriginColors.surfacePopup）
   static Color surfacePopup(BuildContext context) =>
