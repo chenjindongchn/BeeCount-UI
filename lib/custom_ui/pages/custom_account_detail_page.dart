@@ -770,22 +770,13 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
           ),
         );
       }
-    } else {
+    } else if (!isLocked && account.currency.toUpperCase() != base.toUpperCase()) {
       metrics.add(
         OriginHeroMetric(
-          label: '初始金额',
-          unit: unit,
-          value: formatMoneyCompact(account.initialBalance, trimZeros: false),
+          label: '账户币种',
+          value: account.currency.toUpperCase(),
         ),
       );
-      if (!isLocked) {
-        metrics.add(
-          OriginHeroMetric(
-            label: '账户币种',
-            value: account.currency.toUpperCase(),
-          ),
-        );
-      }
     }
 
     // 单项资产大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
