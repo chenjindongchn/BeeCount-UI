@@ -19,7 +19,7 @@ import 'origin_search_bar.dart';
 /// 1. 顶部大圆角 (30dp)、药丸手柄、实底中性材质，遵循 OriginSheetTokens；
 /// 2. 居中标题对齐 OriginUI 规范 (17sp SemiBold)，移除搜索框及多选冗余提示，聚焦高效；
 /// 3. 每个标签采用高质感 OriginFilterChip 胶囊样式，左侧点缀标签色彩圆点，支持多选切换；
-/// 4. 底部大胶囊操作按钮一行一个纵向依次排列（主操作“确定”在上、次操作“新建”在下），高 46dp、圆角 23dp，带轻触触感反馈与微缩放动效；
+/// 4. 底部大胶囊操作按钮一行一个纵向依次排列（“新建”在上、“确定”在下，纯文字无加号图标），高 46dp、圆角 23dp，带轻触触感反馈与微缩放动效；
 /// 5. 新建标签直接联动 CustomTagEditPage，创建成功后自动加入当前选择并实时响应式刷新列表。
 class CustomTagSelectorSheet extends ConsumerStatefulWidget {
   const CustomTagSelectorSheet({
@@ -186,7 +186,19 @@ class _CustomTagSelectorSheetState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 主操作按钮：确定
+                  // 上方：新建按钮（纯文字，无加号）
+                  _TagSheetActionButton(
+                    text: '新建',
+                    backgroundColor:
+                        OriginTokens.dialogButtonSecondary(context),
+                    textColor: canCreate
+                        ? OriginTokens.textPrimary(context)
+                        : OriginTokens.textTertiary(context),
+                    onPressed: canCreate ? _createNewTag : null,
+                  ),
+                  const SizedBox(height: 10.0),
+
+                  // 下方：确定按钮
                   _TagSheetActionButton(
                     text: '确定',
                     backgroundColor: primaryColor,
@@ -194,19 +206,6 @@ class _CustomTagSelectorSheetState
                     isPrimary: true,
                     onPressed: () =>
                         _confirmSelection(visibleIds, canCreate),
-                  ),
-                  const SizedBox(height: 10.0),
-
-                  // 次操作按钮：新建
-                  _TagSheetActionButton(
-                    text: '新建',
-                    icon: Icons.add_rounded,
-                    backgroundColor:
-                        OriginTokens.dialogButtonSecondary(context),
-                    textColor: canCreate
-                        ? OriginTokens.textPrimary(context)
-                        : OriginTokens.textTertiary(context),
-                    onPressed: canCreate ? _createNewTag : null,
                   ),
                 ],
               ),
@@ -391,7 +390,6 @@ class _CustomTagSelectorSheetState
 /// 标签抽屉底部定制大胶囊操作按钮（高度 46dp，圆角 23dp，独占一行）
 class _TagSheetActionButton extends StatefulWidget {
   final String text;
-  final IconData? icon;
   final Color backgroundColor;
   final Color textColor;
   final bool isPrimary;
@@ -399,7 +397,6 @@ class _TagSheetActionButton extends StatefulWidget {
 
   const _TagSheetActionButton({
     required this.text,
-    this.icon,
     required this.backgroundColor,
     required this.textColor,
     this.isPrimary = false,
@@ -435,31 +432,17 @@ class _TagSheetActionButtonState extends State<_TagSheetActionButton> {
           ),
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(
-                  widget.icon,
-                  size: 16.0,
-                  color: widget.textColor,
-                ),
-                const SizedBox(width: 4.0),
-              ],
-              Text(
-                widget.text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15.0,
-                  fontWeight:
-                      widget.isPrimary ? FontWeight.w600 : FontWeight.w500,
-                  color: widget.textColor,
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ],
+          child: Text(
+            widget.text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 15.0,
+              fontWeight:
+                  widget.isPrimary ? FontWeight.w600 : FontWeight.w500,
+              color: widget.textColor,
+              letterSpacing: -0.2,
+            ),
           ),
         ),
       ),

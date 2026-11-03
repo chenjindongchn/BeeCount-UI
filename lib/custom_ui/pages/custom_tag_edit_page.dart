@@ -155,19 +155,12 @@ class _CustomTagEditPageState extends ConsumerState<CustomTagEditPage> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_rounded, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          l.commonSave,
-                          style: const TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                  : Text(
+                      l.commonSave,
+                      style: const TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
             ),
           ),

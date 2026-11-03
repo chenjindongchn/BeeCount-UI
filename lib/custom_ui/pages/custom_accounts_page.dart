@@ -264,7 +264,7 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
               visualOffset: 24.0,
               action: SizedBox(
                 height: OriginTokens.buttonHeight,
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
@@ -277,8 +277,7 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
                     ),
                   ),
                   onPressed: () => _openAddAccount(context, ledgerId),
-                  icon: const Icon(Icons.add_rounded, size: 20),
-                  label: Text(
+                  child: Text(
                     l10n.accountAddButton,
                     style: const TextStyle(
                       fontSize: 15.0,

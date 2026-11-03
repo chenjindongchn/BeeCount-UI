@@ -374,19 +374,12 @@ class CustomBudgetPage extends ConsumerWidget {
                             currencySymbol: actualSymbol,
                           );
                         },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.add_rounded, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.budgetAddTotal,
-                              style: const TextStyle(
-                                fontSize: 16.0,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          l10n.budgetAddTotal,
+                          style: const TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),

@@ -570,20 +570,13 @@ class _CustomCategoryDetailPageState
                           ),
                         ),
                         onPressed: _record,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.add_rounded, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              l.widgetQuickAddLabel,
-                              style: const TextStyle(
-                                fontSize: 16.0,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          l.widgetQuickAddLabel,
+                          style: const TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ),

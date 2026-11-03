@@ -545,7 +545,7 @@ class _CustomCategoryManagePageState
           ),
           child: SizedBox(
             height: OriginTokens.buttonHeight,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
@@ -560,8 +560,7 @@ class _CustomCategoryManagePageState
                 HapticFeedback.lightImpact();
                 _addCategory();
               },
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: Text(
+              child: Text(
                 l10n.categoryNew,
                 style: const TextStyle(
                   fontSize: 15.0,

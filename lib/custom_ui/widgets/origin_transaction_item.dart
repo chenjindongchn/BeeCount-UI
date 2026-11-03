@@ -390,55 +390,85 @@ class OriginTransactionItem extends ConsumerWidget {
         );
       }
 
-      final fromColor = getAccountTypeColor(account?.type);
-      final toColor = getAccountTypeColor(toAccount?.type);
+      final fromColor = getAccountPillColor(context, account?.type);
+      final toColor = getAccountPillColor(context, toAccount?.type);
 
-      return Text.rich(
-        TextSpan(
+      if (hasFrom && hasTo) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            if (hasFrom) ...[
-              TextSpan(text: '从', style: style.copyWith(color: defaultColor)),
-              TextSpan(
+            Flexible(
+              child: _buildAccountPill(
+                context,
                 text: fromName,
-                style: style.copyWith(
-                  color: fromColor,
-                  fontWeight: FontWeight.w500,
-                ),
+                color: fromColor,
               ),
-            ],
-            if (hasFrom && hasTo)
-              TextSpan(text: ' → ', style: style.copyWith(color: defaultColor)),
-            if (hasTo) ...[
-              if (!hasFrom)
-                TextSpan(text: '到', style: style.copyWith(color: defaultColor)),
-              TextSpan(
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3.5),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                size: 10.0,
+                color: defaultColor,
+              ),
+            ),
+            Flexible(
+              child: _buildAccountPill(
+                context,
                 text: toName,
-                style: style.copyWith(
-                  color: toColor,
-                  fontWeight: FontWeight.w500,
-                ),
+                color: toColor,
               ),
-            ],
+            ),
           ],
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.end,
-      );
+        );
+      } else if (hasFrom) {
+        return _buildAccountPill(
+          context,
+          text: fromName,
+          color: fromColor,
+        );
+      } else {
+        return _buildAccountPill(
+          context,
+          text: toName!,
+          color: toColor,
+        );
+      }
     }
 
     final accName = account?.name ?? fallbackText;
-    final accColor = getAccountTypeColor(account?.type);
+    final accColor = getAccountPillColor(context, account?.type);
 
-    return Text(
-      accName,
-      style: style.copyWith(
-        color: accColor,
-        fontWeight: FontWeight.w500,
+    return _buildAccountPill(
+      context,
+      text: accName,
+      color: accColor,
+    );
+  }
+
+  Widget _buildAccountPill(
+    BuildContext context, {
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(100.0),
       ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.end,
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
+          height: 1.15,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }

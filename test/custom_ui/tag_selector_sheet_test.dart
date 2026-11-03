@@ -76,15 +76,16 @@ void main() {
     // 4. 验证彻底删除清空按钮
     expect(find.text('清空'), findsNothing);
 
-    // 5. 验证底部操作按钮：一行一个，纵向排列（确定在上、新建在下）
-    expect(find.text('确定'), findsOneWidget);
+    // 5. 验证底部操作按钮：一行一个，纵向排列（新建在上、确定在下，无加号图标）
     expect(find.text('新建'), findsOneWidget);
+    expect(find.text('确定'), findsOneWidget);
+    expect(find.byIcon(Icons.add_rounded), findsNothing);
 
-    final confirmPos = tester.getCenter(find.text('确定'));
     final createPos = tester.getCenter(find.text('新建'));
+    final confirmPos = tester.getCenter(find.text('确定'));
 
-    // 确定在新建的上方
-    expect(confirmPos.dy < createPos.dy, isTrue);
+    // 新建在确定的上方
+    expect(createPos.dy < confirmPos.dy, isTrue);
 
     // 确定与新建均为通栏大胶囊按钮（一行一个，且左右边距和宽度一致）
     final confirmBtn = find.ancestor(of: find.text('确定'), matching: find.byType(AnimatedScale)).first;

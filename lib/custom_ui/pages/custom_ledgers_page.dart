@@ -257,7 +257,7 @@ class _CustomLedgersPageState extends ConsumerState<CustomLedgersPage> {
           ),
           child: SizedBox(
             height: OriginTokens.buttonHeight,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
@@ -269,8 +269,7 @@ class _CustomLedgersPageState extends ConsumerState<CustomLedgersPage> {
                 ),
               ),
               onPressed: _showCreateDialog,
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: Text(
+              child: Text(
                 l.ledgersCreate,
                 style: const TextStyle(
                   fontSize: 15.0,

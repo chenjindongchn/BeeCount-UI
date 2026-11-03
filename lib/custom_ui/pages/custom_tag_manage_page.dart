@@ -364,7 +364,7 @@ class _CustomTagManagePageState extends ConsumerState<CustomTagManagePage> {
           ),
           child: SizedBox(
             height: OriginTokens.buttonHeight,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
@@ -381,8 +381,7 @@ class _CustomTagManagePageState extends ConsumerState<CustomTagManagePage> {
                       HapticFeedback.lightImpact();
                       _open(null);
                     },
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: Text(
+              child: Text(
                 l.tagAddTitle,
                 style: const TextStyle(
                   fontSize: 15.0,

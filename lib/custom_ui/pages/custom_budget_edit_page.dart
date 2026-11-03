@@ -437,19 +437,12 @@ class _CustomBudgetEditPageState extends ConsumerState<CustomBudgetEditPage> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_rounded, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.commonSave,
-                          style: const TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                  : Text(
+                      l10n.commonSave,
+                      style: const TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
             ),
           ),

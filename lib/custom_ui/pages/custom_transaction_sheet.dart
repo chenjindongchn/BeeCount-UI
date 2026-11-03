@@ -227,9 +227,28 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
 
     final rememberLast = ref.read(rememberLastAccountEnabledProvider);
     if (rememberLast) {
-      // 开启分类记忆：若有初始分类，匹配该分类上次使用的账户；否则保持 null（未操作过不显示）
-      if (widget.initialCategoryId != null) {
-        try {
+      // 开启分类记忆：精确定位当前默认高亮的分类（如餐饮），自动检索其上次使用的账户
+      try {
+        final categories = await ref.read(
+          recordingCategoriesProvider((ledgerId: _ledgerId, kind: _currentKind)).future,
+        );
+        Category? targetCat = _selectedCategory;
+        if (targetCat == null && categories.isNotEmpty) {
+          if (widget.initialCategoryId != null) {
+            targetCat = categories
+                .where((c) => c.id == widget.initialCategoryId)
+                .firstOrNull;
+          }
+          targetCat ??= categories.where((c) => c.level == 1).firstOrNull ??
+              categories.firstOrNull;
+        }
+
+        if (targetCat != null) {
+          if (mounted && _selectedCategory == null) {
+            setState(() {
+              _selectedCategory = targetCat;
+            });
+          }
           final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
                   const <Account>[])
               .where((a) => !a.hidden)
@@ -237,14 +256,15 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
           final memService = ref.read(categoryAccountMemoryServiceProvider);
           final acc = await memService.getLastAccountId(
             ledgerId: _ledgerId,
-            categoryId: widget.initialCategoryId!,
+            categoryId: targetCat.id,
+            parentCategoryId: targetCat.parentId,
             availableAccounts: accounts,
           );
-          if (mounted && acc != null) {
+          if (mounted) {
             setState(() => _selectedAccountId = acc);
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
       return;
     }
 
@@ -273,15 +293,48 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         widget.editingTransactionId != null) {
       return;
     }
+    final kind = index == 1 ? 'income' : 'expense';
     final rememberLast = ref.read(rememberLastAccountEnabledProvider);
     if (rememberLast) {
-      if (mounted) {
-        setState(() => _selectedAccountId = null);
+      try {
+        final categories = await ref.read(
+          recordingCategoriesProvider((ledgerId: _ledgerId, kind: kind)).future,
+        );
+        final defaultCat = categories.where((c) => c.level == 1).firstOrNull ??
+            categories.firstOrNull;
+        if (defaultCat != null) {
+          if (mounted) {
+            setState(() {
+              _selectedCategory = defaultCat;
+            });
+          }
+          final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
+                  const <Account>[])
+              .where((a) => !a.hidden)
+              .toList();
+          final memService = ref.read(categoryAccountMemoryServiceProvider);
+          final acc = await memService.getLastAccountId(
+            ledgerId: _ledgerId,
+            categoryId: defaultCat.id,
+            parentCategoryId: defaultCat.parentId,
+            availableAccounts: accounts,
+          );
+          if (mounted) {
+            setState(() => _selectedAccountId = acc);
+          }
+        } else {
+          if (mounted) {
+            setState(() => _selectedAccountId = null);
+          }
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() => _selectedAccountId = null);
+        }
       }
       return;
     }
     try {
-      final kind = index == 1 ? 'income' : 'expense';
       final acc = await defaultRecordingAccount(ref, kind, _ledgerId);
       if (mounted) {
         setState(() => _selectedAccountId = acc);
@@ -963,23 +1016,31 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildAmountDisplay(context,
-                                  accounts: accounts,
-                                  txCurrency: txCurrency,
-                                  baseCurrency: baseCurrency,
-                                  compact: true),
-                              const SizedBox(height: 2),
-                              _buildNoteInput(context, savedAttachments),
-                              if (showFrequentNotes && _frequentNotes.isNotEmpty)
-                                _buildFrequentNotesRow(context),
-                              _buildAttachmentThumbnails(
-                                  context, savedAttachments),
-                              const SizedBox(height: 3),
-                              _buildMetaSelectorRow(context),
-                            ],
+                          Expanded(
+                            child: SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildAmountDisplay(context,
+                                      accounts: accounts,
+                                      txCurrency: txCurrency,
+                                      baseCurrency: baseCurrency,
+                                      compact: true),
+                                  const SizedBox(height: 2),
+                                  _buildNoteInput(context, savedAttachments),
+                                  if (showFrequentNotes &&
+                                      _frequentNotes.isNotEmpty)
+                                    _buildFrequentNotesRow(context),
+                                  if (savedAttachments.isNotEmpty ||
+                                      _pendingAttachments.isNotEmpty)
+                                    _buildAttachmentThumbnails(
+                                        context, savedAttachments),
+                                  const SizedBox(height: 3),
+                                  _buildMetaSelectorRow(context),
+                                ],
+                              ),
+                            ),
                           ),
                           OriginKeypad(
                             keyHeight: 36,

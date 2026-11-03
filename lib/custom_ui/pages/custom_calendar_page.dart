@@ -242,20 +242,13 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
                 ),
               ),
               onPressed: _addTransactionForSelectedDate,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_rounded, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    l.widgetQuickAddLabel,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
+              child: Text(
+                l.widgetQuickAddLabel,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
           ),

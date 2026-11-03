@@ -399,27 +399,17 @@ class _CustomAccountDetailPageState
                     onPressed: c.account.hidden || c.account.id < 0
                         ? null
                         : () => _perform(valuation ? _value : _record),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          valuation ? Icons.edit_outlined : Icons.add_rounded,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          valuation
-                              ? (isLiabilityType(c.account.type)
-                                  ? l.valuationUpdateDebt
-                                  : l.valuationUpdateValue)
-                              : l.widgetQuickAddLabel,
-                          style: const TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      valuation
+                          ? (isLiabilityType(c.account.type)
+                              ? l.valuationUpdateDebt
+                              : l.valuationUpdateValue)
+                          : l.widgetQuickAddLabel,
+                      style: const TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
