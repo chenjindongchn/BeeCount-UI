@@ -27,6 +27,7 @@ import '../providers/amount_format_provider.dart';
 import '../widgets/origin_hero_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_menu.dart';
+import '../widgets/origin_sync_dot.dart';
 import 'custom_settings_page.dart';
 
 /// 今日支出缓存值（避免刷新闪烁）
@@ -266,6 +267,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
             : '日常账本',
         showDropdown: true,
         onTitleTap: _openLedgerPicker,
+        titleTrailing: const OriginSyncDot(),
         actions: [
           // vivo OriginOS 规范：右上角“竖排双圆点”展示更多设置与功能入口
           OriginMoreButton(

@@ -55,6 +55,7 @@ class OriginLargeTopAppBar extends StatelessWidget implements PreferredSizeWidge
   final Color? backgroundColor;
   final VoidCallback? onTitleTap;
   final bool showDropdown;
+  final Widget? titleTrailing;
 
   const OriginLargeTopAppBar({
     super.key,
@@ -66,6 +67,7 @@ class OriginLargeTopAppBar extends StatelessWidget implements PreferredSizeWidge
     this.backgroundColor,
     this.onTitleTap,
     this.showDropdown = false,
+    this.titleTrailing,
   });
 
   @override
@@ -139,7 +141,18 @@ class OriginLargeTopAppBar extends StatelessWidget implements PreferredSizeWidge
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildTitleWidget(context),
+                        if (titleTrailing == null)
+                          _buildTitleWidget(context)
+                        else
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Flexible(child: _buildTitleWidget(context)),
+                              const SizedBox(width: 8.0),
+                              titleTrailing!,
+                            ],
+                          ),
                         if (subtitle != null && subtitle!.isNotEmpty) ...[
                           const SizedBox(height: 3.0),
                           Text(
