@@ -149,9 +149,12 @@ class BeeAnalyticsRankingList extends StatelessWidget {
                     InkWell(
                         key: ValueKey('analytics-child-${child.id}'),
                         onTap: () => onDetail(child.id),
-                        child: ConstrainedBox(
+                        child: Container(
                             constraints: const BoxConstraints(minHeight: 43),
-                            child: Row(children: [
+                            alignment: Alignment.center,
+                            child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
                               SizedBox(
                                   width: 28,
                                   height: 28,
@@ -159,6 +162,8 @@ class BeeAnalyticsRankingList extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                   child: Text(child.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontSize: 11))),
                               const SizedBox(width: 6),
                               Text(child.amount,

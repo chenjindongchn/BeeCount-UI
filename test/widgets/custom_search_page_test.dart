@@ -116,16 +116,16 @@ void main() {
     expect(find.text('批量操作'), findsOneWidget);
     // 验证已彻底删除“退出批量操作”文本按钮
     expect(find.text('退出批量操作'), findsNothing);
-    // 验证右上角呈现 OriginOS 标准“全选”按钮
-    expect(find.text('全选'), findsAtLeastNWidgets(1));
+    // 验证页面仅在卡片操作栏内呈现唯一的“全选”按钮（右上角冗余全选已移除）
+    expect(find.text('全选'), findsOneWidget);
 
-    // 点击右上角“全选”
-    await tester.tap(find.text('全选').first);
+    // 点击“全选”
+    await tester.tap(find.text('全选'));
     await tester.pumpAndSettle();
 
     // 验证标题动态更新为“已选择 2 笔”
     expect(find.text('已选择 2 笔'), findsOneWidget);
-    // 验证右上角切换为“取消全选”
-    expect(find.text('取消全选'), findsAtLeastNWidgets(1));
+    // 验证按钮切换为“取消全选”
+    expect(find.text('取消全选'), findsOneWidget);
   });
 }

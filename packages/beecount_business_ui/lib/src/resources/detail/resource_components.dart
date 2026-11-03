@@ -157,46 +157,50 @@ class BeeResourceBreakdown extends StatelessWidget {
               onTap: () => onSelected(item.id),
               child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 9),
-                  child: Row(children: [
-                    Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                            color: BeeCardTheme.of(context).soft,
-                            borderRadius: BorderRadius.circular(12)),
-                        child: Center(child: item.icon)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                          Row(children: [
-                            Expanded(
-                                child: Text(item.label,
-                                    style: const TextStyle(fontSize: 13))),
-                            const SizedBox(width: 8),
-                            Text(item.amount,
-                                style: const TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w500))
-                          ]),
-                          const SizedBox(height: 3),
-                          Text(item.detail,
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: Theme.of(context).hintColor)),
-                          const SizedBox(height: 6),
-                          LinearProgressIndicator(
-                              value: item.fraction.isFinite
-                                  ? item.fraction.clamp(0, 1)
-                                  : 0,
-                              minHeight: 3,
-                              borderRadius: BorderRadius.circular(3),
-                              backgroundColor: BeeCardTheme.of(context).soft),
-                        ])),
-                    const SizedBox(width: 8),
-                    const BeeLineIcon('ChevronRight', size: 14),
-                  ]))))
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                              color: BeeCardTheme.of(context).soft,
+                              borderRadius: BorderRadius.circular(12)),
+                          child: Center(child: item.icon)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                            Text(item.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13)),
+                            const SizedBox(height: 3),
+                            Text(item.detail,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: Theme.of(context).hintColor)),
+                            const SizedBox(height: 6),
+                            LinearProgressIndicator(
+                                value: item.fraction.isFinite
+                                    ? item.fraction.clamp(0, 1)
+                                    : 0,
+                                minHeight: 3,
+                                borderRadius: BorderRadius.circular(3),
+                                backgroundColor: BeeCardTheme.of(context).soft),
+                          ])),
+                      const SizedBox(width: 10),
+                      Text(item.amount,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500)),
+                      const SizedBox(width: 8),
+                      const BeeLineIcon('ChevronRight', size: 14),
+                    ],
+                  ))))
           .toList());
 }
 

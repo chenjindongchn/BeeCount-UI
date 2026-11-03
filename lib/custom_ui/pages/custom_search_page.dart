@@ -365,29 +365,6 @@ class _CustomSearchPageState extends ConsumerState<CustomSearchPage> {
                             }
                           },
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: _writing || c.results.isEmpty
-                          ? null
-                          : () {
-                              HapticFeedback.lightImpact();
-                              c.selectAll();
-                            },
-                      child: Text(
-                        c.selected.length == c.results.length &&
-                                c.results.isNotEmpty
-                            ? l.searchDeselectAll
-                            : l.searchSelectAll,
-                        style: TextStyle(
-                          fontSize: 14.0,
-                          fontWeight: FontWeight.w500,
-                          color: c.results.isEmpty
-                              ? OriginTokens.textTertiary(context)
-                              : OriginTokens.primary(context),
-                        ),
-                      ),
-                    ),
-                  ],
                 )
               : null,
           bottomNavigationBar: !c.batch
