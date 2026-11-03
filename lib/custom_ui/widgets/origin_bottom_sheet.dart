@@ -29,12 +29,14 @@ Future<T?> showOriginBottomSheet<T>(
   required WidgetBuilder builder,
   double? heightFactor,
   bool barrierDismissible = true,
+  bool resizeToAvoidBottomInset = true,
 }) {
   return Navigator.of(context, rootNavigator: true).push<T>(
     OriginBottomSheetRoute<T>(
       builder: builder,
       heightFactor: heightFactor,
       barrierDismissible: barrierDismissible,
+      resizeToAvoidBottomInset: resizeToAvoidBottomInset,
     ),
   );
 }
@@ -44,11 +46,13 @@ class OriginBottomSheetRoute<T> extends PopupRoute<T> {
     required this.builder,
     this.heightFactor,
     bool barrierDismissible = true,
+    this.resizeToAvoidBottomInset = true,
   }) : _barrierDismissible = barrierDismissible;
 
   final WidgetBuilder builder;
   final double? heightFactor;
   final bool _barrierDismissible;
+  final bool resizeToAvoidBottomInset;
 
   @override
   Duration get transitionDuration => OriginSheetTokens.enterDuration;
@@ -156,7 +160,9 @@ class _OriginSheetHostState<T> extends State<_OriginSheetHost<T>>
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    final insetBottom = mq.viewInsets.bottom;
+    final insetBottom = widget.route.resizeToAvoidBottomInset
+        ? mq.viewInsets.bottom
+        : 0.0;
     final isLandscape = mq.orientation == Orientation.landscape;
     final maxH = mq.size.height - mq.padding.top - insetBottom - 8.0;
 

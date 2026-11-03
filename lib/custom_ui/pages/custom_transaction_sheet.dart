@@ -58,6 +58,7 @@ Future<bool?> showCustomTransactionSheet(
   return showOriginBottomSheet<bool>(
     context,
     heightFactor: isLandscape ? 0.95 : 0.72,
+    resizeToAvoidBottomInset: false,
     builder: (_) => CustomTransactionSheet(
       initialKind: initialKind,
       initialCategoryId: initialCategoryId,
