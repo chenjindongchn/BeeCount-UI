@@ -14,11 +14,11 @@ import 'custom_ui/pages/custom_transaction_sheet.dart';
 import 'custom_ui/pages/custom_home_page.dart';
 import 'custom_ui/pages/custom_analytics_page.dart';
 import 'custom_ui/pages/custom_accounts_page.dart';
-import 'custom_ui/pages/custom_mine_page.dart';
 import 'custom_ui/pages/custom_budget_page.dart';
 import 'custom_ui/widgets/origin_bottom_nav_bar.dart';
 import 'custom_ui/widgets/origin_quick_add_fan.dart';
 import 'custom_ui/providers/plus_button_enhancement_provider.dart';
+import 'custom_ui/providers/double_back_exit_provider.dart';
 import 'providers.dart';
 import 'l10n/app_localizations.dart';
 import 'widget/widget_manager.dart';
@@ -39,7 +39,6 @@ import 'services/security/app_lock_service.dart';
 import 'providers/security_providers.dart';
 import 'styles/tokens.dart';
 import 'styles/header_skins.dart';
-import 'providers/avatar_providers.dart';
 
 class BeeApp extends ConsumerStatefulWidget {
   const BeeApp({super.key});
@@ -54,7 +53,6 @@ class _BeeAppState extends ConsumerState<BeeApp>
     CustomHomePage(),
     CustomAnalyticsPage(),
     CustomAccountsPage(asTab: true),
-    CustomMinePage(),
   ];
 
   // Tab 按需懒加载集合（冷启动仅挂载首页，其余 Tab 在首次访问时才装载并常驻，消除启动瞬时并发建树与查库）
@@ -795,17 +793,20 @@ class _BeeAppState extends ConsumerState<BeeApp>
     _activatedTabs.add(idx);
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final avatarPath = ref.watch(avatarPathProvider).asData?.value;
     // 头部皮肤可附带悬浮 tab 装饰层(如一周年皮肤),随皮肤选择联动。
     final headerSkin = headerSkinById(ref.watch(headerSkinProvider));
     final isPlusEnhanced = ref.watch(plusButtonEnhancedProvider);
+    final isDoubleBackExit = ref.watch(doubleBackExitProvider);
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) {
         if (didPop) return;
+
+        if (!isDoubleBackExit) {
+          SystemNavigator.pop();
+          return;
+        }
 
         final now = DateTime.now();
 
@@ -846,13 +847,9 @@ class _BeeAppState extends ConsumerState<BeeApp>
             bottomNavigationBar: OriginBeeBottomBar(
               currentIndex: idx,
               primaryColor: primaryColor,
-              isDark: isDark,
-              bottomPadding: bottomPadding,
               labelHome: l10n.tabHome,
               labelInsights: l10n.tabInsights,
               labelAssets: l10n.tabAssets,
-              labelMine: l10n.tabMine,
-              avatarPath: avatarPath,
               skin: headerSkin,
               centerButtonKey: _centerButtonKey,
               onTabTap: (index) {

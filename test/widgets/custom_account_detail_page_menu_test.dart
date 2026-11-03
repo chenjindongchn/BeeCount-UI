@@ -21,6 +21,9 @@ void main() {
     await database.customStatement(
       "INSERT INTO ledgers(id, name, currency) VALUES(1, '日常生活', 'CNY')",
     );
+    await database.customStatement(
+      "INSERT INTO ledgers(id, name, currency) VALUES(2, '旅行账本', 'CNY')",
+    );
   });
 
   tearDown(() async {

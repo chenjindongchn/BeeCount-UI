@@ -562,12 +562,12 @@ class _OriginStandaloneAddButtonState extends State<_OriginStandaloneAddButton>
 class OriginBeeBottomBar extends StatelessWidget {
   final int currentIndex;
   final Color primaryColor;
-  final bool isDark;
-  final double bottomPadding;
+  final bool? isDark;
+  final double? bottomPadding;
   final String labelHome;
   final String labelInsights;
   final String labelAssets;
-  final String labelMine;
+  final String? labelMine;
   final String? avatarPath;
   final dynamic skin;
   final GlobalKey centerButtonKey;
@@ -582,12 +582,12 @@ class OriginBeeBottomBar extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.primaryColor,
-    required this.isDark,
-    required this.bottomPadding,
+    this.isDark,
+    this.bottomPadding,
     required this.labelHome,
     required this.labelInsights,
     required this.labelAssets,
-    required this.labelMine,
+    this.labelMine,
     this.avatarPath,
     this.skin,
     required this.centerButtonKey,

@@ -66,27 +66,8 @@ void main() {
       // 验证卡片顶部展示了“今日支出”文本
       expect(find.text('今日支出'), findsOneWidget);
 
-      // 验证主页提示卡片中出现了“设置预算，轻松掌控每月开支”
-      expect(find.text('设置预算，轻松掌控每月开支'), findsOneWidget);
-
-      // 点击“去设置”按钮
-      final l10n =
-          AppLocalizations.of(tester.element(find.byType(CustomHomePage)));
-      final setupActionFinder = find.text(l10n.budgetSetupAction);
-      expect(setupActionFinder, findsOneWidget);
-
-      await tester.tap(setupActionFinder);
-      await tester.pumpAndSettle();
-
-      // 验证跳转到了符合 OriginUI 规范的 CustomBudgetPage
-      expect(find.byType(CustomBudgetPage), findsOneWidget);
-
-      // 验证没有预算时，添加总预算的按钮在页面的最底下（bottomNavigationBar 中渲染）
-      final customBudgetPage = tester.widget<CustomBudgetPage>(
-        find.byType(CustomBudgetPage),
-      );
-      expect(find.text(l10n.budgetAddTotal), findsOneWidget);
-      expect(find.text(l10n.budgetEmptyHint), findsOneWidget);
+      // 验证无预算时，主卡片不展示未设置预算的冗余横幅，保持紧凑通透
+      expect(find.text('设置预算，轻松掌控每月开支'), findsNothing);
     });
 
     testWidgets('2. 右上角更多菜单中包含「预算管理」入口并可点击进入', (tester) async {

@@ -43,26 +43,29 @@ import '../widgets/origin_dialog.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../providers/amount_format_provider.dart';
 import '../providers/plus_button_enhancement_provider.dart';
+import '../providers/double_back_exit_provider.dart';
 import '../providers/account_color_display_provider.dart';
 import '../providers/frequent_notes_enabled_provider.dart';
 
-/// vivo OriginOS 风格“我的”与设置页面 (CustomMinePage)
+/// vivo OriginOS 风格“设置”页面 (CustomSettingsPage)
 ///
 /// 遵循 `OriginUI/docs/13-card-corner-and-hairline-divider.md` 与 `24`:
 /// 1. 大标题栏（84dp / 22sp SemiBold），规范 AppBar 导航行为（仅 push 时显示返回）；
-/// 2. 沉浸式 OriginProfileCard：56dp 头像、问候语、记账天数/笔数徽章与账本选择；
-/// 3. 分组设置卡片（12dp 圆角，20dp 边距，0.5dp 发丝线）；
-/// 4. 核心功能直达：提拔「分类管理」入口，彻底消除寻找路径过深的问题；
-/// 5. 云服务卡片全面 OriginOS 风格化，消除原版组件混搭割裂；
-/// 6. 100% 复用 Riverpod 驱动，保持零冲突变基能力。
-class CustomMinePage extends ConsumerStatefulWidget {
-  const CustomMinePage({super.key});
+/// 2. 分组设置卡片（12dp 圆角，20dp 边距，0.5dp 发丝线）；
+/// 3. 核心功能直达：提拔「分类管理」入口，彻底消除寻找路径过深的问题；
+/// 4. 云服务卡片全面 OriginOS 风格化，消除原版组件混搭割裂；
+/// 5. 100% 复用 Riverpod 驱动，保持零冲突变基能力。
+class CustomSettingsPage extends ConsumerStatefulWidget {
+  const CustomSettingsPage({super.key});
 
   @override
-  ConsumerState<CustomMinePage> createState() => _CustomMinePageState();
+  ConsumerState<CustomSettingsPage> createState() => _CustomSettingsPageState();
 }
 
-class _CustomMinePageState extends ConsumerState<CustomMinePage> {
+/// 兼容历史别名
+typedef CustomMinePage = CustomSettingsPage;
+
+class _CustomSettingsPageState extends ConsumerState<CustomSettingsPage> {
   void _open(Widget page) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => page),
@@ -154,6 +157,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
     // 记账显示与偏好
     final isCurrencyLocked = ref.watch(currencyLockedProvider);
     final plusButtonEnhanced = ref.watch(plusButtonEnhancedProvider);
+    final doubleBackExit = ref.watch(doubleBackExitProvider);
     final accountColorDisplayEnabled = ref.watch(accountColorDisplayProvider);
     final frequentNotesEnabled = ref.watch(frequentNotesEnabledProvider);
     final compactAmount = ref.watch(compactAmountProvider);
@@ -217,7 +221,7 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
 
     return OriginScaffold(
       appBar: OriginLargeTopAppBar(
-        title: l.mineTitle,
+        title: l.commonSettings,
         leading: canPop ? const BackButton() : null,
       ),
       body: ListView(
@@ -468,6 +472,28 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
                 ),
                 onTap: () => ref
                     .read(plusButtonEnhancedProvider.notifier)
+                    .toggle(),
+              ),
+              OriginSettingItem(
+                title: '双击返回退出',
+                subtitle: doubleBackExit
+                    ? '开启：主界面需连续按两次返回键退出'
+                    : '关闭：主界面按一次返回键直接退出',
+                leading: Icon(
+                  Icons.exit_to_app_rounded,
+                  color: primaryColor,
+                  size: 22.0,
+                ),
+                showArrow: false,
+                trailing: OriginSwitch(
+                  value: doubleBackExit,
+                  activeColor: primaryColor,
+                  onChanged: (v) => ref
+                      .read(doubleBackExitProvider.notifier)
+                      .setEnabled(v),
+                ),
+                onTap: () => ref
+                    .read(doubleBackExitProvider.notifier)
                     .toggle(),
               ),
               OriginSettingItem(

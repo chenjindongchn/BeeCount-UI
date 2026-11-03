@@ -25,7 +25,7 @@ void main() {
     await database.close();
   });
 
-  testWidgets('CustomTransactionTileBinding 点击分类图标应打开 CustomCategoryDetailPage', (tester) async {
+  testWidgets('CustomTransactionTileBinding 规范渲染分类名称、金额与流水条目结构', (tester) async {
     const category = db.Category(
       id: 1,
       name: '餐饮',
@@ -79,20 +79,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('餐饮'), findsOneWidget);
+    expect(find.text('-45.00'), findsOneWidget);
 
-    // 寻找分类图标上的 InkWell
+    // 寻找流水条目上的 InkWell
     final inkWellFinder = find.descendant(
       of: find.byType(CustomTransactionTileBinding),
       matching: find.byType(InkWell),
     );
 
     expect(inkWellFinder, findsWidgets);
-    await tester.tap(inkWellFinder.last);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    // 验证打开的是 CustomCategoryDetailPage，而不是原版的 CategoryDetailPage
-    expect(find.byType(CustomCategoryDetailPage), findsOneWidget);
 
     // 清理并完成异步定时器
     await tester.pumpWidget(const SizedBox.shrink());

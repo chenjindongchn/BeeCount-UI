@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
-import 'custom_ai_chat_page.dart';
 import 'custom_calendar_page.dart';
 import 'custom_search_page.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
@@ -169,13 +168,6 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
     }
   }
 
-  void _openAI() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CustomAIChatPage()),
-    );
-  }
-
   void _openSearch() {
     Navigator.push(
       context,
@@ -269,14 +261,6 @@ class _CustomAnalyticsPageState extends ConsumerState<CustomAnalyticsPage> {
                 title: l10n.homeSearch,
                 icon: const Icon(Icons.search_rounded),
                 onTap: _openSearch,
-              ),
-              OriginMenuItem(
-                title: l10n.aiChatTitle,
-                icon: Icon(
-                  Icons.auto_awesome_rounded,
-                  color: primaryColor,
-                ),
-                onTap: _openAI,
               ),
             ],
           ),

@@ -70,6 +70,8 @@ void main() {
       // 滚动找到金额千分位开关
       final itemFinder = find.text('金额千分位');
       await tester.scrollUntilVisible(itemFinder, 200);
+      await tester.ensureVisible(itemFinder);
+      await tester.pumpAndSettle();
       expect(itemFinder, findsOneWidget);
       expect(find.text('关闭：显示为 8888.00'), findsOneWidget);
 

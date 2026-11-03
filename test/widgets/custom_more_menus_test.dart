@@ -9,6 +9,7 @@ import 'package:beecount/custom_ui/pages/custom_category_manage_page.dart';
 import 'package:beecount/custom_ui/pages/custom_tag_manage_page.dart';
 import 'package:beecount/custom_ui/pages/custom_ledgers_page.dart';
 import 'package:beecount/custom_ui/widgets/origin_menu.dart';
+import 'package:beecount/custom_ui/widgets/origin_scaffold.dart';
 import 'package:beecount/data/db.dart' as db;
 import 'package:beecount/data/repositories/local/local_repository.dart';
 import 'package:beecount/providers.dart';
@@ -51,20 +52,16 @@ void main() {
     );
   }
 
-  testWidgets('CustomMinePage 右上角应展示 OriginMoreButton 并展开气泡菜单', (tester) async {
+  testWidgets('CustomMinePage 采用 OriginOS 大标题栏并展示核心设置卡片', (tester) async {
     await tester.pumpWidget(wrap(const CustomMinePage()));
     await tester.pumpAndSettle();
 
-    final moreFinder = find.byType(OriginMoreButton);
-    expect(moreFinder, findsOneWidget);
-
-    await tester.tap(moreFinder);
-    await tester.pumpAndSettle();
-
-    expect(find.text('个性化设置'), findsWidgets);
+    expect(find.byType(OriginLargeTopAppBar), findsOneWidget);
+    expect(find.text('分类管理'), findsWidgets);
+    expect(find.text('标签管理'), findsWidgets);
+    expect(find.text('账户偏好设置'), findsWidgets);
+    expect(find.text('智能记账'), findsWidgets);
     expect(find.text('数据管理'), findsWidgets);
-    expect(find.text('自动化'), findsWidgets);
-    expect(find.text('关于'), findsWidgets);
 
     await tester.pump(const Duration(seconds: 3));
   });
@@ -107,18 +104,15 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
-  testWidgets('CustomLedgersPage 右上角应展示 OriginMoreButton 并展开气泡菜单', (tester) async {
+  testWidgets('CustomLedgersPage 右上角应展示刷新按钮', (tester) async {
     await tester.pumpWidget(wrap(const CustomLedgersPage()));
     await tester.pumpAndSettle();
 
-    final moreFinder = find.byType(OriginMoreButton);
-    expect(moreFinder, findsOneWidget);
+    final refreshFinder = find.byTooltip('刷新账本');
+    expect(refreshFinder, findsOneWidget);
 
-    await tester.tap(moreFinder);
+    await tester.tap(refreshFinder);
     await tester.pumpAndSettle();
-
-    expect(find.text('创建'), findsWidgets);
-    expect(find.text('刷新账本'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 3));
   });

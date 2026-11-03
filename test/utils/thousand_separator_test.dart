@@ -20,7 +20,8 @@ void main() {
       expect(formatMoneyCompact(-109.0, trimZeros: false), '-109.00');
       expect(formatMoneyCompact(1234567.89, trimZeros: false), '1234567.89');
 
-      expect(formatBalanceFull(8888.0, 'CNY'), '¥8888.00');
+      expect(formatBalanceFull(8888.0, 'CNY'), '8888.00');
+      expect(formatBalanceFull(8888.0, 'CNY', showCurrency: true), '¥8888.00');
     });
 
     test('开启千分位开关时，输出传统千分位逗号格式', () {
@@ -28,7 +29,8 @@ void main() {
       expect(formatMoneyCompact(5555.0, trimZeros: false, useThousandSeparator: true), '5,555.00');
       expect(formatMoneyCompact(1234567.89, trimZeros: false, useThousandSeparator: true), '1,234,567.89');
 
-      expect(formatBalanceFull(8888.0, 'CNY', useThousandSeparator: true), '¥8,888.00');
+      expect(formatBalanceFull(8888.0, 'CNY', useThousandSeparator: true), '8,888.00');
+      expect(formatBalanceFull(8888.0, 'CNY', useThousandSeparator: true, showCurrency: true), '¥8,888.00');
     });
 
     test('ThousandSeparatorNotifier 状态切换与全局变量同步', () async {

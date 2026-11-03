@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +6,6 @@ import 'package:flutter_list_view/flutter_list_view.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
-import '../../providers/avatar_providers.dart';
 import '../../utils/month_range.dart';
 import '../../utils/format_money.dart';
 import '../../utils/format_utils.dart';
@@ -29,7 +27,7 @@ import '../providers/amount_format_provider.dart';
 import '../widgets/origin_hero_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_menu.dart';
-import 'custom_mine_page.dart';
+import 'custom_settings_page.dart';
 
 /// 今日支出缓存值（避免刷新闪烁）
 final lastTodayExpenseProvider =
@@ -120,10 +118,10 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     );
   }
 
-  void _openMinePage() {
+  void _openSettingsPage() {
     _transactionListKey.currentState?.switchToStreamMode();
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CustomMinePage()),
+      MaterialPageRoute(builder: (_) => const CustomSettingsPage()),
     );
   }
 
@@ -204,7 +202,6 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
     final month = ref.watch(selectedMonthProvider);
     final hideAmounts = ref.watch(hideAmountsProvider);
     final primaryColor = ref.watch(primaryColorProvider);
-    final avatarPath = ref.watch(avatarPathProvider).asData?.value;
     ref.watch(thousandSeparatorProvider);
 
     final params = (ledgerId: ledgerId, month: month);
@@ -293,21 +290,9 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                   onTap: _openAIChat,
                 ),
                 OriginMenuItem(
-                  title: l10n.tabMine,
-                  icon: avatarPath != null
-                      ? Container(
-                          width: 20.0,
-                          height: 20.0,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            image: DecorationImage(
-                              image: FileImage(File(avatarPath)),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        )
-                      : const Icon(Icons.person_outline_rounded),
-                  onTap: _openMinePage,
+                  title: l10n.commonSettings,
+                  icon: const Icon(Icons.settings_outlined),
+                  onTap: _openSettingsPage,
                 ),
               ],
             ),
