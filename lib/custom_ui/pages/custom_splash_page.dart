@@ -72,16 +72,23 @@ final customAppSplashInitProvider = FutureProvider<void>((ref) async {
       ref.invalidate(monthlyTotalsProvider(monthlyParams));
       ref.invalidate(budgetOverviewProvider);
 
-      // 并行预加载：月度统计 + 首屏前20条 + 预算 + 账本
+      // 极速放行通道（第一性原理）：
+      // 首屏渲染最关键的基石是「首屏前20条流水 preview」与「账本基础信息 currentLedger」
+      // 月度统计与预算总览采用并发快取模式：100ms 内就绪直接同步填充；若耗时超过 100ms 则绝不阻滞启动门，
+      // 立即放行进入主界面，后台继续执行并通过 Riverpod 自动驱动对应卡片局部刷新！
+      final monthlyFuture = ref.read(monthlyTotalsProvider(monthlyParams).future);
+      final budgetFuture = ref.read(budgetOverviewProvider.future);
+      final ledgerFuture = ref.read(currentLedgerProvider.future);
+      final previewFuture =
+          handoff.prepare(repo, ledgerId, ref.read(databaseProvider));
+
+      // 核心关键路径：仅强等流水与账本就绪（通常仅需 10~25ms）
       final results = await Future.wait([
-        ref.read(monthlyTotalsProvider(monthlyParams).future),
-        handoff.prepare(repo, ledgerId, ref.read(databaseProvider)),
-        ref.read(budgetOverviewProvider.future),
-        ref.read(currentLedgerProvider.future),
+        previewFuture,
+        ledgerFuture,
       ]);
 
-      final monthlyResult = results[0] as (double, double);
-      final preview = results[1] as HomeTransactionPreview;
+      final preview = results[0] as HomeTransactionPreview;
       if (disposed) return;
       if (!identical(repo, ref.read(repositoryProvider)) ||
           ledgerId != ref.read(currentLedgerIdProvider) ||
@@ -89,9 +96,25 @@ final customAppSplashInitProvider = FutureProvider<void>((ref) async {
         continue;
       }
 
-      ref.read(lastMonthlyTotalsProvider(monthlyParams).notifier).state =
-          monthlyResult;
       ref.read(cachedTransactionsProvider.notifier).state = preview.rows;
+
+      // 极速快取：尝试在 100ms 窗口内获取月度统计；超时直接放行，后台完成时自动刷新卡片
+      try {
+        final monthlyResult =
+            await monthlyFuture.timeout(const Duration(milliseconds: 100));
+        ref.read(lastMonthlyTotalsProvider(monthlyParams).notifier).state =
+            monthlyResult;
+      } catch (_) {
+        unawaited(monthlyFuture.then((res) {
+          if (!disposed) {
+            ref.read(lastMonthlyTotalsProvider(monthlyParams).notifier).state =
+                res;
+          }
+        }).catchError((_) {}));
+      }
+
+      // 预算概览后台静默完成，不影响首屏
+      unawaited(budgetFuture.catchError((_) => null));
       break;
     }
 
@@ -172,6 +195,7 @@ class CustomSplashPage extends StatelessWidget {
                     height: 88,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.medium,
+                    gaplessPlayback: true,
                   ),
                 ),
                 const SizedBox(height: 16),

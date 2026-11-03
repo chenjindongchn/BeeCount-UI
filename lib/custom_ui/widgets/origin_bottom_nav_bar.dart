@@ -1,6 +1,7 @@
 import 'dart:async' show Timer;
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../pages/shared/appearance/skin_animation_scope.dart';
 import '../styles/origin_tokens.dart';
 import 'origin_animated_nav_icon.dart';
@@ -476,17 +477,17 @@ class _OriginStandaloneAddButtonState extends State<_OriginStandaloneAddButton>
 
     final now = DateTime.now();
     if (_lastTapTime != null &&
-        now.difference(_lastTapTime!) < const Duration(milliseconds: 280)) {
-      // 命中双击
+        now.difference(_lastTapTime!) < const Duration(milliseconds: 220)) {
+      // 命中双击（拍照记账）
       _singleTapTimer?.cancel();
       _singleTapTimer = null;
       _lastTapTime = null;
       widget.onDoubleTap?.call();
     } else {
-      // 首次点击，启动延时定时器等待可能发生的第二击
+      // 首次点击，以最紧凑的 160ms 窗口等待潜在第二击，最大程度消除主操作延迟
       _lastTapTime = now;
       _singleTapTimer?.cancel();
-      _singleTapTimer = Timer(const Duration(milliseconds: 250), () {
+      _singleTapTimer = Timer(const Duration(milliseconds: 160), () {
         _singleTapTimer = null;
         _lastTapTime = null;
         widget.onTap();
@@ -498,7 +499,10 @@ class _OriginStandaloneAddButtonState extends State<_OriginStandaloneAddButton>
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _anim.reverse(),
+      onTapDown: (_) {
+        HapticFeedback.lightImpact();
+        _anim.reverse();
+      },
       onTapUp: (_) => _handleTapUp(),
       onTapCancel: () => _anim.forward(),
       onLongPressStart: (details) {

@@ -23,6 +23,7 @@ import '../widgets/origin_card.dart';
 import '../widgets/origin_text_field.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_divider.dart';
+import '../widgets/origin_empty_state.dart';
 
 /// vivo OriginOS 风格自定义账本管理页面 (CustomLedgersPage)
 ///
@@ -211,17 +212,11 @@ class _CustomLedgersPageState extends ConsumerState<CustomLedgersPage> {
                   ),
                 ],
                 if (empty) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 48.0),
-                    child: Center(
-                      child: Text(
-                        l.ledgersEmpty,
-                        style: TextStyle(
-                          color: OriginTokens.textTertiary(context),
-                          fontSize: 14.0,
-                        ),
-                      ),
-                    ),
+                  OriginEmptyState(
+                    iconData: Icons.auto_stories_outlined,
+                    title: l.ledgersEmpty,
+                    message: '点击下方按钮新建账本，开始记录您的财务收支',
+                    bottomSpacing: 12.0,
                   ),
                 ],
                 if (local.isNotEmpty) ...[

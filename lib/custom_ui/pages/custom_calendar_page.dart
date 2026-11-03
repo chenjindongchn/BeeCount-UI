@@ -20,6 +20,7 @@ import '../widgets/origin_dialog.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_transaction_item.dart';
+import '../widgets/origin_empty_state.dart';
 import 'custom_transaction_sheet.dart';
 
 String _calendarDateKey(DateTime d) =>
@@ -685,28 +686,14 @@ class _CustomCalendarPageState extends ConsumerState<CustomCalendarPage> {
         ),
         data: (items) {
           if (items.isEmpty) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 36),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.event_note_rounded,
-                      size: 42,
-                      color: OriginTokens.textTertiary(context)
-                          .withValues(alpha: 0.45),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '当日暂无记账记录',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        color: OriginTokens.textTertiary(context),
-                      ),
-                    ),
-                  ],
-                ),
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: OriginEmptyState(
+                iconData: Icons.event_note_rounded,
+                title: '当日暂无记账记录',
+                circleSize: 64.0,
+                iconSize: 32.0,
+                visualOffset: 0,
               ),
             );
           }

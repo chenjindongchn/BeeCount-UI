@@ -14,6 +14,7 @@ import 'custom_transaction_tile.dart';
 import 'origin_card.dart';
 import 'origin_divider.dart';
 import 'origin_search_bar.dart';
+import 'origin_empty_state.dart';
 
 /// vivo OriginOS 风格搜索结果组件 (CustomSearchResults)
 ///
@@ -308,26 +309,14 @@ class CustomSearchResults extends ConsumerWidget {
     if (c.hasQuery) {
       if (c.results.isEmpty) {
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40.0),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.search_off_rounded,
-                  size: 48.0,
-                  color: OriginTokens.textTertiary(context),
-                ),
-                const SizedBox(height: 12.0),
-                Text(
-                  l.searchNoResults,
-                  style: TextStyle(
-                    fontSize: 14.0,
-                    color: OriginTokens.textSecondary(context),
-                  ),
-                ),
-              ],
-            ),
+          padding: const EdgeInsets.symmetric(vertical: 36.0),
+          child: OriginEmptyState(
+            iconData: Icons.search_off_rounded,
+            title: l.searchNoResults,
+            message: '试试搜索其他分类、账户、备注或金额关键词',
+            circleSize: 72.0,
+            iconSize: 36.0,
+            visualOffset: 0,
           ),
         );
       }

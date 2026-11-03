@@ -6,7 +6,6 @@ import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import '../../l10n/app_localizations.dart';
 import '../../providers/github_star_provider.dart';
-import '../../providers/feature_highlight_providers.dart';
 import '../../providers.dart';
 import '../../utils/website_urls.dart';
 import '../../utils/currencies.dart';
@@ -35,7 +34,6 @@ import '../../pages/cloud/cloud_sync_page.dart';
 import '../../pages/cloud/beecount_cloud_sync_page.dart';
 import '../../pages/report/annual_report_page.dart';
 import '../../pages/donation/donation_page.dart';
-import '../../pages/shared/widgets/feature_dot.dart';
 import '../../services/export/share_poster_service.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
@@ -65,14 +63,6 @@ class CustomMinePage extends ConsumerStatefulWidget {
 }
 
 class _CustomMinePageState extends ConsumerState<CustomMinePage> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) markAnchorVisited(ref, 'personalize');
-    });
-  }
-
   void _open(Widget page) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => page),
@@ -374,26 +364,20 @@ class _CustomMinePageState extends ConsumerState<CustomMinePage> {
               OriginSettingItem(
                 title: l.personalizeTitle,
                 subtitle: l.personalizeSubtitle,
-                leading: FeatureDot(
-                  anchor: 'personalize',
-                  child: Icon(
-                    Icons.palette_outlined,
-                    color: primaryColor,
-                    size: 22.0,
-                  ),
+                leading: Icon(
+                  Icons.palette_outlined,
+                  color: primaryColor,
+                  size: 22.0,
                 ),
                 onTap: () => _open(const PersonalizePage()),
               ),
               OriginSettingItem(
                 title: l.headerSkinTitle,
                 valueText: skinName,
-                leading: FeatureDot(
-                  anchor: 'header_skin',
-                  child: Icon(
-                    Icons.image_outlined,
-                    color: primaryColor,
-                    size: 22.0,
-                  ),
+                leading: Icon(
+                  Icons.image_outlined,
+                  color: primaryColor,
+                  size: 22.0,
                 ),
                 onTap: () => _open(const HeaderSkinPage()),
               ),

@@ -21,6 +21,7 @@ import '../../pages/tag/tag_edit_page.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_menu.dart';
+import '../widgets/origin_empty_state.dart';
 
 /// vivo OriginOS 风格自定义标签详情页面 (CustomTagDetailPage)
 ///
@@ -273,7 +274,10 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
                 ),
               ),
               data: (value) => value == null
-                  ? Center(child: BeeEmptyState(title: l.tagNotFound))
+                  ? OriginEmptyState(
+                      iconData: Icons.label_off_outlined,
+                      title: l.tagNotFound,
+                    )
                   : CustomTagDetailSections(
                       tag: value,
                       stats: stats,

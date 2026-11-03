@@ -632,14 +632,15 @@ String formatDisplayAmount(double value,
 | 序号 | 文件路径 | 架构角色 | 变更性质 | 冲突排查与维护指引 |
 | :--- | :--- | :--- | :--- | :--- |
 | **01** | `lib/main.dart` | 入口挂载点 | 极小侵入（仅 3 处调度优化） | 若上游更新 `main.dart`，核对 `unawaited(_initializeAppMode)`、`_runDeferredBackgroundTasks` 阶梯延迟与 `_updateWidgetOnStart` 延时 |
-| **02** | `lib/custom_ui/pages/custom_splash_page.dart` | 定制启动页与预加载 Provider | 定制目录纯增量代码 | 原作者仓库无此文件，Rebase 零冲突 |
-| **03** | `test/widgets/custom_splash_page_test.dart` | 自动化测试套件 | 测试代码 | 运行 `flutter test test/widgets/custom_splash_page_test.dart` 保证无回归 |
+| **02** | `lib/app.dart` | 主路由/Tab 挂载点 | 极小侵入（仅 4 行代码：Tab 按需懒加载） | 若上游更新 `lib/app.dart`，保留 `_activatedTabs` 集合并在 `IndexedStack` 中按需装载页面 |
+| **03** | `lib/custom_ui/pages/custom_splash_page.dart` | 定制启动页与预加载 Provider | 定制目录纯增量代码 | 引入流水优先极速放行通道，Rebase 零冲突 |
+| **04** | `test/widgets/custom_splash_page_test.dart` | 自动化测试套件 | 测试代码 | 运行 `flutter test test/widgets/custom_splash_page_test.dart` 保证无回归 |
 
 ---
 
-### 2. 代码行级 Diff 备查（`lib/main.dart`）
+### 2. 代码行级 Diff 备查
 
-#### (1) `main()` 内部 `_initializeAppMode` 改为非阻塞异步调用
+#### (1) `lib/main.dart`: `main()` 内部 `_initializeAppMode` 改为非阻塞异步调用
 ```dart
 <<<< 上游原版 / 优化前:
   // 初始化应用模式（从 SharedPreferences 读取并设置到 appModeProvider）
@@ -650,7 +651,7 @@ String formatDisplayAmount(double value,
 >>>>
 ```
 
-#### (2) `_runDeferredBackgroundTasks` 引入三阶段阶梯式错峰调度
+#### (2) `lib/main.dart`: `_runDeferredBackgroundTasks` 引入三阶段阶梯式错峰调度
 ```dart
 <<<< 上游原版 / 优化前:
 Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
@@ -672,7 +673,7 @@ Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
 >>>>
 ```
 
-#### (3) `_updateWidgetOnStart` 小组件渲染避开首屏交互期
+#### (3) `lib/main.dart`: `_updateWidgetOnStart` 小组件渲染避开首屏交互期
 ```dart
 <<<< 上游原版 / 优化前:
   void _updateWidgetOnStart(ProviderContainer container) async {
@@ -687,7 +688,7 @@ Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
 >>>>
 ```
 
-#### (4) `_initializeAppMode` 消除冷启动多余的 SharedPreferences 磁盘持久化
+#### (4) `lib/main.dart`: `_initializeAppMode` 消除冷启动多余的 SharedPreferences 磁盘持久化
 ```dart
 <<<< 上游原版 / 优化前:
     await container.read(appModeProvider.notifier).switchMode(mode);
@@ -696,6 +697,63 @@ Future<void> _runDeferredBackgroundTasks(ProviderContainer container) async {
     if (currentMode != mode) {
       container.read(appModeProvider.notifier).state = mode;
     }
+>>>>
+```
+
+#### (5) `lib/app.dart`: Tab 页面按需懒加载（Lazy Load Tabs，消除启动瞬时 4 页面并发建树与查库）
+```dart
+<<<< 上游原版 / 优化前:
+class _BeeAppState extends ConsumerState<BeeApp> ... {
+  final _pages = const [ ... ];
+  ...
+  body: IndexedStack(
+    index: idx,
+    children: [
+      for (var i = 0; i < _pages.length; i++)
+        TickerMode(enabled: i == idx, child: _pages[i]),
+    ],
+  ),
+==== 本地定制 / 优化后:
+class _BeeAppState extends ConsumerState<BeeApp> ... {
+  final _pages = const [ ... ];
+  // 仅在首次被访问时才实例化挂载对应 Tab
+  final Set<int> _activatedTabs = {0};
+  ...
+  final idx = ref.watch(bottomTabIndexProvider);
+  _activatedTabs.add(idx);
+  ...
+  body: IndexedStack(
+    index: idx,
+    children: [
+      for (var i = 0; i < _pages.length; i++)
+        TickerMode(
+          enabled: i == idx,
+          child: _activatedTabs.contains(i)
+              ? _pages[i]
+              : const SizedBox.shrink(),
+        ),
+    ],
+  ),
+>>>>
+#### (6) 原生启动屏消除纯白闪屏（Android `launch_background.xml` 与 iOS `LaunchImage`）
+```xml
+<<<< 上游原版 / 优化前:
+<!-- Android launch_background.xml: bitmap 被注释，仅留白背景 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/white" />
+    <!-- <item>
+        <bitmap android:gravity="center" android:src="@mipmap/launch_image" />
+    </item> -->
+</layer-list>
+==== 本地定制 / 优化后:
+<!-- Android launch_background.xml: 激活居中蓝盒 Logo，点击第 0 毫秒即展示品牌画面 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/white" />
+    <item android:width="88dp" android:height="88dp" android:gravity="center">
+        <bitmap android:gravity="center" android:src="@mipmap/ic_launcher" />
+    </item>
+</layer-list>
+<!-- iOS LaunchImage: 用蓝盒 Logo 替换原版 68 字节的 1x1 纯透明空图片 -->
 >>>>
 ```
 
@@ -803,6 +861,40 @@ flutter run -d macos  # 或 -d chrome / 连接真机
 | :--- | :--- | :--- | :--- | :--- |
 | **01** | `lib/services/data/tx_author_service.dart` | 交易作者回填服务 | 纯本地化改造 | 移除阻塞主事务的 `currentUser` 异步远程鉴权，改为纯本地内存读取 `cloud.currentUserId` |
 | **02** | `packages/flutter_cloud_sync/lib/src/providers/beecount_cloud_provider.dart` | 云同步通信 Provider | 稳定性增强 | 暴露 `currentUserId` 同步只读属性，并为所有 HTTP 请求配置合理的超时控制（5~60秒） |
+
+---
+
+## 十、全应用空状态（Empty State）规范统一与操作层级收敛
+
+- **修改日期**：2026-11-03
+- **问题根因**：
+  1. **位置高低不一（有的偏上、有的偏下）**：
+     - 标签页（`CustomTagManagePage`）等将空状态置于 `ListView` 中，失去垂直高度约束，退化为贴顶偏上；
+     - 资产页（`CustomAccountsPage`）由于顶部大标题栏（84dp+）与底部浮动导航栏（80dp+）的双重挤压，普通 `Center` 未做视口避让与黄金中心补偿，导致视觉偏下坠底；
+  2. **交互层级混乱与按钮多重冲突**：
+     - 标签管理页同时在空状态中间展示“生成默认标签”，右上角菜单内存在“添加标签”与“生成默认标签”，底部又常驻“新增标签”胶囊大按钮，三处操作冲突重叠，提示语“点击右上角添加标签”与底部按钮矛盾。
+- **优化原则**：
+  - **组件化沉淀（SSOT）**：新建 `OriginEmptyState` 作为全局标准空状态组件（80dp 圆形浅色底座 + 40dp 线性图标 + 16sp SemiBold 标题 + 13sp 辅助说明），全系统统一视觉语言；
+  - **黄金视觉居中**：通过 `LayoutBuilder` 与视口计算，根据页面结构自适应避让底部导航栏（`bottomSpacing`）并施加黄金视觉偏置（`visualOffset`），使空状态稳居人眼视线舒适区；
+  - **操作层级清晰**：
+    - 主操作：保留底部唯一的常驻置底主按钮（如“新增标签”、“新建分类”）；
+    - 扩展功能：收纳“生成默认标签”、“分享”、“导入”至右上角更多菜单（`OriginMoreButton`），剔除重复添加入口；
+    - 空状态中间只做轻量、精致的引导，杜绝冗余重复按钮。
+
+### 1. 涉及文件清单与架构角色
+
+| 序号 | 文件路径 | 架构角色 | 变更性质 | 维护与对齐指引 |
+| :--- | :--- | :--- | :--- | :--- |
+| **01** | `lib/custom_ui/widgets/origin_empty_state.dart` | 全局标准空状态组件 | 新增核心组件 | vivo OriginOS 质感圆形底座、标题排版与自适应视口居中引擎 |
+| **02** | `lib/custom_ui/pages/custom_tag_manage_page.dart` | 标签管理页面 | 体验与交互收敛 | 移除右上角与底部重复的“添加标签”，将“生成默认标签”置于右上角首位；空状态居中且不再堆砌重复按钮 |
+| **03** | `lib/custom_ui/pages/custom_accounts_page.dart` | 资产总览管理页面 | 居中与组件统一 | 替换原手写 Column，增加底栏 96dp 避让与视觉向上修正，彻底消除“偏下”坠底问题 |
+| **04** | `lib/custom_ui/pages/custom_category_manage_page.dart` | 分类管理页面 | 居中与去重 | 分类为空时采用 `OriginEmptyState` 居中展示，移除顶部 `BeeStatus` 内嵌的重复“新建分类”按钮 |
+| **05** | `lib/custom_ui/pages/custom_ledgers_page.dart` | 账本管理页面 | 视觉规范升级 | 替换简陋居左单行文本，统一为带图标与提示引导的居中空状态 |
+| **06** | `lib/custom_ui/pages/custom_hidden_accounts_page.dart` | 已隐藏账户页面 | 规范统一 | 替换页面内手写居中 Column，接入 `OriginEmptyState` |
+| **07** | `lib/custom_ui/pages/custom_budget_page.dart` | 预算管理页面 | 规范沉淀统一 | 接入统一 `OriginEmptyState`，保持代码简洁统一 |
+| **08** | `lib/custom_ui/pages/custom_calendar_page.dart` | 日历页面 | 紧凑型规范统一 | 当日无交易时接入紧凑型 `OriginEmptyState` |
+| **09** | `lib/custom_ui/widgets/custom_search_results.dart` | 搜索流水组件 | 规范统一 | 搜索无结果时接入统一 `OriginEmptyState` |
+
 
 
 

@@ -21,6 +21,7 @@ import '../widgets/origin_hero_card.dart';
 import '../widgets/origin_divider.dart';
 import '../widgets/origin_bottom_sheet.dart';
 import '../widgets/origin_menu.dart';
+import '../widgets/origin_empty_state.dart';
 import '../providers/amount_format_provider.dart';
 import '../providers/account_display_preferences_provider.dart';
 
@@ -30,7 +31,7 @@ import '../providers/account_display_preferences_provider.dart';
 /// 1. 大标题栏（84dp / 22sp SemiBold）；
 /// 2. 资产总览采用 12dp 纯色卡片，清晰呈现净资产、总资产、总负债；
 /// 3. 分类账户列表使用 12dp 卡片 + 0.5dp 发丝分割线；
-/// 4. 支持右上角切换是否按类别分组展示；
+/// 4. 支持在资产偏好设置中切换是否按类别分组展示；
 /// 5. 支持长按触发拖拽排序（分组内及平铺全量排序）；
 /// 6. 纯 Riverpod 驱动，不修改业务表与数据库逻辑。
 class CustomAccountsPage extends ConsumerStatefulWidget {
@@ -239,18 +240,6 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
                 onTap: () => _openNetWorthTrend(context),
               ),
               OriginMenuItem(
-                title: '按类别分组',
-                icon: Icon(
-                  showGrouping ? Icons.grid_view_rounded : Icons.view_agenda_outlined,
-                ),
-                trailing: showGrouping
-                    ? Icon(Icons.check_rounded, size: 18.0, color: primaryColor)
-                    : null,
-                onTap: () {
-                  ref.read(showAccountGroupingProvider.notifier).toggle();
-                },
-              ),
-              OriginMenuItem(
                 title: '资产偏好设置',
                 icon: const Icon(Icons.tune_rounded),
                 onTap: () => showOriginAccountPreferencesSheet(context, ref),
@@ -267,36 +256,36 @@ class _CustomAccountsPageState extends ConsumerState<CustomAccountsPage> {
       body: accountsAsync.when(
         data: (accounts) {
           if (accounts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 64,
-                    color: OriginTokens.textTertiary(context),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.accountsEmptyMessage,
-                    style: TextStyle(
-                      color: OriginTokens.textSecondary(context),
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(OriginTokens.buttonRadius),
+            return OriginEmptyState(
+              iconData: Icons.account_balance_wallet_outlined,
+              title: l10n.accountsEmptyMessage,
+              message: '添加您的银行卡、微信、支付宝等各类资产账户',
+              bottomSpacing: widget.asTab ? 96.0 : 24.0,
+              visualOffset: 24.0,
+              action: SizedBox(
+                height: OriginTokens.buttonHeight,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        OriginTokens.buttonRadius,
                       ),
                     ),
-                    onPressed: () => _openAddAccount(context, ledgerId),
-                    child: Text(l10n.accountAddButton),
                   ),
-                ],
+                  onPressed: () => _openAddAccount(context, ledgerId),
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                  label: Text(
+                    l10n.accountAddButton,
+                    style: const TextStyle(
+                      fontSize: 15.0,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ),
             );
           }

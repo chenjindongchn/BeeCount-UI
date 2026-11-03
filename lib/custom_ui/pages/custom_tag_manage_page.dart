@@ -20,6 +20,7 @@ import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_menu.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_divider.dart';
+import '../widgets/origin_empty_state.dart';
 import 'custom_tag_detail_page.dart';
 
 /// vivo OriginOS 风格自定义标签管理页面 (CustomTagManagePage)
@@ -266,19 +267,14 @@ class _CustomTagManagePageState extends ConsumerState<CustomTagManagePage> {
           OriginMoreButton(
             items: [
               OriginMenuItem(
-                title: l.tagAddTitle,
-                icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
-                onTap: () => _open(null),
+                title: l.tagManageGenerateDefault,
+                icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+                onTap: _generate,
               ),
               OriginMenuItem(
                 title: l.tagShare,
                 icon: const Icon(Icons.share_outlined, size: 20),
                 onTap: _share,
-              ),
-              OriginMenuItem(
-                title: l.tagManageGenerateDefault,
-                icon: const Icon(Icons.auto_awesome_outlined, size: 20),
-                onTap: _generate,
               ),
               OriginMenuItem(
                 title: l.tagImport,
@@ -317,18 +313,11 @@ class _CustomTagManagePageState extends ConsumerState<CustomTagManagePage> {
               ),
               data: (rows) {
                 if (rows.isEmpty) {
-                  return ListView(
-                    padding: const EdgeInsets.all(OriginTokens.cardMargin),
-                    children: [
-                      BeeEmptyState(
-                        title: l.tagManageEmpty,
-                        message: l.tagManageEmptyHint,
-                        action: BeeButton(
-                          label: l.tagManageGenerateDefault,
-                          onPressed: _busy ? null : _generate,
-                        ),
-                      ),
-                    ],
+                  return OriginEmptyState(
+                    iconData: Icons.local_offer_outlined,
+                    title: l.tagManageEmpty,
+                    message: '点击下方按钮新增标签，或在右上角生成默认预设',
+                    bottomSpacing: 12.0,
                   );
                 }
                 Tag? item(String id) =>

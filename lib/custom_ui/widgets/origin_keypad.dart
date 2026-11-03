@@ -45,37 +45,20 @@ class OriginKeypad extends StatelessWidget {
     bool isSave = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // 默认按键底色：日间极纯净浅灰 #F8F9FA，夜间 #262629
     final defaultBg = isDark ? const Color(0xFF262629) : const Color(0xFFF8F9FA);
-    // 保存按钮底色：挂钩软件设置中的主题色
     final saveBg = OriginTokens.primary(context);
-
     final bg = backgroundColor ?? (isSave ? saveBg : defaultBg);
 
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 3.0),
-        child: Material(
-          color: bg,
-          borderRadius: BorderRadius.circular(10),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onTap();
-            },
-            onLongPress: onLongPress != null
-                ? () {
-                    HapticFeedback.mediumImpact();
-                    onLongPress();
-                  }
-                : null,
-            child: SizedBox(
-              height: keyHeight,
-              child: Center(child: child),
-            ),
-          ),
+        child: _OriginKeypadKey(
+          keyHeight: keyHeight,
+          backgroundColor: bg,
+          isSave: isSave,
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: child,
         ),
       ),
     );
@@ -227,6 +210,93 @@ class OriginKeypad extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 具有即时物理微弹簧按压手感的键盘单键 (OriginKeypadKey)
+class _OriginKeypadKey extends StatefulWidget {
+  final double keyHeight;
+  final Color backgroundColor;
+  final bool isSave;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final Widget child;
+
+  const _OriginKeypadKey({
+    required this.keyHeight,
+    required this.backgroundColor,
+    required this.isSave,
+    required this.onTap,
+    this.onLongPress,
+    required this.child,
+  });
+
+  @override
+  State<_OriginKeypadKey> createState() => _OriginKeypadKeyState();
+}
+
+class _OriginKeypadKeyState extends State<_OriginKeypadKey> {
+  bool _isPressed = false;
+
+  void _handleTapDown(TapDownDetails _) {
+    HapticFeedback.lightImpact();
+    setState(() => _isPressed = true);
+  }
+
+  void _handleTapUp(TapUpDetails _) {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
+    widget.onTap();
+  }
+
+  void _handleTapCancel() {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 物理微缩放：保存大键缩放至 0.96，常规数字键缩放至 0.93，手感极其紧凑弹润
+    final targetScale = _isPressed ? (widget.isSave ? 0.96 : 0.93) : 1.0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // 按下时提供微光影沉浸感
+    final effectiveBg = _isPressed
+        ? (widget.isSave
+            ? widget.backgroundColor.withValues(alpha: 0.88)
+            : (isDark
+                ? widget.backgroundColor.withValues(alpha: 0.70)
+                : const Color(0xFFE5E7EB)))
+        : widget.backgroundColor;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      onLongPress: widget.onLongPress != null
+          ? () {
+              HapticFeedback.mediumImpact();
+              widget.onLongPress!();
+            }
+          : null,
+      child: AnimatedScale(
+        scale: targetScale,
+        duration: const Duration(milliseconds: 90),
+        curve: _isPressed ? Curves.easeInQuad : Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          height: widget.keyHeight,
+          decoration: BoxDecoration(
+            color: effectiveBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(child: widget.child),
+        ),
       ),
     );
   }

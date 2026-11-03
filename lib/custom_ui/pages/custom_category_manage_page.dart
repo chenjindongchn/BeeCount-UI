@@ -25,6 +25,7 @@ import '../widgets/origin_menu.dart';
 import '../widgets/origin_segmented_control.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_divider.dart';
+import '../widgets/origin_empty_state.dart';
 
 /// vivo OriginOS 风格自定义分类管理页面 (CustomCategoryManagePage)
 ///
@@ -630,19 +631,18 @@ class _CustomCategoryList extends ConsumerWidget {
       );
     }).toList();
 
+    if (items.isEmpty) {
+      return OriginEmptyState(
+        iconData: Icons.category_outlined,
+        title: l10n.categoryEmpty,
+        message: '点击下方按钮新建分类，或在右上角生成默认预设',
+        bottomSpacing: 12.0,
+      );
+    }
+
     return BeeCategoryManagementList(
       reorderLabel: l10n.categoryDetailSortTitle,
       manageLabel: l10n.categoryManageChildren,
-      empty: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 36),
-        child: BeeStatus(
-          label: l10n.categoryEmpty,
-          action: BeeButton(
-            label: l10n.categoryNew,
-            onPressed: onAddCategory,
-          ),
-        ),
-      ),
       items: items,
       onEdit: (id) {
         final category = byId[int.tryParse(id)];

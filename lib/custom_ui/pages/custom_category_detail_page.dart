@@ -11,9 +11,8 @@ import 'custom_category_manage_page.dart';
 import '../../pages/category/category_migration_page.dart';
 import '../../pages/shared/currency/bindings/detail_currency_notice.dart';
 import '../../pages/shared/resources/bindings/recording_category_icon.dart';
-import '../../pages/shared/resources/widgets/detail_period_controls.dart'
-    show detailRangeLabel;
-import '../widgets/origin_period_picker.dart';
+import 'package:flutter/services.dart';
+import '../widgets/origin_report_period_sheets.dart';
 import '../widgets/custom_transaction_tile.dart';
 import '../../pages/transaction/category_detail/bindings/category_detail.dart';
 import '../../pages/transaction/category_detail_page.dart'
@@ -66,6 +65,17 @@ class _CustomCategoryDetailPageState
     extends ConsumerState<CustomCategoryDetailPage> {
   CategoryDetailController? _data;
   bool _showAll = false;
+  DateTime? _customStart;
+  DateTime? _customEnd;
+  String? _customLabel;
+
+  @override
+  void initState() {
+    super.initState();
+    _customStart = widget.startDate;
+    _customEnd = widget.endDate;
+    _customLabel = widget.periodLabel;
+  }
 
   @override
   void dispose() {
@@ -77,8 +87,8 @@ class _CustomCategoryDetailPageState
     if (_data != null &&
         _data!.ledgerId == ledgerId &&
         _data!.categoryId == widget.categoryId &&
-        _data!.initialStart == widget.startDate &&
-        _data!.initialEnd == widget.endDate) {
+        _data!.initialStart == _customStart &&
+        _data!.initialEnd == _customEnd) {
       unawaited(_data!.setSummaryLedger(summaryLedgerId));
       return;
     }
@@ -88,10 +98,30 @@ class _CustomCategoryDetailPageState
       categoryId: widget.categoryId,
       ledgerId: ledgerId,
       summaryLedgerId: summaryLedgerId,
-      initialStart: widget.startDate,
-      initialEnd: widget.endDate,
+      initialStart: _customStart,
+      initialEnd: _customEnd,
     )..sort = ref.read(categoryDetailSortProvider(widget.categoryId));
     unawaited(_data!.start());
+  }
+
+  void _setCustomRange(DateTime start, DateTime end) {
+    setState(() {
+      _showAll = false;
+      _customStart = start;
+      _customEnd = end;
+      _customLabel = '${start.month}/${start.day}-${end.month}/${end.day}';
+      final ledgerId = ref.read(currentLedgerIdProvider);
+      _data?.dispose();
+      _data = CategoryDetailController(
+        repository: ref.read(repositoryProvider),
+        categoryId: widget.categoryId,
+        ledgerId: widget.allLedgers ? null : ledgerId,
+        summaryLedgerId: ledgerId,
+        initialStart: start,
+        initialEnd: end,
+      )..sort = ref.read(categoryDetailSortProvider(widget.categoryId));
+      unawaited(_data!.start());
+    });
   }
 
   Future<void> _openSearch() async {
@@ -195,18 +225,109 @@ class _CustomCategoryDetailPageState
     if (mounted) await c.refreshResources();
   }
 
-  Future<void> _date() async {
-    final c = _data!;
-    final chosen = await showOriginPeriodPicker(
+  void _openMonthSheet(Color primaryColor) {
+    final c = _data;
+    if (c == null) return;
+    showOriginMonthPickerSheet(
       context,
-      period: c.period.name,
-      anchor: c.anchor,
+      selectedMonth: c.anchor,
+      primaryColor: primaryColor,
+      onSelected: (month) {
+        setState(() => _showAll = false);
+        c.chooseAnchor(month);
+      },
     );
-    if (chosen != null && mounted) {
-      c.choosePeriod(
-        CategoryDetailPeriod.values.byName(chosen.period),
-        anchor: chosen.anchor,
-      );
+  }
+
+  void _openYearSheet(Color primaryColor) {
+    final c = _data;
+    if (c == null) return;
+    showOriginYearPickerSheet(
+      context,
+      selectedYear: c.anchor.year,
+      primaryColor: primaryColor,
+      onSelected: (year) {
+        setState(() => _showAll = false);
+        c.chooseAnchor(DateTime(year, 1));
+      },
+    );
+  }
+
+  void _openCustomRangeSheet(Color primaryColor) {
+    final c = _data;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final initialS = _customStart ?? c?.range.start ?? today.subtract(const Duration(days: 30));
+    final initialE = _customEnd ?? c?.range.end ?? today;
+
+    showOriginCustomRangeSheet(
+      context,
+      start: initialS,
+      end: initialE,
+      primaryColor: primaryColor,
+      onSelected: (start, end) {
+        _setCustomRange(start, end);
+      },
+    );
+  }
+
+  void _movePeriod(int delta) {
+    final c = _data;
+    if (c == null) return;
+    HapticFeedback.lightImpact();
+    setState(() => _showAll = false);
+    if (c.period == CategoryDetailPeriod.month) {
+      c.chooseAnchor(DateTime(c.anchor.year, c.anchor.month + delta, 1));
+    } else if (c.period == CategoryDetailPeriod.year) {
+      c.chooseAnchor(DateTime(c.anchor.year + delta, c.anchor.month, 1));
+    }
+  }
+
+  String _getPeriodDisplayLabel(CategoryDetailController c) {
+    if (c.period == CategoryDetailPeriod.month) {
+      return '${c.anchor.year}年${c.anchor.month}月';
+    } else if (c.period == CategoryDetailPeriod.year) {
+      return '${c.anchor.year}年';
+    } else if (c.period == CategoryDetailPeriod.all) {
+      return '全部时间';
+    } else {
+      if (_customLabel != null && _customLabel!.isNotEmpty) {
+        return _customLabel!;
+      }
+      final s = c.range.start;
+      final e = c.range.end;
+      if (s != null && e != null) {
+        return '${s.month}/${s.day}-${e.month}/${e.day}';
+      }
+      return '指定周期';
+    }
+  }
+
+  void _changeSort(CategoryDetailSort newSort) {
+    HapticFeedback.lightImpact();
+    ref.read(categoryDetailSortProvider(widget.categoryId).notifier).state = newSort;
+    _data?.chooseSort(newSort);
+  }
+
+  void _toggleTimeSort(CategoryDetailController c) {
+    final isTimeActive =
+        c.sort == CategoryDetailSort.timeDesc || c.sort == CategoryDetailSort.timeAsc;
+    final isTimeDesc = c.sort == CategoryDetailSort.timeDesc;
+    if (!isTimeActive) {
+      _changeSort(CategoryDetailSort.timeDesc);
+    } else {
+      _changeSort(isTimeDesc ? CategoryDetailSort.timeAsc : CategoryDetailSort.timeDesc);
+    }
+  }
+
+  void _toggleAmountSort(CategoryDetailController c) {
+    final isAmountActive =
+        c.sort == CategoryDetailSort.amountDesc || c.sort == CategoryDetailSort.amountAsc;
+    final isAmountDesc = c.sort == CategoryDetailSort.amountDesc;
+    if (!isAmountActive) {
+      _changeSort(CategoryDetailSort.amountDesc);
+    } else {
+      _changeSort(isAmountDesc ? CategoryDetailSort.amountAsc : CategoryDetailSort.amountDesc);
     }
   }
 
@@ -262,6 +383,10 @@ class _CustomCategoryDetailPageState
     });
 
     final c = _data!;
+    final periodLabel = _getPeriodDisplayLabel(c);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+    final navButtonBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF4F4F6);
 
     return AnimatedBuilder(
       animation: c,
@@ -277,6 +402,7 @@ class _CustomCategoryDetailPageState
 
         return OriginScaffold(
           appBar: _CustomCategoryTopAppBar(
+            backgroundColor: headerBg,
             title: displayName.isNotEmpty ? displayName : l.categoryDetailTooltip,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
@@ -335,71 +461,40 @@ class _CustomCategoryDetailPageState
           ),
           body: Column(
             children: [
-              // 周期选择与日期调节条
+              // 顶部筛选控制面板（纯白/夜间深色，带发丝线底边，与洞察页面规范保持一致）
               if (c.category != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 17),
-                  child: Column(
-                    children: [
-                      BeeCompactTabs<CategoryDetailPeriod>(
-                        value: c.period,
-                        trackHeight: 32,
-                        tapHeight: 44,
-                        items: [
-                          BeeSegment(
-                            CategoryDetailPeriod.month,
-                            l.v4DetailMonth,
-                          ),
-                          BeeSegment(
-                            CategoryDetailPeriod.year,
-                            l.v4DetailYear,
-                          ),
-                          BeeSegment(
-                            CategoryDetailPeriod.all,
-                            l.analyticsAll,
-                          ),
-                          if (c.period == CategoryDetailPeriod.custom)
-                            BeeSegment(
-                              CategoryDetailPeriod.custom,
-                              l.v4DetailCustom,
-                            ),
-                        ],
-                        onChanged: (value) {
-                          setState(() => _showAll = false);
-                          c.choosePeriod(value);
-                        },
+                Container(
+                  decoration: BoxDecoration(
+                    color: headerBg,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isDark ? const Color(0x1FFFFFFF) : const Color(0x0F000000),
+                        width: 0.5,
                       ),
-                      if (c.period != CategoryDetailPeriod.all)
-                        BeeDateRangeBar(
-                          label: c.period == CategoryDetailPeriod.custom
-                              ? widget.periodLabel ?? l.v4DetailCustom
-                              : detailRangeLabel(
-                                  context,
-                                  c.period.name,
-                                  c.anchor,
-                                ),
-                          onChoose: _date,
-                          previousLabel: c.period == CategoryDetailPeriod.month ||
-                                  c.period == CategoryDetailPeriod.year
-                              ? MaterialLocalizations.of(context)
-                                  .previousMonthTooltip
-                              : null,
-                          nextLabel: c.period == CategoryDetailPeriod.month ||
-                                  c.period == CategoryDetailPeriod.year
-                              ? MaterialLocalizations.of(context)
-                                  .nextMonthTooltip
-                              : null,
-                          onPrevious: () => c.chooseAnchor(
-                            c.period == CategoryDetailPeriod.year
-                                ? DateTime(c.anchor.year - 1, c.anchor.month)
-                                : DateTime(c.anchor.year, c.anchor.month - 1),
-                          ),
-                          onNext: () => c.chooseAnchor(
-                            c.period == CategoryDetailPeriod.year
-                                ? DateTime(c.anchor.year + 1, c.anchor.month)
-                                : DateTime(c.anchor.year, c.anchor.month + 1),
-                          ),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 第一行：本月 / 本年 / 全部 / 指定周期 Tab 切换
+                      _buildTopTabBar(c, primaryColor),
+
+                      // 第二行：时间调节（左） + 独立排序胶囊按钮（右，与洞察页面一致）
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14.0, 4.0, 14.0, 10.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // 左侧时间周期调节
+                            Flexible(
+                              child: _buildPeriodSelector(c, navButtonBg, primaryColor, periodLabel),
+                            ),
+                            const SizedBox(width: 8.0),
+                            // 右侧时间/金额排序双胶囊按钮
+                            _buildSortSelector(c, navButtonBg, primaryColor),
+                          ],
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -498,6 +593,288 @@ class _CustomCategoryDetailPageState
       },
     );
   }
+
+  /// 第一行 Tab 切换栏（与洞察报表页风格一致）
+  Widget _buildTopTabBar(CategoryDetailController c, Color primaryColor) {
+    final tabs = [
+      (CategoryDetailPeriod.month, '本月'),
+      (CategoryDetailPeriod.year, '本年'),
+      (CategoryDetailPeriod.all, '全部'),
+      (CategoryDetailPeriod.custom, '指定周期'),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      height: 44.0,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: tabs.map((tab) {
+          final isSelected = c.period == tab.$1;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              if (tab.$1 == CategoryDetailPeriod.custom) {
+                _openCustomRangeSheet(primaryColor);
+              } else {
+                setState(() => _showAll = false);
+                c.choosePeriod(tab.$1);
+              }
+            },
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  tab.$2,
+                  style: TextStyle(
+                    fontSize: isSelected ? 17.0 : 15.5,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected
+                        ? OriginTokens.textPrimary(context)
+                        : OriginTokens.textSecondary(context),
+                  ),
+                ),
+                const SizedBox(height: 4.0),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  width: isSelected ? 26.0 : 0.0,
+                  height: 3.5,
+                  decoration: BoxDecoration(
+                    color: isSelected ? primaryColor : Colors.transparent,
+                    borderRadius: BorderRadius.circular(2.0),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// 顶部第二行左侧时间调节器（与洞察报表页风格一致）
+  Widget _buildPeriodSelector(
+    CategoryDetailController c,
+    Color navButtonBg,
+    Color primaryColor,
+    String periodLabel,
+  ) {
+    if (c.period == CategoryDetailPeriod.all) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+        child: Text(
+          periodLabel,
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: OriginTokens.textPrimary(context),
+          ),
+        ),
+      );
+    }
+
+    if (c.period == CategoryDetailPeriod.custom) {
+      return Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8.0),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8.0),
+          onTap: () => _openCustomRangeSheet(primaryColor),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    periodLabel,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: OriginTokens.textPrimary(context),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 2.0),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18.0,
+                  color: OriginTokens.textSecondary(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // month or year
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildNavButton(
+          icon: Icons.chevron_left_rounded,
+          bgColor: navButtonBg,
+          onTap: () => _movePeriod(-1),
+        ),
+        const SizedBox(width: 2.0),
+        Flexible(
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(8.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8.0),
+              onTap: () {
+                if (c.period == CategoryDetailPeriod.month) {
+                  _openMonthSheet(primaryColor);
+                } else if (c.period == CategoryDetailPeriod.year) {
+                  _openYearSheet(primaryColor);
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                child: Text(
+                  periodLabel,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: OriginTokens.textPrimary(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 2.0),
+        _buildNavButton(
+          icon: Icons.chevron_right_rounded,
+          bgColor: navButtonBg,
+          onTap: () => _movePeriod(1),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavButton({
+    required IconData icon,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: bgColor,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 26.0,
+          height: 26.0,
+          child: Icon(
+            icon,
+            size: 16.0,
+            color: OriginTokens.textPrimary(context),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 顶部第二行右侧独立胶囊排序开关 (时间排序 / 金额排序)
+  Widget _buildSortSelector(
+    CategoryDetailController c,
+    Color unselectedBg,
+    Color primaryColor,
+  ) {
+    final isTimeActive =
+        c.sort == CategoryDetailSort.timeDesc || c.sort == CategoryDetailSort.timeAsc;
+    final isTimeDesc = c.sort == CategoryDetailSort.timeDesc;
+
+    final isAmountActive =
+        c.sort == CategoryDetailSort.amountDesc || c.sort == CategoryDetailSort.amountAsc;
+    final isAmountDesc = c.sort == CategoryDetailSort.amountDesc;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 时间排序独立胶囊
+        _buildSortChip(
+          label: '时间',
+          isActive: isTimeActive,
+          isDesc: isTimeDesc,
+          primaryColor: primaryColor,
+          unselectedBg: unselectedBg,
+          onTap: () => _toggleTimeSort(c),
+        ),
+        const SizedBox(width: 5.0),
+        // 金额排序独立胶囊
+        _buildSortChip(
+          label: '金额',
+          isActive: isAmountActive,
+          isDesc: isAmountDesc,
+          primaryColor: primaryColor,
+          unselectedBg: unselectedBg,
+          onTap: () => _toggleAmountSort(c),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSortChip({
+    required String label,
+    required bool isActive,
+    required bool isDesc,
+    required Color primaryColor,
+    required Color unselectedBg,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14.0),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          height: 28.0,
+          padding: const EdgeInsets.symmetric(horizontal: 8.5),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? primaryColor.withValues(alpha: 0.12) : unselectedBg,
+            borderRadius: BorderRadius.circular(14.0),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  color: isActive
+                      ? primaryColor
+                      : OriginTokens.textPrimary(context).withValues(alpha: 0.78),
+                ),
+              ),
+              const SizedBox(width: 2.0),
+              Icon(
+                isActive
+                    ? (isDesc ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded)
+                    : Icons.swap_vert_rounded,
+                size: 13.0,
+                color: isActive
+                    ? primaryColor
+                    : OriginTokens.textSecondary(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 顶部紧凑导航栏：左侧返回箭头紧随分类名称，右侧操作菜单
@@ -506,11 +883,13 @@ class _CustomCategoryTopAppBar extends StatelessWidget
   final String title;
   final Widget? leading;
   final List<Widget>? actions;
+  final Color? backgroundColor;
 
   const _CustomCategoryTopAppBar({
     required this.title,
     this.leading,
     this.actions,
+    this.backgroundColor,
   });
 
   @override
@@ -520,7 +899,7 @@ class _CustomCategoryTopAppBar extends StatelessWidget
   @override
   Widget build(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
-    final bg = OriginTokens.pageBackground(context);
+    final bg = backgroundColor ?? OriginTokens.pageBackground(context);
 
     return Container(
       color: bg,
@@ -777,27 +1156,7 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
           const SizedBox(height: 12),
         ],
 
-        // 排序选项 Chip
-        Wrap(
-          spacing: 6,
-          runSpacing: 4,
-          children: [
-            for (final value in CategoryDetailSort.values)
-              BeeChoiceChip(
-                compact: true,
-                label: switch (value) {
-                  CategoryDetailSort.timeAsc => l.categoryDetailSortTimeAsc,
-                  CategoryDetailSort.timeDesc => l.categoryDetailSortTimeDesc,
-                  CategoryDetailSort.amountAsc => l.categoryDetailSortAmountAsc,
-                  CategoryDetailSort.amountDesc =>
-                    l.categoryDetailSortAmountDesc,
-                },
-                selected: c.sort == value,
-                onSelected: (_) => onSort(value),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
+
         BeeTransactionStreamHeader(
           title: l.v4DetailRecent,
           count: l.tagTransactionCount(c.count),

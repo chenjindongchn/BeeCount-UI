@@ -57,6 +57,9 @@ class _BeeAppState extends ConsumerState<BeeApp>
     CustomMinePage(),
   ];
 
+  // Tab 按需懒加载集合（冷启动仅挂载首页，其余 Tab 在首次访问时才装载并常驻，消除启动瞬时并发建树与查库）
+  final Set<int> _activatedTabs = {0};
+
   // 双击检测：记录最后一次点击的时间和索引
   DateTime? _lastTapTime;
   int? _lastTappedIndex;
@@ -789,6 +792,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
   @override
   Widget build(BuildContext context) {
     final idx = ref.watch(bottomTabIndexProvider);
+    _activatedTabs.add(idx);
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -824,11 +828,19 @@ class _BeeAppState extends ConsumerState<BeeApp>
             // TickerMode 关掉后,非当前页的 AnimationController 被 mute(仍
             // isAnimating,只是不再 tick),切回来自动恢复。动态皮肤是最先
             // 暴露这个问题的,但收益覆盖所有页内动画。
+            //
+            // 启动速度极致优化：结合 _activatedTabs 实现首次访问按需挂载，未访问过的
+            // 页面仅用 SizedBox.shrink() 占位，避免冷启动瞬时拉起 4 组重型分析与账户查询！
             body: IndexedStack(
               index: idx,
               children: [
                 for (var i = 0; i < _pages.length; i++)
-                  TickerMode(enabled: i == idx, child: _pages[i]),
+                  TickerMode(
+                    enabled: i == idx,
+                    child: _activatedTabs.contains(i)
+                        ? _pages[i]
+                        : const SizedBox.shrink(),
+                  ),
               ],
             ),
             bottomNavigationBar: OriginBeeBottomBar(

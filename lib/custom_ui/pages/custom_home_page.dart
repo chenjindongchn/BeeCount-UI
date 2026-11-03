@@ -16,7 +16,6 @@ import '../widgets/origin_transaction_feed.dart';
 import 'custom_ledgers_page.dart';
 import '../widgets/origin_dialog.dart';
 import '../widgets/origin_date_picker.dart';
-import '../../pages/shared/widgets/feature_dot.dart';
 import 'custom_search_page.dart';
 import '../../providers/budget_providers.dart';
 import 'custom_budget_page.dart';
@@ -272,17 +271,14 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
         onTitleTap: _openLedgerPicker,
         actions: [
           // vivo OriginOS 规范：右上角“竖排双圆点”展示更多设置与功能入口
-          FeatureDot(
-            anchor: 'tab_mine',
-            offset: const Offset(-2, 0),
-            child: OriginMoreButton(
-              tooltip: '设置与功能',
-              items: [
-                OriginMenuItem(
-                  title: '多选',
-                  icon: const Icon(Icons.check_box_outlined),
-                  onTap: () => _openSearch(batch: true),
-                ),
+          OriginMoreButton(
+            tooltip: '设置与功能',
+            items: [
+              OriginMenuItem(
+                title: '多选',
+                icon: const Icon(Icons.check_box_outlined),
+                onTap: () => _openSearch(batch: true),
+              ),
                 OriginMenuItem(
                   title: l10n.budgetTitle,
                   icon: const Icon(Icons.pie_chart_outline_rounded),
@@ -315,7 +311,7 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                 ),
               ],
             ),
-          ),
+          const SizedBox(width: 8.0),
         ],
       ),
       body: Stack(
@@ -414,20 +410,30 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                                         ],
                                       ),
                                       const SizedBox(height: 8.0),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(4.0),
-                                        child: SizedBox(
-                                          height: 5.5,
-                                          child: LinearProgressIndicator(
-                                            value: budgetUsage.rate.clamp(0.0, 1.0),
-                                            backgroundColor: Colors.white.withValues(alpha: 0.65),
-                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                              budgetUsage.rate >= 1.0
-                                                  ? OriginTokens.expenseRed
-                                                  : primaryColor,
-                                            ),
-                                          ),
+                                      TweenAnimationBuilder<double>(
+                                        tween: Tween<double>(
+                                          begin: 0.0,
+                                          end: budgetUsage.rate.clamp(0.0, 1.0),
                                         ),
+                                        duration: const Duration(milliseconds: 350),
+                                        curve: OriginTokens.enterCurve,
+                                        builder: (context, animatedProgress, _) {
+                                          return ClipRRect(
+                                            borderRadius: BorderRadius.circular(4.0),
+                                            child: SizedBox(
+                                              height: 5.5,
+                                              child: LinearProgressIndicator(
+                                                value: animatedProgress,
+                                                backgroundColor: Colors.white.withValues(alpha: 0.65),
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  animatedProgress >= 1.0
+                                                      ? OriginTokens.expenseRed
+                                                      : primaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),

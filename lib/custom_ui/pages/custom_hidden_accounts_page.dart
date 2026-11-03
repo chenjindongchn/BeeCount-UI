@@ -13,6 +13,7 @@ import '../providers/amount_format_provider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_card.dart';
 import '../widgets/origin_divider.dart';
+import '../widgets/origin_empty_state.dart';
 import 'custom_account_detail_page.dart';
 
 /// vivo OriginOS 风格已隐藏账户管理页面 (CustomHiddenAccountsPage)
@@ -72,34 +73,10 @@ class _CustomHiddenAccountsPageState extends ConsumerState<CustomHiddenAccountsP
           final statsMap = allStatsAsync.valueOrNull ?? {};
 
           if (hiddenAccounts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.visibility_off_outlined,
-                    size: 64,
-                    color: OriginTokens.textTertiary(context),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '暂无已隐藏账户',
-                    style: TextStyle(
-                      color: OriginTokens.textSecondary(context),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '在账户详情或编辑中设置隐藏后，将归集在此处',
-                    style: TextStyle(
-                      color: OriginTokens.textTertiary(context),
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
+            return const OriginEmptyState(
+              iconData: Icons.visibility_off_outlined,
+              title: '暂无已隐藏账户',
+              message: '在账户详情或编辑中设置隐藏后，将归集在此处',
             );
           }
 

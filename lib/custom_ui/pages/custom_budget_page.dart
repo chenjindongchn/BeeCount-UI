@@ -15,6 +15,7 @@ import '../widgets/origin_divider.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_switch.dart';
 import '../widgets/origin_budget_dialog.dart';
+import '../widgets/origin_empty_state.dart';
 import '../providers/amount_format_provider.dart';
 
 /// vivo OriginOS 风格预算管理页面 (CustomBudgetPage)
@@ -94,49 +95,11 @@ class CustomBudgetPage extends ConsumerWidget {
           ),
           body: !hasBudget
               // 1. 无预算状态：空状态图文居中展示
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Theme.of(context).brightness ==
-                                    Brightness.dark
-                                ? Colors.white.withValues(alpha: 0.06)
-                                : Colors.black.withValues(alpha: 0.04),
-                          ),
-                          child: Icon(
-                            Icons.account_balance_wallet_outlined,
-                            size: 40,
-                            color: OriginTokens.textTertiary(context),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l10n.budgetEmptyHint,
-                          style: TextStyle(
-                            fontSize: 17.0,
-                            fontWeight: FontWeight.w600,
-                            color: OriginTokens.textPrimary(context),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          l10n.budgetManagementDesc,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13.0,
-                            color: OriginTokens.textTertiary(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              ? OriginEmptyState(
+                  iconData: Icons.account_balance_wallet_outlined,
+                  title: l10n.budgetEmptyHint,
+                  message: l10n.budgetManagementDesc,
+                  bottomSpacing: 12.0,
                 )
               // 2. 有预算状态：月度总预算、分类预算与首页设置卡片
               : ListView(

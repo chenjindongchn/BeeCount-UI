@@ -142,6 +142,12 @@ class _OriginSheetHostState<T> extends State<_OriginSheetHost<T>>
       Navigator.of(context).maybePop();
     } else {
       _settleFrom = _drag;
+      // 遵循物理流体原则：依据当前拖拽位移与瞬时初速度自适应回弹时长
+      // 向上推或位移较小时回弹更敏捷紧凑，避免固定时长导致的机械刹车感
+      final baseMs = (_drag / OriginSheetTokens.dismissDistance * 200).clamp(90.0, 220.0);
+      final velocityBonus = (v < 0 ? (v / 1200) * 60 : 0.0);
+      final finalDurationMs = (baseMs + velocityBonus).clamp(80.0, 240.0).toInt();
+      _settle.duration = Duration(milliseconds: finalDurationMs);
       _settle.forward(from: 0);
     }
   }
