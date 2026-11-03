@@ -84,10 +84,19 @@
    - **严禁**将此类页面核心主操作随滚动列表（`ListView`）上下滚动，以保证单手操作便利性与页面视觉稳定性。
    - 统一尺寸与间距规格：高度 `OriginTokens.buttonHeight`（46dp），圆角 `OriginTokens.buttonRadius`（23dp），水平边距 `OriginTokens.cardMargin`（20dp），垂直边距 12dp，外层包裹 `SafeArea`。
 
-2. **对话框统一规范**：
-   - 必须使用 `OriginDialog` / `showOriginCustomDialog`，严禁使用原生 Material `AlertDialog`。
-   - 遵循贴底居中悬浮（`Alignment.bottomCenter`）、30dp 大圆角、滑升进场与 `AnimatedPadding` 软键盘避让；
-   - 对话框底部操作按钮必须为竖排双胶囊（高度 46dp，确认在上、取消在下）。
+2. **对话框与弹窗必须 100% 强制复用标准组件体系（严禁重复造轮子）**：
+   - **绝对禁止**私自手写非标弹窗、自造抽屉（如调用原生 `showModalBottomSheet` 手写布局），或使用原生 Material `AlertDialog`。
+   - 所有对话框与弹窗**一律强制统一使用**：
+     - 确认操作：`showOriginConfirmDialog`
+     - 单按钮提示：`showOriginAlertDialog`
+     - 单选列表：`showOriginChoiceDialog`
+     - 自定义内容弹窗：`showOriginCustomDialog` + `OriginDialog`
+     - 底部动作抽屉：`showOriginActionSheet` / `showOriginBottomSheet`
+   - 对话框标准物理规格：
+     - 贴底居中悬浮（`Alignment.bottomCenter`，距底 `SafeArea + 28dp`）；
+     - 30dp 大圆角（`OriginTokens.dialogRadius`）；
+     - 304dp 标准宽度，蒙层 `OriginTokens.dialogScrim`；
+     - 底部操作按钮必须为标准竖排双胶囊（高度 46dp，确认在上为强调色实心，取消在下为中性浅底色）。
 
 ---
 

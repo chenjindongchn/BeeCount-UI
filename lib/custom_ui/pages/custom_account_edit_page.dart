@@ -673,6 +673,7 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
           ? double.parse(creditLimitText)
           : null;
 
+      int? createdAccountId;
       if (isEditing) {
         String? currencyToUpdate;
         if (_selectedCurrency != widget.account!.currency) {
@@ -785,6 +786,7 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
               : null,
           note: noteText.isNotEmpty ? noteText : null,
         );
+        createdAccountId = id;
 
         if (isCreditCard) {
           await _saveReminderSettings(id);
@@ -793,7 +795,7 @@ class _CustomAccountEditPageState extends ConsumerState<CustomAccountEditPage> {
 
       if (mounted) {
         PostProcessor.sync(ref, ledgerId: widget.ledgerId);
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop(createdAccountId ?? true);
       }
     } catch (e) {
       if (mounted) {

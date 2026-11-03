@@ -56,6 +56,7 @@ class OriginLargeTopAppBar extends StatelessWidget implements PreferredSizeWidge
   final VoidCallback? onTitleTap;
   final bool showDropdown;
   final Widget? titleTrailing;
+  final double titleTrailingGap;
 
   const OriginLargeTopAppBar({
     super.key,
@@ -68,6 +69,7 @@ class OriginLargeTopAppBar extends StatelessWidget implements PreferredSizeWidge
     this.onTitleTap,
     this.showDropdown = false,
     this.titleTrailing,
+    this.titleTrailingGap = 2.0,
   });
 
   @override
@@ -149,7 +151,7 @@ class OriginLargeTopAppBar extends StatelessWidget implements PreferredSizeWidge
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Flexible(child: _buildTitleWidget(context)),
-                              const SizedBox(width: 8.0),
+                              SizedBox(width: titleTrailingGap),
                               titleTrailing!,
                             ],
                           ),

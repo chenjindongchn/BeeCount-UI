@@ -13,6 +13,7 @@ import '../../cloud/sync/sync_providers.dart' as sync_p;
 import '../../pages/cloud/beecount_cloud_sync_page.dart';
 import '../../pages/cloud/cloud_sync_page.dart';
 import '../styles/origin_tokens.dart';
+import 'origin_dialog.dart';
 
 /// 首页同步状态视觉分类
 enum HomeSyncVisualState {
@@ -213,136 +214,81 @@ class _OriginSyncDotState extends ConsumerState<OriginSyncDot>
       _ => '本地存储',
     };
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
-      ),
-      builder: (bottomSheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24.0, 12.0, 24.0, 24.0),
-            child: Column(
+    showOriginCustomDialog<void>(
+      context,
+      child: Builder(
+        builder: (dialogContext) {
+          return OriginDialog(
+            alignment: Alignment.bottomCenter,
+            title: title,
+            textAlign: TextAlign.center,
+            icon: Container(
+              width: 48.0,
+              height: 48.0,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 26.0),
+            ),
+            content: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 顶部把手
-                Container(
-                  width: 36.0,
-                  height: 4.0,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : Colors.black.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(2.0),
+                // 服务后端芯片标签
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                    decoration: BoxDecoration(
+                      color: OriginTokens.cardSecondary(context),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.cloud_outlined,
+                          size: 14.0,
+                          color: OriginTokens.textSecondary(context),
+                        ),
+                        const SizedBox(width: 5.0),
+                        Text(
+                          '服务后端：$backendName',
+                          style: TextStyle(
+                            fontSize: 12.0,
+                            fontWeight: FontWeight.w500,
+                            color: OriginTokens.textSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20.0),
-
-                // 状态大图标
-                Container(
-                  width: 52.0,
-                  height: 52.0,
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: iconColor, size: 28.0),
                 ),
                 const SizedBox(height: 12.0),
-
-                // 标题
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6.0),
-
-                // 服务与账号
-                Text(
-                  '服务后端：$backendName',
-                  style: TextStyle(
-                    fontSize: 12.0,
-                    color: OriginTokens.textSecondary(context),
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-
-                // 描述
                 Text(
                   description,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 13.0,
-                    height: 1.45,
+                    fontSize: 13.5,
+                    height: 1.5,
                     color: OriginTokens.textSecondary(context),
                   ),
                 ),
-                const SizedBox(height: 24.0),
-
-                // 操作按钮组
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(44.0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(22.0),
-                          ),
-                          side: BorderSide(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.18)
-                                : Colors.black.withValues(alpha: 0.12),
-                          ),
-                        ),
-                        onPressed: () {
-                          Navigator.of(bottomSheetContext).pop();
-                          _openCloudSettings(context, config);
-                        },
-                        child: Text(
-                          '同步设置',
-                          style: TextStyle(
-                            color: OriginTokens.textPrimary(context),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12.0),
-                    Expanded(
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          minimumSize: const Size.fromHeight(44.0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(22.0),
-                          ),
-                        ),
-                        onPressed: () {
-                          Navigator.of(bottomSheetContext).pop();
-                          _triggerSync(context, showToast: true);
-                        },
-                        child: const Text(
-                          '立即同步',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
-          ),
-        );
-      },
+            confirmText: state == HomeSyncVisualState.syncing ? '正在同步...' : '立即同步',
+            onConfirm: () {
+              Navigator.of(dialogContext).pop();
+              _triggerSync(context, showToast: true);
+            },
+            cancelText: '同步设置',
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+              _openCloudSettings(context, config);
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -419,7 +365,7 @@ class _OriginSyncDotState extends ConsumerState<OriginSyncDot>
           _triggerSync(context, showToast: true);
         },
         child: SizedBox(
-          width: 28.0,
+          width: 16.0,
           height: 28.0,
           child: Center(
             child: ScaleTransition(

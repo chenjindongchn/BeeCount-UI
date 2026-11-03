@@ -15,6 +15,7 @@ import '../../pages/transaction/recording/bindings/recording_save.dart';
 import '../../pages/transaction/recording/bindings/recording_category_section.dart';
 import '../../pages/transaction/recording/bindings/transfer_inline_accounts.dart';
 import 'custom_category_edit_page.dart';
+import 'custom_account_edit_page.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 import '../../pages/shared/selectors/currency_picker_sheet.dart';
 import '../../services/attachment_service.dart';
@@ -345,9 +346,24 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
   /// 选中分类时的统一处理方法（支持按分类智能记忆上次使用的账户）
   Future<void> _onCategorySelected(Category cat, {bool hasChildren = false}) async {
     HapticFeedback.selectionClick();
+    final previousSelected = _selectedCategory;
     setState(() {
       _selectedCategory = cat;
-      _expandedParentId = hasChildren ? cat.id : null;
+      if (cat.parentId == null) {
+        // 点击一级分类：若有子分类，再次点击已选中的当前父分类则折叠收起，否则展开
+        if (hasChildren) {
+          if (_expandedParentId == cat.id && previousSelected?.id == cat.id) {
+            _expandedParentId = null;
+          } else {
+            _expandedParentId = cat.id;
+          }
+        } else {
+          _expandedParentId = null;
+        }
+      } else {
+        // 点击二级子分类：保持其所属父分类展开
+        _expandedParentId = cat.parentId;
+      }
     });
     _loadFrequentNotes();
 
@@ -754,8 +770,10 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
       return;
     }
 
-    final accounts =
-        ref.read(accountsStreamProvider(_ledgerId)).valueOrNull ?? [];
+    final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
+            const <Account>[])
+        .where((a) => !a.hidden)
+        .toList();
     final baseCurrency = ref.read(currentLedgerCurrencyProvider);
     final txCurrency = _txCurrency(accounts);
     final currentRate = _currentRate(txCurrency, baseCurrency);
@@ -912,8 +930,10 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
-    final accountsAsync = ref.watch(accountsStreamProvider(_ledgerId));
-    final accounts = accountsAsync.valueOrNull ?? [];
+    final accountsAsync = ref.watch(allAccountsStreamProvider);
+    final accounts = (accountsAsync.valueOrNull ?? const <Account>[])
+        .where((a) => !a.hidden)
+        .toList();
     final baseCurrency = ref.watch(currentLedgerCurrencyProvider);
     final txCurrency = _txCurrency(accounts);
     final showFrequentNotes = ref.watch(frequentNotesEnabledProvider);
@@ -1531,157 +1551,347 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                 ? _selectedCategory
                 : (initialMatch ?? parents.firstOrNull);
 
-        // 如果当前选中的分类有二级子分类，或者父级展开中
-        final activeParentId = _expandedParentId ??
-            (currentSelected?.parentId ?? currentSelected?.id);
-        final subCategories = activeParentId != null
+        // 如果用户主动展开了某个父分类，优先使用 _expandedParentId；
+        // 如果当前选中的是二级分类（currentSelected.parentId != null），则父分类自动展开；
+        // 否则遵循 _expandedParentId
+        final int? activeParentId;
+        if (_expandedParentId != null) {
+          activeParentId = _expandedParentId;
+        } else if (currentSelected?.parentId != null) {
+          activeParentId = currentSelected!.parentId;
+        } else {
+          activeParentId = null;
+        }
+
+        final activeParentCat = activeParentId != null
+            ? parents.where((c) => c.id == activeParentId).firstOrNull
+            : null;
+        final subCategories = (activeParentId != null && activeParentCat != null)
             ? allCategories.where((c) => c.parentId == activeParentId).toList()
             : <Category>[];
 
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
-        return Column(
-          children: [
-            // 1. 一级分类网格 + 末尾添加按钮
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: GridView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  scrollDirection: Axis.vertical,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    mainAxisSpacing: 6,
-                    crossAxisSpacing: 6,
-                    childAspectRatio: 0.92,
+        // 包含所有一级分类 + 末尾一个添加项
+        final totalItemCount = parents.length + 1;
+        final totalRows =
+            (totalItemCount + crossAxisCount - 1) ~/ crossAxisCount;
+
+        return ListView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          itemCount: totalRows,
+          itemBuilder: (context, rowIndex) {
+            final start = rowIndex * crossAxisCount;
+            Category? rowExpandedParent;
+
+            final cells = <Widget>[];
+            for (var i = 0; i < crossAxisCount; i++) {
+              final itemIndex = start + i;
+              if (itemIndex < totalItemCount) {
+                if (itemIndex == parents.length) {
+                  // 末尾添加分类按钮
+                  cells.add(
+                    Expanded(
+                      child: _buildAddCategoryItem(context, isDark: isDark),
+                    ),
+                  );
+                } else {
+                  final cat = parents[itemIndex];
+                  final isParentActive = (currentSelected?.id == cat.id ||
+                      currentSelected?.parentId == cat.id);
+                  final hasChildren =
+                      allCategories.any((c) => c.parentId == cat.id);
+
+                  if (hasChildren && cat.id == activeParentId) {
+                    rowExpandedParent = cat;
+                  }
+
+                  cells.add(
+                    Expanded(
+                      child: _buildParentCategoryItem(
+                        context,
+                        cat,
+                        isParentActive: isParentActive,
+                        hasChildren: hasChildren,
+                        isDark: isDark,
+                      ),
+                    ),
+                  );
+                }
+              } else {
+                cells.add(const Expanded(child: SizedBox.shrink()));
+              }
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: cells,
                   ),
-                  itemCount: parents.length + 1, // +1 给末尾「+ 添加」
-                  itemBuilder: (context, index) {
-                    if (index == parents.length) {
-                      // 末尾添加分类按钮
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _openCategoryEdit,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isDark
-                                      ? Colors.white24
-                                      : Colors.black26,
-                                  style: BorderStyle.solid,
-                                  width: 1.2,
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.add_rounded,
-                                size: 20,
-                                color: isDark ? Colors.white60 : Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '添加',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                color: isDark ? Colors.white60 : Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
+                  if (rowExpandedParent != null && subCategories.isNotEmpty)
+                    _buildInlineSubCategoryPanel(
+                      context,
+                      parentCat: rowExpandedParent,
+                      subCategories: subCategories,
+                      currentSelected: currentSelected,
+                      isDark: isDark,
+                      crossAxisCount: crossAxisCount,
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
-                    final cat = parents[index];
-                    final isParentActive =
-                        (currentSelected?.id == cat.id ||
-                            currentSelected?.parentId == cat.id);
-                    final hasChildren =
-                        allCategories.any((c) => c.parentId == cat.id);
+  /// 一级分类单项（保持原有视觉与原点标记完全一致）
+  Widget _buildParentCategoryItem(
+    BuildContext context,
+    Category cat, {
+    required bool isParentActive,
+    required bool hasChildren,
+    required bool isDark,
+  }) {
+    final selectedBg = Theme.of(context)
+        .colorScheme
+        .primary
+        .withValues(alpha: isDark ? 0.25 : 0.15);
+    final unselectedBg =
+        isDark ? const Color(0xFF28282C) : const Color(0xFFF4F5F7);
 
-                    final selectedBg = Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: isDark ? 0.25 : 0.15);
-                    final unselectedBg = isDark
-                        ? const Color(0xFF28282C)
-                        : const Color(0xFFF4F5F7);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _onCategorySelected(cat, hasChildren: hasChildren),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isParentActive ? selectedBg : unselectedBg,
+                  shape: BoxShape.circle,
+                  border: isParentActive
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 1.5,
+                        )
+                      : null,
+                ),
+                child: Center(
+                  child: RecordingCategoryIcon(
+                    category: cat,
+                    size: 19,
+                    color: isParentActive
+                        ? Theme.of(context).colorScheme.primary
+                        : (isDark
+                            ? Colors.white70
+                            : const Color(0xFF4A4A4F)),
+                  ),
+                ),
+              ),
+              if (hasChildren)
+                Positioned(
+                  right: -1,
+                  bottom: -1,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: isParentActive
+                          ? Theme.of(context).colorScheme.primary
+                          : (isDark ? Colors.white38 : Colors.black26),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            cat.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight:
+                  isParentActive ? FontWeight.w600 : FontWeight.w400,
+              color: isParentActive
+                  ? Theme.of(context).colorScheme.primary
+                  : (isDark ? Colors.white70 : const Color(0xFF333336)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                    return GestureDetector(
-                      onTap: () =>
-                          _onCategorySelected(cat, hasChildren: hasChildren),
+  /// 一级分类列表末尾的添加按钮
+  Widget _buildAddCategoryItem(BuildContext context, {required bool isDark}) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _openCategoryEdit,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark ? Colors.white24 : Colors.black26,
+                style: BorderStyle.solid,
+                width: 1.2,
+              ),
+            ),
+            child: Icon(
+              Icons.add_rounded,
+              size: 20,
+              color: isDark ? Colors.white60 : Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '添加',
+            style: TextStyle(
+              fontSize: 10.5,
+              color: isDark ? Colors.white60 : Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 行间就地展开的二级分类面板（显示二级分类图标 + 名称 + 选中高亮）
+  Widget _buildInlineSubCategoryPanel(
+    BuildContext context, {
+    required Category parentCat,
+    required List<Category> subCategories,
+    required Category? currentSelected,
+    required bool isDark,
+    required int crossAxisCount,
+  }) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    // 选项列表：首项为父分类自身（即“全部”），随后是各个带图标的二级分类
+    final items = <({String label, Category category, bool isParentAll})>[
+      (label: '全部', category: parentCat, isParentAll: true),
+      ...subCategories
+          .map((c) => (label: c.name, category: c, isParentAll: false)),
+    ];
+
+    final subRowCount = (items.length + crossAxisCount - 1) ~/ crossAxisCount;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      child: Container(
+        margin: const EdgeInsets.only(top: 6, bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF0F2F5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark
+                ? Colors.white10
+                : Colors.black.withValues(alpha: 0.04),
+            width: 0.8,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(subRowCount, (rIdx) {
+            final start = rIdx * crossAxisCount;
+            final end = (start + crossAxisCount < items.length)
+                ? start + crossAxisCount
+                : items.length;
+            final rowItems = items.sublist(start, end);
+
+            return Padding(
+              padding:
+                  EdgeInsets.only(bottom: rIdx < subRowCount - 1 ? 6.0 : 0.0),
+              child: Row(
+                children: List.generate(crossAxisCount, (cIdx) {
+                  if (cIdx >= rowItems.length) {
+                    return const Expanded(child: SizedBox.shrink());
+                  }
+                  final item = rowItems[cIdx];
+                  final isSelected = item.isParentAll
+                      ? (currentSelected?.id == parentCat.id)
+                      : (currentSelected?.id == item.category.id);
+
+                  final itemBg = isSelected
+                      ? primary.withValues(alpha: isDark ? 0.28 : 0.16)
+                      : (isDark ? const Color(0xFF2A2A2E) : Colors.white);
+
+                  return Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        _onCategorySelected(item.category, hasChildren: true);
+                      },
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: isParentActive
-                                      ? selectedBg
-                                      : unselectedBg,
-                                  shape: BoxShape.circle,
-                                  border: isParentActive
-                                      ? Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          width: 1.5,
-                                        )
-                                      : null,
-                                ),
-                                child: Center(
-                                  child: RecordingCategoryIcon(
-                                    category: cat,
-                                    size: 19,
-                                    color: isParentActive
-                                        ? Theme.of(context).colorScheme.primary
-                                        : (isDark
-                                            ? Colors.white70
-                                            : const Color(0xFF4A4A4F)),
-                                  ),
-                                ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: itemBg,
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(color: primary, width: 1.3)
+                                  : null,
+                              boxShadow: (!isSelected && !isDark)
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.03),
+                                        blurRadius: 2,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Center(
+                              child: RecordingCategoryIcon(
+                                category: item.category,
+                                size: 16,
+                                color: isSelected
+                                    ? primary
+                                    : (isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF4A4A4F)),
                               ),
-                              if (hasChildren)
-                                Positioned(
-                                  right: -1,
-                                  bottom: -1,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: isParentActive
-                                          ? Theme.of(context).colorScheme.primary
-                                          : (isDark
-                                              ? Colors.white38
-                                              : Colors.black26),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                            ],
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            cat.name,
+                            item.label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: isParentActive
+                              fontSize: 10,
+                              fontWeight: isSelected
                                   ? FontWeight.w600
                                   : FontWeight.w400,
-                              color: isParentActive
-                                  ? Theme.of(context).colorScheme.primary
+                              color: isSelected
+                                  ? primary
                                   : (isDark
                                       ? Colors.white70
                                       : const Color(0xFF333336)),
@@ -1689,95 +1899,12 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                           ),
                         ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                }),
               ),
-            ),
-
-            // 2. 二级子分类展开滑动胶囊栏
-            if (subCategories.isNotEmpty)
-              Container(
-                height: 32,
-                margin: const EdgeInsets.only(bottom: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: subCategories.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 6),
-                  itemBuilder: (context, idx) {
-                    if (idx == 0) {
-                      // 父分类自身
-                      final parentCat = parents
-                          .where((p) => p.id == activeParentId)
-                          .firstOrNull;
-                      final isSelected =
-                          currentSelected?.id == parentCat?.id;
-                      return _buildSubCategoryChip(
-                        context,
-                        label: '全部',
-                        isSelected: isSelected,
-                        onTap: () {
-                          if (parentCat != null) {
-                            _onCategorySelected(parentCat, hasChildren: true);
-                          }
-                        },
-                      );
-                    }
-                    final child = subCategories[idx - 1];
-                    final isSelected = currentSelected?.id == child.id;
-                    return _buildSubCategoryChip(
-                      context,
-                      label: child.name,
-                      isSelected: isSelected,
-                      onTap: () =>
-                          _onCategorySelected(child, hasChildren: true),
-                    );
-                  },
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildSubCategoryChip(
-    BuildContext context, {
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primary = OriginTokens.primary(context);
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? primary.withValues(alpha: isDark ? 0.3 : 0.15)
-              : (isDark ? const Color(0xFF28282C) : const Color(0xFFF3F4F6)),
-          borderRadius: BorderRadius.circular(12),
-          border: isSelected
-              ? Border.all(color: primary, width: 1.0)
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected
-                  ? primary
-                  : (isDark ? Colors.white70 : const Color(0xFF4A4A4F)),
-            ),
-          ),
+            );
+          }),
         ),
       ),
     );
@@ -1851,7 +1978,58 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (eligible.isEmpty) {
-      return const Center(child: Text('暂无可转账账户，请先添加账户'));
+      final primary = ref.watch(primaryColorProvider);
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '暂无可转账账户，请先添加账户',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CustomAccountEditPage(ledgerId: _ledgerId),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: primary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text(
+                        '新建账户',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     _selectedAccountId ??= eligible.first.id;
@@ -2413,6 +2591,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
       currentAccountId: currentId,
       showNoAccountOption: _selectedType != 2 && isSourceAccount,
       title: isSourceAccount ? '选择账户' : '选择转入账户',
+      ledgerId: _ledgerId,
     );
 
     if (selectedId != null && mounted) {
