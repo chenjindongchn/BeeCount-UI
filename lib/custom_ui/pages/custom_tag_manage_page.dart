@@ -10,7 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../pages/tag/detail/bindings/tag_detail.dart' show tagDetailColor;
 import '../../pages/tag/manage/bindings/tag_library_data.dart';
 import '../../pages/tag/manage/bindings/tag_library_files.dart';
-import '../../pages/tag/tag_edit_page.dart';
+import 'custom_tag_edit_page.dart';
 import '../../providers.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/export/config_export_service.dart';
@@ -82,7 +82,7 @@ class _CustomTagManagePageState extends ConsumerState<CustomTagManagePage> {
       context,
       MaterialPageRoute<void>(
         builder: (_) => tag == null
-            ? const TagEditPage()
+            ? const CustomTagEditPage()
             : CustomTagDetailPage(
                 tagId: tag.id,
                 tagName: tag.name,

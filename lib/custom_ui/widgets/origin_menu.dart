@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../styles/origin_tokens.dart';
 
 /// vivo OriginOS 官方规范右上角“竖排双圆点”图标 (OriginMoreIcon)
@@ -84,20 +85,31 @@ class OriginMenuItem {
 /// 具备 40×40dp 标准点击热区，支持未读状态红点（Badge），
 /// 点击后自动获取当前按钮的屏幕位置，并从右上角平滑呼出 OriginOS 风格气泡菜单。
 class OriginMoreButton extends StatelessWidget {
-  final List<OriginMenuItem> items;
+  final List<OriginMenuItem>? items;
+  final VoidCallback? onPressed;
   final bool showBadge;
   final Color? iconColor;
   final String? tooltip;
 
   const OriginMoreButton({
     super.key,
-    required this.items,
+    this.items,
+    this.onPressed,
     this.showBadge = false,
     this.iconColor,
     this.tooltip,
-  });
+  }) : assert(
+          items != null || onPressed != null,
+          'Must provide either items or onPressed',
+        );
 
   void _handleTap(BuildContext context) {
+    HapticFeedback.lightImpact();
+    if (onPressed != null) {
+      onPressed!();
+      return;
+    }
+    if (items == null || items!.isEmpty) return;
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
     final offset = renderBox.localToGlobal(Offset.zero);
@@ -107,7 +119,7 @@ class OriginMoreButton extends StatelessWidget {
     showOriginMenu(
       context: context,
       targetRect: targetRect,
-      items: items,
+      items: items!,
     );
   }
 

@@ -38,6 +38,7 @@ class OriginTextField extends StatefulWidget {
   final Color? backgroundColor;
   final double borderRadius;
   final bool isDense;
+  final bool showCounter;
 
   const OriginTextField({
     super.key,
@@ -69,6 +70,7 @@ class OriginTextField extends StatefulWidget {
     this.backgroundColor,
     this.borderRadius = OriginTokens.cardRadius,
     this.isDense = false,
+    this.showCounter = false,
   });
 
   /// 紧凑型输入框（用于抽屉、弹窗、筛选栏等小高度场景）
@@ -102,6 +104,7 @@ class OriginTextField extends StatefulWidget {
     this.backgroundColor,
     this.borderRadius = 17.0,
     this.isDense = true,
+    this.showCounter = false,
   });
 
   @override
@@ -302,6 +305,10 @@ class _OriginTextFieldState extends State<OriginTextField> {
       maxLines: widget.obscureText ? 1 : widget.maxLines,
       minLines: widget.minLines,
       maxLength: widget.maxLength,
+      buildCounter: widget.showCounter
+          ? null
+          : (_, {required currentLength, required isFocused, maxLength}) =>
+              null,
       style: widget.style ?? defaultTextStyle,
       cursorColor: primaryColor,
       cursorRadius: const Radius.circular(2.0),
@@ -314,6 +321,7 @@ class _OriginTextFieldState extends State<OriginTextField> {
         fillColor: fillBg,
         labelText: widget.label,
         floatingLabelBehavior: FloatingLabelBehavior.never,
+        counterText: widget.showCounter ? null : '',
         labelStyle: TextStyle(
           fontSize: 13.0,
           color: OriginTokens.textSecondary(context),

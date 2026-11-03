@@ -298,7 +298,6 @@ class _CustomHomePageState extends ConsumerState<CustomHomePage> {
                 ),
               ],
             ),
-          const SizedBox(width: 8.0),
         ],
       ),
       body: Stack(

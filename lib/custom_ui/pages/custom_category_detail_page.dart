@@ -907,7 +907,10 @@ class _CustomCategoryTopAppBar extends StatelessWidget
       child: SizedBox(
         height: OriginTokens.smallTitleHeight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          padding: const EdgeInsets.only(
+            left: 8.0,
+            right: OriginTokens.cardMargin,
+          ),
           child: Row(
             children: [
               if (leading != null) leading!,

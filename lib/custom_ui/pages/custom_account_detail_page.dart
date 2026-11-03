@@ -645,7 +645,10 @@ class _CustomAccountTopAppBar extends StatelessWidget
       child: SizedBox(
         height: OriginTokens.smallTitleHeight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          padding: const EdgeInsets.only(
+            left: 8.0,
+            right: OriginTokens.cardMargin,
+          ),
           child: Row(
             children: [
               if (leading != null) leading!,
@@ -796,6 +799,7 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
     }
 
     // 单项资产大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
+    // 根据 OriginOS 极简体验原则：点进资产详情即已明确资产类型，移除冗余的卡片类型标签（包括银行卡、信用卡等）
     return OriginHeroCard(
       title: balanceLabel,
       unit: unit,
@@ -804,21 +808,6 @@ class _CompactAccountSummaryCard extends ConsumerWidget {
       onToggleHideAmounts: () {
         ref.read(hideAmountsProvider.notifier).state = !hidden;
       },
-      action: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.22),
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        child: Text(
-          getAccountTypeLabel(context, account.type),
-          style: const TextStyle(
-            fontSize: 11.0,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
-        ),
-      ),
       metrics: metrics,
     );
   }

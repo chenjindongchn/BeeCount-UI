@@ -521,8 +521,8 @@ class _CustomSettingsPageState extends ConsumerState<CustomSettingsPage> {
               OriginSettingItem(
                 title: '常用备注推荐',
                 subtitle: frequentNotesEnabled
-                    ? '开启：记账时展示高频历史备注'
-                    : '关闭：不展示高频历史备注',
+                    ? '开启：记账时智能推荐高频与常用备注'
+                    : '关闭：不展示常用备注推荐',
                 leading: Icon(
                   Icons.auto_awesome_outlined,
                   color: primaryColor,

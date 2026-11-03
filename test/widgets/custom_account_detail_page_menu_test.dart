@@ -81,4 +81,44 @@ void main() {
     // 等待 LoggerService 2s 定时器完成
     await tester.pump(const Duration(seconds: 3));
   });
+
+  testWidgets('CustomAccountDetailPage 顶部资产卡片不应显示冗余的账户类型标签（如银行卡）', (tester) async {
+    final accountId = await repo.createAccount(
+      ledgerId: 1,
+      name: '招商银行',
+      type: 'bank_card',
+      currency: 'CNY',
+      initialBalance: 2000.0,
+    );
+    final account = (await repo.getAccount(accountId))!;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(database),
+          repositoryProvider.overrideWithValue(repo),
+          currentLedgerIdProvider.overrideWith((ref) => 1),
+          baseCurrencyProvider.overrideWith((ref) => 'CNY'),
+          hideAmountsProvider.overrideWith((ref) => false),
+        ],
+        child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CustomAccountDetailPage(account: account),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // 验证：顶部导航栏应包含账户名称“招商银行”
+    expect(find.text('招商银行'), findsOneWidget);
+
+    // 验证：大看板卡片上不应再显示多余的类型标题/标签“银行卡”
+    expect(find.text('银行卡'), findsNothing);
+
+    // 等待异步定时器完成
+    await tester.pump(const Duration(seconds: 3));
+  });
 }

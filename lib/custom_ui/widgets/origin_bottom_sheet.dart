@@ -15,6 +15,7 @@ import 'origin_dialog.dart';
 import 'origin_switch.dart';
 import '../providers/account_display_preferences_provider.dart';
 import '../providers/amount_format_provider.dart';
+import '../providers/last_account_preference_provider.dart';
 
 /// 以 OriginUI 规范弹出自底向上升起的抽屉 (OriginBottomSheet)
 ///
@@ -666,12 +667,61 @@ class _OriginAccountPreferencesSheet extends ConsumerWidget {
                   ),
                   const OriginDivider(startIndent: 50.0, endIndent: 16.0),
 
-                  // 2. 默认支出账户行
+                  // 3. 默认选择上次的支出账户（按分类记忆上次使用的账户）
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.history_rounded,
+                          size: 22.0,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '默认选择上次的支出账户',
+                                style: TextStyle(
+                                  fontSize: 15.0,
+                                  fontWeight: FontWeight.w500,
+                                  color: OriginTokens.textPrimary(context),
+                                ),
+                              ),
+                              const SizedBox(height: 2.0),
+                              Text(
+                                '点选分类时自动切换为该分类上次使用的账户',
+                                style: TextStyle(
+                                  fontSize: 12.0,
+                                  color: OriginTokens.textTertiary(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        OriginSwitch(
+                          value: ref.watch(rememberLastAccountEnabledProvider),
+                          onChanged: (val) {
+                            ref.read(rememberLastAccountEnabledProvider.notifier).setEnabled(val);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const OriginDivider(startIndent: 50.0, endIndent: 16.0),
+
+                  // 4. 默认支出账户行 (开启分类记忆后禁用)
                   _OriginSheetSettingRow(
                     icon: Icons.arrow_upward_rounded,
                     iconColor: OriginTokens.expenseRed,
                     title: '默认支出账户',
-                    value: accountName(defaultExpenseId),
+                    value: ref.watch(rememberLastAccountEnabledProvider)
+                        ? '随分类记忆'
+                        : accountName(defaultExpenseId),
+                    enabled: !ref.watch(rememberLastAccountEnabledProvider),
                     onTap: () {
                       showOriginAccountPickerSheet(
                         context: context,
@@ -685,12 +735,15 @@ class _OriginAccountPreferencesSheet extends ConsumerWidget {
                   ),
                   const OriginDivider(startIndent: 50.0, endIndent: 16.0),
 
-                  // 3. 默认收入账户行
+                  // 5. 默认收入账户行 (开启分类记忆后禁用)
                   _OriginSheetSettingRow(
                     icon: Icons.arrow_downward_rounded,
                     iconColor: OriginTokens.incomeGreen,
                     title: '默认收入账户',
-                    value: accountName(defaultIncomeId),
+                    value: ref.watch(rememberLastAccountEnabledProvider)
+                        ? '随分类记忆'
+                        : accountName(defaultIncomeId),
+                    enabled: !ref.watch(rememberLastAccountEnabledProvider),
                     onTap: () {
                       showOriginAccountPickerSheet(
                         context: context,
@@ -766,6 +819,7 @@ class _OriginSheetSettingRow extends StatelessWidget {
   final String title;
   final String value;
   final VoidCallback onTap;
+  final bool enabled;
 
   const _OriginSheetSettingRow({
     required this.icon,
@@ -773,42 +827,46 @@ class _OriginSheetSettingRow extends StatelessWidget {
     required this.title,
     required this.value,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),
-        child: Row(
-          children: [
-            Icon(icon, size: 22.0, color: iconColor),
-            const SizedBox(width: 12.0),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15.0,
-                  fontWeight: FontWeight.w500,
-                  color: OriginTokens.textPrimary(context),
+      onTap: enabled ? onTap : null,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.45,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),
+          child: Row(
+            children: [
+              Icon(icon, size: 22.0, color: iconColor),
+              const SizedBox(width: 12.0),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15.0,
+                    fontWeight: FontWeight.w500,
+                    color: OriginTokens.textPrimary(context),
+                  ),
                 ),
               ),
-            ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 14.0,
-                color: OriginTokens.textSecondary(context),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14.0,
+                  color: OriginTokens.textSecondary(context),
+                ),
               ),
-            ),
-            const SizedBox(width: 4.0),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20.0,
-              color: OriginTokens.textTertiary(context),
-            ),
-          ],
+              const SizedBox(width: 4.0),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20.0,
+                color: OriginTokens.textTertiary(context),
+              ),
+            ],
+          ),
         ),
       ),
     );

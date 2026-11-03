@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
 import '../../pages/shared/resources/bindings/recording_category_icon.dart';
-import '../../pages/tag/widgets/tag_selector.dart';
+import '../widgets/custom_tag_selector_sheet.dart';
 import '../../pages/transaction/recording/bindings/amount_editor_sheet.dart';
 import '../../pages/transaction/recording/bindings/recording_save.dart';
 import '../../pages/transaction/recording/bindings/recording_category_section.dart';
@@ -18,13 +18,14 @@ import 'custom_category_edit_page.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 import '../../pages/shared/selectors/currency_picker_sheet.dart';
 import '../../services/attachment_service.dart';
-import '../../services/data/note_history_service.dart';
 import '../../utils/currencies.dart';
 import '../../utils/format_money.dart';
 import '../providers/amount_format_provider.dart';
 import '../providers/frequent_notes_enabled_provider.dart';
+import '../providers/last_account_preference_provider.dart';
 import '../styles/origin_sheet_tokens.dart';
 import '../styles/origin_tokens.dart';
+import '../utils/frequent_notes_helper.dart';
 import '../widgets/custom_account_grid_picker.dart';
 import '../widgets/custom_transaction_flags_sheet.dart';
 import '../widgets/origin_bottom_sheet.dart';
@@ -222,6 +223,31 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
 
   Future<void> _initDefaultAccount() async {
     if (_selectedAccountId != null) return;
+    if (widget.editingTransactionId != null) return;
+
+    final rememberLast = ref.read(rememberLastAccountEnabledProvider);
+    if (rememberLast) {
+      // 开启分类记忆：若有初始分类，匹配该分类上次使用的账户；否则保持 null（未操作过不显示）
+      if (widget.initialCategoryId != null) {
+        try {
+          final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
+                  const <Account>[])
+              .where((a) => !a.hidden)
+              .toList();
+          final memService = ref.read(categoryAccountMemoryServiceProvider);
+          final acc = await memService.getLastAccountId(
+            ledgerId: _ledgerId,
+            categoryId: widget.initialCategoryId!,
+            availableAccounts: accounts,
+          );
+          if (mounted && acc != null) {
+            setState(() => _selectedAccountId = acc);
+          }
+        } catch (_) {}
+      }
+      return;
+    }
+
     try {
       final acc = await defaultRecordingAccount(ref, _currentKind, _ledgerId);
       if (mounted && acc != null) {
@@ -247,6 +273,13 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         widget.editingTransactionId != null) {
       return;
     }
+    final rememberLast = ref.read(rememberLastAccountEnabledProvider);
+    if (rememberLast) {
+      if (mounted) {
+        setState(() => _selectedAccountId = null);
+      }
+      return;
+    }
     try {
       final kind = index == 1 ? 'income' : 'expense';
       final acc = await defaultRecordingAccount(ref, kind, _ledgerId);
@@ -254,6 +287,40 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         setState(() => _selectedAccountId = acc);
       }
     } catch (_) {}
+  }
+
+  /// 选中分类时的统一处理方法（支持按分类智能记忆上次使用的账户）
+  Future<void> _onCategorySelected(Category cat, {bool hasChildren = false}) async {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedCategory = cat;
+      _expandedParentId = hasChildren ? cat.id : null;
+    });
+    _loadFrequentNotes();
+
+    // 若开启了“默认选择上次支出账户”，且非编辑旧交易时，自动检索匹配上次使用的账户
+    if (ref.read(rememberLastAccountEnabledProvider) &&
+        widget.editingTransactionId == null) {
+      try {
+        final accounts = (ref.read(allAccountsStreamProvider).valueOrNull ??
+                const <Account>[])
+            .where((a) => !a.hidden)
+            .toList();
+        final memService = ref.read(categoryAccountMemoryServiceProvider);
+        final lastAccId = await memService.getLastAccountId(
+          ledgerId: _ledgerId,
+          categoryId: cat.id,
+          parentCategoryId: cat.parentId,
+          availableAccounts: accounts,
+        );
+        if (mounted) {
+          setState(() {
+            // 如果查到有效账户则自动选中，未操作过则为 null（不显示账户）
+            _selectedAccountId = lastAccId;
+          });
+        }
+      } catch (_) {}
+    }
   }
 
   void _onTypeSelected(int index) {
@@ -302,30 +369,27 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
   // --- 历史备注智能推荐 ---
 
   Future<void> _loadFrequentNotes() async {
-    if (_selectedType == 2 || !ref.read(frequentNotesEnabledProvider)) {
+    if (!ref.read(frequentNotesEnabledProvider)) {
       if (mounted) setState(() => _frequentNotes = []);
       return;
     }
     try {
       final repo = ref.read(repositoryProvider);
-      final notes = await NoteHistoryService.getHistoryNotes(
+      final notes = await FrequentNotesHelper.getRecommendedNotes(
         repository: repo,
         ledgerId: _ledgerId,
         scope: ref.read(noteHistoryScopeProvider),
         sort: ref.read(noteHistorySortProvider),
+        kind: _currentKind,
         categoryId: _selectedCategory?.id ?? widget.initialCategoryId,
         categorySyncId: ((_selectedCategory?.id ?? widget.initialCategoryId) ?? 0) < 0
             ? _selectedCategory?.syncId
             : null,
+        categoryName: _selectedCategory?.name,
         limit: 8,
       );
       if (mounted) {
-        final filtered = notes
-            .map((e) => e.note.trim())
-            .where((n) => n.isNotEmpty)
-            .toSet()
-            .toList();
-        setState(() => _frequentNotes = filtered);
+        setState(() => _frequentNotes = notes);
       }
     } catch (_) {}
   }
@@ -714,6 +778,19 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
           editingId: widget.editingTransactionId,
           onCreated: (_) {},
         );
+
+        // 记录该分类使用的账户（若开启了分类记忆，且本次选择了账户）
+        if (ref.read(rememberLastAccountEnabledProvider) &&
+            _selectedAccountId != null) {
+          unawaited(
+            ref.read(categoryAccountMemoryServiceProvider).saveLastAccountId(
+                  ledgerId: _ledgerId,
+                  categoryId: catToSave.id,
+                  accountId: _selectedAccountId!,
+                  parentCategoryId: catToSave.parentId,
+                ),
+          );
+        }
       }
 
       // 保存附件（编辑模式有新增附件时）
@@ -787,6 +864,11 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     final baseCurrency = ref.watch(currentLedgerCurrencyProvider);
     final txCurrency = _txCurrency(accounts);
     final showFrequentNotes = ref.watch(frequentNotesEnabledProvider);
+    ref.listen<bool>(frequentNotesEnabledProvider, (prev, next) {
+      if (prev != next) {
+        _loadFrequentNotes();
+      }
+    });
 
     // 尝试拉取外币汇率
     _maybeAutoFetchRate(txCurrency, baseCurrency);
@@ -1470,14 +1552,8 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                         : const Color(0xFFF4F5F7);
 
                     return GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          _selectedCategory = cat;
-                          _expandedParentId = hasChildren ? cat.id : null;
-                        });
-                        _loadFrequentNotes();
-                      },
+                      onTap: () =>
+                          _onCategorySelected(cat, hasChildren: hasChildren),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1583,9 +1659,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                         isSelected: isSelected,
                         onTap: () {
                           if (parentCat != null) {
-                            HapticFeedback.selectionClick();
-                            setState(() => _selectedCategory = parentCat);
-                            _loadFrequentNotes();
+                            _onCategorySelected(parentCat, hasChildren: true);
                           }
                         },
                       );
@@ -1596,11 +1670,8 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                       context,
                       label: child.name,
                       isSelected: isSelected,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedCategory = child);
-                        _loadFrequentNotes();
-                      },
+                      onTap: () =>
+                          _onCategorySelected(child, hasChildren: true),
                     );
                   },
                 ),
@@ -1933,6 +2004,8 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                 _noteController.clear();
               } else {
                 _noteController.text = note;
+                _noteController.selection =
+                    TextSelection.collapsed(offset: note.length);
               }
               setState(() {});
             },
@@ -2294,7 +2367,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
   }
 
   Future<void> _pickTags() async {
-    final result = await TagSelector.show(
+    final result = await CustomTagSelectorSheet.show(
       context,
       selectedTagIds: _selectedTagIds,
     );

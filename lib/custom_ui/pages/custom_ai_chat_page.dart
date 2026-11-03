@@ -154,12 +154,8 @@ class _CustomAIChatPageState extends ConsumerState<CustomAIChatPage>
         title: l10n.aiChatTitle,
         actions: [
           // vivo OriginOS 规范顶栏两个点设置入口
-          IconButton(
+          OriginMoreButton(
             tooltip: l10n.agentAssistantSettingsTitle,
-            icon: OriginMoreIcon(
-              size: 20.0,
-              color: OriginTokens.textPrimary(context),
-            ),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => CustomAISettingsPage(
@@ -169,7 +165,6 @@ class _CustomAIChatPageState extends ConsumerState<CustomAIChatPage>
               ),
             ),
           ),
-          const SizedBox(width: 4.0),
         ],
       ),
       body: Column(

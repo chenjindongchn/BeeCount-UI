@@ -264,7 +264,15 @@ class OriginSmallTopAppBar extends StatelessWidget implements PreferredSizeWidge
             child: NavigationToolbar(
               leading: leading,
               middle: _buildMiddle(context),
-              trailing: actions != null ? Row(mainAxisSize: MainAxisSize.min, children: actions!) : null,
+              trailing: actions != null
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: OriginTokens.cardMargin),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: actions!,
+                      ),
+                    )
+                  : null,
               centerMiddle: centerTitle,
             ),
           ),

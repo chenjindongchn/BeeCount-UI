@@ -17,7 +17,7 @@ import '../../utils/month_range.dart';
 import '../widgets/origin_period_picker.dart';
 import 'custom_category_detail_page.dart';
 import 'custom_transaction_sheet.dart';
-import '../../pages/tag/tag_edit_page.dart';
+import 'custom_tag_edit_page.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_menu.dart';
@@ -88,7 +88,7 @@ class _CustomTagDetailPageState extends ConsumerState<CustomTagDetailPage> {
   Future<void> _edit(db.Tag tag) async {
     await Navigator.push(
       context,
-      MaterialPageRoute<void>(builder: (_) => TagEditPage(tag: tag)),
+      MaterialPageRoute<void>(builder: (_) => CustomTagEditPage(tag: tag)),
     );
     if (mounted) _refresh();
   }
