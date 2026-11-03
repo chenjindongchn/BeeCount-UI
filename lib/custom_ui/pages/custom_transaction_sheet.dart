@@ -1776,7 +1776,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     );
   }
 
-  /// 行间就地展开的二级分类面板（显示二级分类图标 + 名称 + 选中高亮）
+  /// 行间就地展开的二级分类面板（纯粹展示二级子分类，不显示多余的“全部”按钮）
   Widget _buildInlineSubCategoryPanel(
     BuildContext context, {
     required Category parentCat,
@@ -1785,15 +1785,12 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     required bool isDark,
     required int crossAxisCount,
   }) {
+    if (subCategories.isEmpty) return const SizedBox.shrink();
+
     final primary = Theme.of(context).colorScheme.primary;
 
-    // 选项列表：首项为父分类自身（即“全部”），随后是各个带图标的二级分类
-    final items = <({String label, Category category, bool isParentAll})>[
-      (label: '全部', category: parentCat, isParentAll: true),
-      ...subCategories
-          .map((c) => (label: c.name, category: c, isParentAll: false)),
-    ];
-
+    // 直接使用该父分类下的子分类列表，无需多余的“全部”按钮
+    final items = subCategories;
     final subRowCount = (items.length + crossAxisCount - 1) ~/ crossAxisCount;
 
     return AnimatedSize(
@@ -1830,9 +1827,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                     return const Expanded(child: SizedBox.shrink());
                   }
                   final item = rowItems[cIdx];
-                  final isSelected = item.isParentAll
-                      ? (currentSelected?.id == parentCat.id)
-                      : (currentSelected?.id == item.category.id);
+                  final isSelected = currentSelected?.id == item.id;
 
                   final itemBg = isSelected
                       ? primary.withValues(alpha: isDark ? 0.28 : 0.16)
@@ -1842,7 +1837,12 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () {
-                        _onCategorySelected(item.category, hasChildren: true);
+                        if (isSelected) {
+                          // 再次点击已选中的二级分类，反选回退为父分类（大类记账）
+                          _onCategorySelected(parentCat, hasChildren: true);
+                        } else {
+                          _onCategorySelected(item, hasChildren: true);
+                        }
                       },
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -1870,7 +1870,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                             ),
                             child: Center(
                               child: RecordingCategoryIcon(
-                                category: item.category,
+                                category: item,
                                 size: 16,
                                 color: isSelected
                                     ? primary
@@ -1882,7 +1882,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            item.label,
+                            item.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
