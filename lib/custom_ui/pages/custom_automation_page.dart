@@ -31,13 +31,18 @@ class CustomAutomationPage extends ConsumerWidget {
         ),
       ),
       body: ListView(
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(
-          horizontal: OriginTokens.cardMargin,
           vertical: 12.0,
         ),
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 4.0, bottom: 12.0),
+            padding: const EdgeInsets.fromLTRB(
+              OriginTokens.cardMargin,
+              4.0,
+              OriginTokens.cardMargin,
+              10.0,
+            ),
             child: Text(
               l.automationPageSubtitle,
               style: TextStyle(

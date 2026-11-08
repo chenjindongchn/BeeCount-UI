@@ -1,5 +1,6 @@
 import 'package:beecount_ui/beecount_ui.dart' hide OriginSwitch;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -77,13 +78,6 @@ class _CustomRecurringTransactionPageState
         leading: BackButton(
           onPressed: () => Navigator.maybePop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
-            tooltip: l.recurringTransactionAdd,
-            onPressed: () => _openEditor(),
-          ),
-        ],
       ),
       body: data.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -106,31 +100,11 @@ class _CustomRecurringTransactionPageState
             return OriginEmptyState(
               iconData: Icons.repeat_rounded,
               title: l.recurringTransactionEmpty,
-              message: l.recurringTransactionEmptyHint,
-              action: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 10,
-                  ),
-                ),
-                onPressed: () => _openEditor(),
-                child: Text(l.recurringTransactionAdd),
-              ),
             );
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.symmetric(
-              horizontal: OriginTokens.cardMargin,
-              vertical: 12.0,
-            ),
+            padding: const EdgeInsets.only(top: 12.0, bottom: 24.0),
             itemCount: records.length + 1,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
@@ -189,6 +163,41 @@ class _CustomRecurringTransactionPageState
             },
           );
         },
+      ),
+      // 底部常驻符合 OriginUI 规范的胶囊大按钮（置底显示）
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OriginTokens.cardMargin,
+            vertical: 12.0,
+          ),
+          child: SizedBox(
+            height: OriginTokens.buttonHeight,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    OriginTokens.buttonRadius,
+                  ),
+                ),
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _openEditor();
+              },
+              child: Text(
+                l.recurringTransactionAdd,
+                style: const TextStyle(
+                  fontSize: 15.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

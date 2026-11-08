@@ -590,24 +590,26 @@ class _CustomRecurringTransactionEditPageState
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: OriginTokens.cardMargin,
-                    vertical: 12.0,
-                  ),
+                  padding: const EdgeInsets.only(top: 12.0, bottom: 24.0),
                   children: [
-                    // 1. 类型切换 (支出/收入/转账)
-                    OriginSegmentedControl<String>(
-                      items: const ['expense', 'income', 'transfer'],
-                      selectedItem: _type,
-                      onSelected: _saving ? (_) {} : _selectType,
-                      labelBuilder: (type) => switch (type) {
-                        'expense' => l.categoryExpense,
-                        'income' => l.categoryIncome,
-                        'transfer' => l.transferTitle,
-                        _ => '',
-                      },
+                    // 1. 类型切换 (支出/收入/转账) - 保持与卡片 20dp 边距对齐
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: OriginTokens.cardMargin,
+                      ),
+                      child: OriginSegmentedControl<String>(
+                        items: const ['expense', 'income', 'transfer'],
+                        selectedItem: _type,
+                        onSelected: _saving ? (_) {} : _selectType,
+                        labelBuilder: (type) => switch (type) {
+                          'expense' => l.categoryExpense,
+                          'income' => l.categoryIncome,
+                          'transfer' => l.transferTitle,
+                          _ => '',
+                        },
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
                     // 2. 金额输入卡片
                     OriginCard(
@@ -666,7 +668,7 @@ class _CustomRecurringTransactionEditPageState
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
                     // 3. 基础属性配置 (账本/币种/分类/账户)
                     OriginSettingGroup(
@@ -744,7 +746,7 @@ class _CustomRecurringTransactionEditPageState
                           ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
                     // 4. 周期规则设置 (频率/间隔/每月几日/起止日期)
                     OriginSettingGroup(
@@ -822,91 +824,97 @@ class _CustomRecurringTransactionEditPageState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
-                    // 5. 备注卡片
+                    // 5. 备注独立小节标题与输入卡片
+                    OriginSectionTitle(
+                      title: l.importFieldNote,
+                      margin: const EdgeInsets.fromLTRB(
+                        OriginTokens.cardMargin,
+                        4.0,
+                        OriginTokens.cardMargin,
+                        6.0,
+                      ),
+                    ),
                     OriginCard(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16.0,
                         vertical: 12.0,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l.commonNoteHint,
-                            style: TextStyle(
-                              fontSize: 12.0,
-                              color: OriginTokens.textSecondary(context),
-                            ),
-                          ),
-                          TextField(
-                            controller: _noteController,
-                            enabled: !_saving,
-                            maxLines: 2,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              isDense: true,
-                              hintText: l.commonNoteHint,
-                              hintStyle: TextStyle(
-                                fontSize: 14.0,
-                                color: OriginTokens.textSecondary(context),
-                              ),
-                            ),
-                            style: TextStyle(
-                              fontSize: 14.0,
-                              color: OriginTokens.textPrimary(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // 6. 底部保存按钮
-                    SizedBox(
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24.0),
+                      child: TextField(
+                        controller: _noteController,
+                        enabled: !_saving,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          hintText: '请输入备注',
+                          hintStyle: TextStyle(
+                            fontSize: 14.0,
+                            color: OriginTokens.textTertiary(context),
                           ),
                         ),
-                        onPressed:
-                            _saving || _initializing || !_isFormValid()
-                                ? null
-                                : _save,
-                        child: _saving
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.check_rounded, size: 20),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    l.commonSave,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        style: TextStyle(
+                          fontSize: 14.0,
+                          color: OriginTokens.textPrimary(context),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                   ],
                 ),
+      // 底部常驻保存大按钮
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            OriginTokens.cardMargin,
+            8.0,
+            OriginTokens.cardMargin,
+            12.0,
+          ),
+          child: SizedBox(
+            height: OriginTokens.buttonHeight,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    OriginTokens.buttonRadius,
+                  ),
+                ),
+              ),
+              onPressed:
+                  _saving || _initializing || !_isFormValid() ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_rounded, size: 20),
+                        const SizedBox(width: 6),
+                        Text(
+                          l.commonSave,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
