@@ -28,6 +28,7 @@ class OriginTextField extends StatefulWidget {
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+  final TapRegionCallback? onTapOutside;
   final VoidCallback? onClear;
   final int? maxLines;
   final int? minLines;
@@ -60,6 +61,7 @@ class OriginTextField extends StatefulWidget {
     this.inputFormatters,
     this.onChanged,
     this.onSubmitted,
+    this.onTapOutside,
     this.onClear,
     this.maxLines = 1,
     this.minLines,
@@ -94,6 +96,7 @@ class OriginTextField extends StatefulWidget {
     this.inputFormatters,
     this.onChanged,
     this.onSubmitted,
+    this.onTapOutside,
     this.onClear,
     this.maxLines = 1,
     this.minLines,
@@ -314,7 +317,17 @@ class _OriginTextFieldState extends State<OriginTextField> {
       cursorRadius: const Radius.circular(2.0),
       cursorWidth: 1.8,
       onChanged: widget.onChanged,
-      onSubmitted: widget.onSubmitted,
+      onSubmitted: (value) {
+        if (widget.textInputAction == TextInputAction.done ||
+            (widget.maxLines == 1 && widget.textInputAction == null)) {
+          _effectiveFocusNode.unfocus();
+        }
+        widget.onSubmitted?.call(value);
+      },
+      onTapOutside: widget.onTapOutside ??
+          (event) {
+            _effectiveFocusNode.unfocus();
+          },
       decoration: InputDecoration(
         isDense: widget.isDense,
         filled: true,

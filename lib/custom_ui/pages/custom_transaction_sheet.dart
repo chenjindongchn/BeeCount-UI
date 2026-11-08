@@ -234,7 +234,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
   }
 
   Future<void> _initDefaultAccount() async {
-    if (_selectedAccountId != null) return;
+    if (_selectedAccountId != null || widget.initialAccountId != null) return;
     if (widget.editingTransactionId != null) return;
 
     final rememberLast = ref.read(rememberLastAccountEnabledProvider);
@@ -372,9 +372,11 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
     });
     _loadFrequentNotes();
 
-    // 若开启了“默认选择上次支出账户”，且非编辑旧交易时，自动检索匹配上次使用的账户
+    // 若开启了“默认选择上次支出账户”，且非编辑旧交易、且未由外部显式锁定初始账户（如在资产内记一笔）时，自动检索匹配上次使用的账户
+    // 资产优先级 > 分类记忆账户优先级：在特定资产下记账时，切换分类不覆盖当前资产账户
     if (ref.read(rememberLastAccountEnabledProvider) &&
-        widget.editingTransactionId == null) {
+        widget.editingTransactionId == null &&
+        widget.initialAccountId == null) {
       try {
         final accounts = _getSortedAccounts();
         final memService = ref.read(categoryAccountMemoryServiceProvider);
@@ -669,11 +671,18 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         final currentNumber = parts.last;
         if (currentNumber.contains('.')) {
           final decParts = currentNumber.split('.');
+          // 小数位限制：当前数字项小数部分最多 2 位
           if (decParts.length > 1 && decParts[1].length >= 2) {
             return;
           }
+        } else {
+          // 整数位限制：单项数字整数部分上限 12 位（千亿级），避免超出浮点数精度
+          if (currentNumber.length >= 12) {
+            return;
+          }
         }
-        if (_amountExpression.length < 15) {
+        // 去除 15 字符的全局限制，总表达式上限放宽至 100 字符
+        if (_amountExpression.length < 100) {
           _amountExpression += digit;
         }
       }
@@ -686,6 +695,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         _amountExpression =
             _amountExpression.substring(0, _amountExpression.length - 1) + op;
       } else {
+        if (_amountExpression.length >= 100) return;
         _evaluateExpression();
         _amountExpression += op;
       }
@@ -694,6 +704,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
 
   void _onDecimal() {
     setState(() {
+      if (_amountExpression.length >= 100) return;
       final parts = _amountExpression.split(RegExp(r'[\+\-]'));
       final currentNumber = parts.last;
       if (!currentNumber.contains('.')) {
@@ -849,9 +860,11 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
           onCreated: (_) {},
         );
 
-        // 记录该分类使用的账户（若开启了分类记忆，且本次选择了账户）
+        // 记录该分类使用的账户（若开启了分类记忆、本次选择了账户、且非从特定资产进入记账）
+        // 方案 A：从特定资产进入记一笔视为特例场景，不污染该分类在全局日常记账的默认账户偏好
         if (ref.read(rememberLastAccountEnabledProvider) &&
-            _selectedAccountId != null) {
+            _selectedAccountId != null &&
+            widget.initialAccountId == null) {
           unawaited(
             ref.read(categoryAccountMemoryServiceProvider).saveLastAccountId(
                   ledgerId: _ledgerId,
@@ -1066,7 +1079,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
                             ),
                           ),
                           OriginKeypad(
-                            keyHeight: 36,
+                            keyHeight: 40,
                             onDigit: _onDigit,
                             onOperator: _onOperator,
                             onBackspace: _onBackspace,
@@ -2143,6 +2156,7 @@ class _CustomTransactionSheetState extends ConsumerState<CustomTransactionSheet>
         controller: _noteController,
         hintText: '点击填写备注',
         clearable: true,
+        textInputAction: TextInputAction.done,
         prefixIcon: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
