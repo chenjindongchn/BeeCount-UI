@@ -3,11 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../styles/origin_tokens.dart';
 
-/// OriginOS 风格自定义记账数字键盘（紧凑精致版）
+/// OriginOS 风格自定义记账数字键盘（舒适易用版）
 ///
 /// 严格参照用户提供的参考设计：
-/// - 按键高度紧凑（44dp）
-/// - 数字字体优雅纤细（20sp，w400/w500）
+/// - 按键高度舒适自然（48.5dp）
+/// - 数字字体清晰饱满（23sp，w400/w500）
 /// - 纯净微浅底色，柔和圆角（10dp）
 /// - 右下角「保存」按钮跟随软件设置的主题色，左下角浅灰「再记一笔」
 class OriginKeypad extends StatelessWidget {
@@ -22,7 +22,7 @@ class OriginKeypad extends StatelessWidget {
     required this.onSaveAndContinue,
     this.saveLabel = '保存',
     this.continueLabel = '再记一笔',
-    this.keyHeight = 44.0,
+    this.keyHeight = 48.5,
   });
 
   final ValueChanged<String> onDigit;
@@ -74,12 +74,12 @@ class OriginKeypad extends StatelessWidget {
     final subActionBgColor = isDark ? const Color(0xFF29292D) : const Color(0xFFF0F1F4);
 
     const digitStyle = TextStyle(
-      fontSize: 20,
+      fontSize: 23,
       fontWeight: FontWeight.w400,
       letterSpacing: 0.3,
     );
     const opStyle = TextStyle(
-      fontSize: 19,
+      fontSize: 21,
       fontWeight: FontWeight.w400,
     );
 
@@ -88,28 +88,28 @@ class OriginKeypad extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row 1: 7  8  9  ⌫
+          // Row 1: 1  2  3  ⌫
           Row(
             children: [
               _buildKey(
                 context: context,
-                child: Text('7', style: digitStyle.copyWith(color: numTextColor)),
-                onTap: () => onDigit('7'),
+                child: Text('1', style: digitStyle.copyWith(color: numTextColor)),
+                onTap: () => onDigit('1'),
               ),
               _buildKey(
                 context: context,
-                child: Text('8', style: digitStyle.copyWith(color: numTextColor)),
-                onTap: () => onDigit('8'),
+                child: Text('2', style: digitStyle.copyWith(color: numTextColor)),
+                onTap: () => onDigit('2'),
               ),
               _buildKey(
                 context: context,
-                child: Text('9', style: digitStyle.copyWith(color: numTextColor)),
-                onTap: () => onDigit('9'),
+                child: Text('3', style: digitStyle.copyWith(color: numTextColor)),
+                onTap: () => onDigit('3'),
               ),
               _buildKey(
                 context: context,
                 backgroundColor: opBgColor,
-                child: Icon(Icons.backspace_outlined, size: 19, color: numTextColor),
+                child: Icon(Icons.backspace_outlined, size: 21, color: numTextColor),
                 onTap: onBackspace,
                 onLongPress: onClear,
               ),
@@ -141,23 +141,23 @@ class OriginKeypad extends StatelessWidget {
               ),
             ],
           ),
-          // Row 3: 1  2  3  +
+          // Row 3: 7  8  9  +
           Row(
             children: [
               _buildKey(
                 context: context,
-                child: Text('1', style: digitStyle.copyWith(color: numTextColor)),
-                onTap: () => onDigit('1'),
+                child: Text('7', style: digitStyle.copyWith(color: numTextColor)),
+                onTap: () => onDigit('7'),
               ),
               _buildKey(
                 context: context,
-                child: Text('2', style: digitStyle.copyWith(color: numTextColor)),
-                onTap: () => onDigit('2'),
+                child: Text('8', style: digitStyle.copyWith(color: numTextColor)),
+                onTap: () => onDigit('8'),
               ),
               _buildKey(
                 context: context,
-                child: Text('3', style: digitStyle.copyWith(color: numTextColor)),
-                onTap: () => onDigit('3'),
+                child: Text('9', style: digitStyle.copyWith(color: numTextColor)),
+                onTap: () => onDigit('9'),
               ),
               _buildKey(
                 context: context,
@@ -176,7 +176,7 @@ class OriginKeypad extends StatelessWidget {
                 child: Text(
                   continueLabel,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w400,
                     color: numTextColor.withValues(alpha: 0.65),
                   ),
@@ -199,7 +199,7 @@ class OriginKeypad extends StatelessWidget {
                 child: Text(
                   saveLabel,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: Colors.white,
                     letterSpacing: 0.4,

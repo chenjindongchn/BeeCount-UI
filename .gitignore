@@ -77,3 +77,9 @@ design-prototypes/
 # 测试失败临时产物
 test/**/failures/
 
+# 本地临时脚本与导出产物
+scratch/
+export_custom_icons/
+自动记账/**/*.apk
+
+

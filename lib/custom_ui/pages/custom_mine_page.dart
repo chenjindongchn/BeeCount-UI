@@ -15,7 +15,7 @@ import '../../pages/main/mine/bindings/mine_actions.dart';
 import '../../pages/settings/help_center_page.dart';
 import '../../pages/settings/data_management_page.dart';
 import '../../pages/settings/smart_billing_page.dart';
-import '../../pages/settings/automation_page.dart';
+import 'custom_automation_page.dart';
 import '../../pages/settings/about_page.dart';
 import '../../pages/settings/appearance/bindings/appearance_dialogs.dart';
 import '../../pages/settings/app_lock_settings_page.dart';
@@ -333,7 +333,7 @@ class _CustomSettingsPageState extends ConsumerState<CustomSettingsPage> {
                   color: primaryColor,
                   size: 22.0,
                 ),
-                onTap: () => _open(const AutomationPage()),
+                onTap: () => _open(const CustomAutomationPage()),
               ),
             ],
           ),
