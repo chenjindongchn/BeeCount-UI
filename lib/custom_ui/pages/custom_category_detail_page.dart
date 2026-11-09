@@ -1010,6 +1010,18 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
       );
     }
 
+    // 二级分类按金额从大到小（降序）排序，与洞察主页面分析逻辑保持一致；若金额相同则按 ID 稳定排序
+    final sortedChildren = c.children.isEmpty
+        ? const <Category>[]
+        : (List<Category>.of(c.children)
+          ..sort((a, b) {
+            final aValue = c.childAmounts[a.id] ?? 0;
+            final bValue = c.childAmounts[b.id] ?? 0;
+            final cmp = bValue.compareTo(aValue);
+            if (cmp != 0) return cmp;
+            return a.id.compareTo(b.id);
+          }));
+
     final header = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1070,7 +1082,7 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
           detailCurrencyNotice(context, c.currencyProjection!),
         ],
         const SizedBox(height: 12),
-        if (c.children.isNotEmpty) ...[
+        if (sortedChildren.isNotEmpty) ...[
           BeeSurface(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1084,7 +1096,7 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 BeeResourceBreakdown(
-                  items: c.children.map((child) {
+                  items: sortedChildren.map((child) {
                     final value = c.childAmounts[child.id] ?? 0;
                     final count = c.rows
                         .where((row) => row.category?.id == child.id)
@@ -1103,7 +1115,7 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
                     );
                   }).toList(),
                   onSelected: (id) => onChild(
-                    c.children.singleWhere((child) => '${child.id}' == id),
+                    sortedChildren.singleWhere((child) => '${child.id}' == id),
                   ),
                 ),
               ],
