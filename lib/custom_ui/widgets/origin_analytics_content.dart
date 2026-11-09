@@ -9,11 +9,10 @@ import '../../providers.dart';
 import '../../utils/format_money.dart';
 import '../../utils/currencies.dart';
 import '../../pages/main/analytics/bindings/analytics_data.dart';
-import '../../pages/main/analytics/widgets/analytics_ranking.dart' show AnalyticsPie;
 import '../../pages/main/analytics/widgets/analytics_trend.dart';
 import '../styles/origin_tokens.dart';
 import '../providers/amount_format_provider.dart';
-import 'origin_analytics_ranking.dart';
+import 'origin_analytics_pie.dart';
 import 'origin_dialog.dart';
 import 'origin_hero_card.dart';
 
@@ -242,9 +241,12 @@ class OriginAnalyticsContent extends ConsumerWidget {
         if (data.total > 0)
           card(
             l.v4InsightsCategoryShare,
-            AnalyticsPie(
+            OriginAnalyticsPie(
               key: ValueKey((scope, month, type, data.total)),
               data: data,
+              type: type,
+              scope: scope,
+              month: month,
             ),
             action: TextButton(
               style: TextButton.styleFrom(
@@ -280,20 +282,6 @@ class OriginAnalyticsContent extends ConsumerWidget {
                   const BeeLineIcon('ChevronRight', size: 12),
                 ],
               ),
-            ),
-          ),
-        if (data.total > 0)
-          card(
-            l.analyticsCategoryRanking,
-            OriginAnalyticsRanking(
-              key: ValueKey((scope, month, type, data.total)),
-              data: data,
-              scope: scope,
-              month: month,
-            ),
-            action: Text(
-              l.v4InsightsSortedByAmount,
-              style: TextStyle(fontSize: 10, color: theme.hintColor),
             ),
           ),
       ],
