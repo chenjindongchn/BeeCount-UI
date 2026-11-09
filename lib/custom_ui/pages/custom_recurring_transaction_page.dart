@@ -14,6 +14,7 @@ import '../../providers.dart';
 import '../../utils/category_utils.dart';
 import '../styles/origin_tokens.dart';
 import '../widgets/origin_card.dart';
+import '../widgets/origin_divider.dart';
 import '../widgets/origin_empty_state.dart';
 import '../widgets/origin_scaffold.dart';
 import '../widgets/origin_switch.dart';
@@ -221,6 +222,9 @@ class _RecurringBillTile extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final ledger =
         ref.watch(ledgerByIdProvider(recurring.ledgerId)).valueOrNull;
+    final ledgers = ref.watch(localLedgersProvider).valueOrNull ?? const [];
+    final hasMultipleLedgers = ledgers.length > 1;
+
     final code = recurring.currencyCode;
     final foreign = code != null &&
         code.isNotEmpty &&
@@ -249,19 +253,36 @@ class _RecurringBillTile extends ConsumerWidget {
               ? const Icon(Icons.category_outlined, size: 22)
               : RecordingCategoryIcon(category: category, size: 22);
 
+      // 周期频次说明：只有在多账本时才显示账本名，单账本不显示默认账本
+      final frequencyText = recurringFrequencyLabel(l, recurring);
+      final ledgerAndFreq = (hasMultipleLedgers && ledger != null)
+          ? '${ledger.name} · $frequencyText'
+          : frequencyText;
+
+      final metaText = recurring.lastGeneratedDate != null
+          ? '$ledgerAndFreq · ${l.v4RecurringLastGeneratedLabel} ${DateFormat.Md().format(recurring.lastGeneratedDate!)}'
+          : ledgerAndFreq;
+
       return OriginCard(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 1. 上层：账单基础信息（左侧图标与分类/备注，右上角专属清晰金额）
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 分类/转账图标
-                SizedBox(width: 24, height: 24, child: Center(child: icon)),
-                const SizedBox(width: 10),
-
-                // 标题与账本/频次
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: OriginTokens.cardSecondary(context),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(child: icon),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,51 +294,26 @@ class _RecurringBillTile extends ConsumerWidget {
                           fontWeight: FontWeight.w600,
                           color: OriginTokens.textPrimary(context),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${ledger?.name ?? ''} · ${recurringFrequencyLabel(l, recurring)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: OriginTokens.textSecondary(context),
+                      if (recurring.note?.isNotEmpty == true) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          recurring.note!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: OriginTokens.textSecondary(context),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
-
-                // 开关
-                OriginSwitch(
-                  value: recurring.enabled,
-                  enabled: !busy,
-                  onChanged: onToggle,
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // 金额与最后生成时间
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // 备注或最后生成时间
-                Expanded(
-                  child: Text(
-                    recurring.note?.isNotEmpty == true
-                        ? recurring.note!
-                        : (recurring.lastGeneratedDate != null
-                            ? '${l.v4RecurringLastGeneratedLabel} ${DateFormat.Md().format(recurring.lastGeneratedDate!)}'
-                            : ''),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: OriginTokens.textSecondary(context),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-
-                // 金额
+                const SizedBox(width: 12),
+                // 右上角专属金额展示
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -344,6 +340,39 @@ class _RecurringBillTile extends ConsumerWidget {
                       ),
                     ),
                   ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const OriginDivider(startIndent: 0, endIndent: 0),
+            const SizedBox(height: 10),
+
+            // 2. 下层：规则周期说明与右下角专属开关操作区（上下分区，互不挤占）
+            Row(
+              children: [
+                Icon(
+                  Icons.repeat_rounded,
+                  size: 15,
+                  color: OriginTokens.textSecondary(context),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    metaText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: OriginTokens.textSecondary(context),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // 右下角专属开关操作
+                OriginSwitch(
+                  value: recurring.enabled,
+                  enabled: !busy,
+                  onChanged: onToggle,
                 ),
               ],
             ),
