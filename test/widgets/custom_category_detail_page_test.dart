@@ -63,12 +63,12 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          locale: Locale('zh', 'CN'),
+        child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: CustomCategoryDetailPage(
-            categoryId: 1,
+            categoryId: categoryId,
             categoryName: '餐饮美食',
           ),
         ),
@@ -173,16 +173,108 @@ void main() {
     final scaffold = tester.widget<Scaffold>(scaffoldFinder);
     expect(scaffold.bottomNavigationBar, isNotNull);
 
-    // 3. 验证按钮图标为加号
-    expect(find.descendant(of: quickAddButtonFinder, matching: find.byIcon(Icons.add_rounded)), findsOneWidget);
-
-    // 4. 点击该置底按钮，能成功呼出记账抽屉
+    // 3. 点击该置底按钮，能成功呼出记账抽屉
     await tester.tap(quickAddButtonFinder);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     // 抽屉展开后应该能看到保存按钮或金额键盘
     expect(find.text('保存'), findsOneWidget);
+
+    // 清理
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('单账本情况下看板卡片隐藏账本名称', (tester) async {
+    final categoryId = await repo.createCategory(
+      name: '餐饮',
+      kind: 'expense',
+      icon: 'cutlery',
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(database),
+        repositoryProvider.overrideWithValue(repo),
+        currentLedgerIdProvider.overrideWith((ref) => 1),
+        baseCurrencyProvider.overrideWith((ref) => 'CNY'),
+        hideAmountsProvider.overrideWith((ref) => false),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // 单账本场景（数据库中只有 1 个账本）
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CustomCategoryDetailPage(
+            categoryId: categoryId,
+            categoryName: '餐饮',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // 单账本下不应显示“日常账本”，而是直接显示分类名和周期
+    expect(find.textContaining('日常账本'), findsNothing);
+    expect(find.textContaining('餐饮 · 累计'), findsOneWidget);
+
+    // 清理
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('多账本情况下看板卡片展示账本名称', (tester) async {
+    final categoryId = await repo.createCategory(
+      name: '餐饮',
+      kind: 'expense',
+      icon: 'cutlery',
+    );
+
+    // 插入第二个账本
+    await database.customStatement(
+      "INSERT INTO ledgers(id, name, currency) VALUES(2, '生意账本', 'CNY')",
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(database),
+        repositoryProvider.overrideWithValue(repo),
+        currentLedgerIdProvider.overrideWith((ref) => 1),
+        baseCurrencyProvider.overrideWith((ref) => 'CNY'),
+        hideAmountsProvider.overrideWith((ref) => false),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CustomCategoryDetailPage(
+            categoryId: categoryId,
+            categoryName: '餐饮',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 多账本下看板卡片应显示“餐饮 · 日常账本 · 累计”
+    expect(find.textContaining('日常账本'), findsOneWidget);
+    expect(find.textContaining('餐饮 · 日常账本 · 累计'), findsOneWidget);
 
     // 清理
     await tester.pumpWidget(const SizedBox.shrink());

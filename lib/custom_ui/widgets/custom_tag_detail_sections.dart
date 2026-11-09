@@ -113,12 +113,21 @@ class CustomTagDetailSections extends ConsumerWidget {
       );
     }
 
-    final scope = allLedgers ? l.syncHealthGroupAll : book?.name ?? '';
+    final hasMultipleLedgers =
+        (ref.watch(ledgersStreamProvider).valueOrNull?.length ?? 0) > 1;
+    final scope = hasMultipleLedgers
+        ? (allLedgers ? l.syncHealthGroupAll : book?.name)
+        : null;
     final periodText = switch (period) {
       TagDetailPeriod.month => detailRangeLabel(context, 'month', anchor),
       TagDetailPeriod.year => detailRangeLabel(context, 'year', anchor),
       TagDetailPeriod.all => l.v4DetailCumulative,
     };
+    final titleParts = [
+      tag.name,
+      if (scope != null && scope.trim().isNotEmpty) scope.trim(),
+      periodText,
+    ];
 
     final header = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,7 +135,7 @@ class CustomTagDetailSections extends ConsumerWidget {
         // 顶部高质感色彩底卡片 (OriginHeroCard)
         OriginHeroCard(
           margin: EdgeInsets.zero,
-          title: '${tag.name} · $scope · $periodText',
+          title: titleParts.join(' · '),
           unit: hide || !complete ? '' : symbol,
           mainAmount: totals == null ? '—' : number(totals.expense),
           hideAmounts: hide,
@@ -294,8 +303,9 @@ class CustomTagDetailSections extends ConsumerWidget {
                 accountsEnabled: accounts,
                 allLedgers: allLedgers,
                 allowCategoryNavigation: true,
-                ledgerName:
-                    allLedgers ? resource.ledgers[row.t.ledgerId]?.name : null,
+                ledgerName: (allLedgers && hasMultipleLedgers)
+                    ? resource.ledgers[row.t.ledgerId]?.name
+                    : null,
                 baseCurrency: resource.ledgers[row.t.ledgerId]?.currency,
                 onDelete: () => onDelete(row.t.id, row.t.ledgerId),
                 onReturned: onReturned,

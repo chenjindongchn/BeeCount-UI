@@ -979,13 +979,22 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
     String name(Category cat) =>
         CategoryUtils.getDisplayName(cat.name, context, kind: cat.kind);
 
-    final scope = allLedgers ? l.syncHealthGroupAll : current?.name ?? '';
+    final hasMultipleLedgers =
+        (ref.watch(ledgersStreamProvider).valueOrNull?.length ?? 0) > 1;
+    final scope = hasMultipleLedgers
+        ? (allLedgers ? l.syncHealthGroupAll : current?.name)
+        : null;
     final period = switch (c.period) {
       CategoryDetailPeriod.month => l.v4DetailMonth,
       CategoryDetailPeriod.year => l.v4DetailYear,
       CategoryDetailPeriod.all => l.v4DetailCumulative,
       CategoryDetailPeriod.custom => periodLabel ?? l.v4DetailCustom,
     };
+    final titleParts = [
+      name(category),
+      if (scope != null && scope.trim().isNotEmpty) scope.trim(),
+      period,
+    ];
 
     final metricLabel = isLocked ? '' : currency;
     final rows = showAll ? c.rows : c.rows.take(4).toList();
@@ -1007,7 +1016,7 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
         // 分类详情大看板卡片 (统一 OriginHeroCard，19.0dp 圆角，主题色沉浸感，无磨砂条)
         OriginHeroCard(
           margin: EdgeInsets.zero,
-          title: '${name(category)} · $scope · $period',
+          title: titleParts.join(' · '),
           unit: hide || !complete ? '' : symbol,
           mainAmount: number(c.amount),
           hideAmounts: hide,
@@ -1226,8 +1235,9 @@ class _CustomCategoryDetailBody extends ConsumerWidget {
                 accountsEnabled: accounts,
                 allLedgers: allLedgers,
                 allowCategoryNavigation: row.category?.id != c.categoryId,
-                ledgerName:
-                    allLedgers ? c.ledgers[row.t.ledgerId]?.name : null,
+                ledgerName: (allLedgers && hasMultipleLedgers)
+                    ? c.ledgers[row.t.ledgerId]?.name
+                    : null,
                 baseCurrency: c.ledgers[row.t.ledgerId]?.currency,
                 onDelete: () => onDelete(row.t.id, row.t.ledgerId),
                 onReturned: () => unawaited(c.refreshResources()),
